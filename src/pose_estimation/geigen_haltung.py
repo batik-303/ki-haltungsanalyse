@@ -71,6 +71,76 @@ POSE_CONNECTIONS = [
 
 
 # ──────────────────────────────────────────────
+# Segment-Farben (BGR) nach Körperregion
+# ──────────────────────────────────────────────
+
+FARBE_KOPF = (255, 255, 255)   # Weiß
+FARBE_ARME = (255, 150, 50)    # Blau (BGR)
+FARBE_TORSO = (0, 200, 100)    # Grün
+FARBE_BEINE = (0, 165, 255)    # Orange
+
+SEGMENT_FARBEN = {
+    # Kopf/Gesicht
+    (0, 1): FARBE_KOPF, (1, 2): FARBE_KOPF, (2, 3): FARBE_KOPF, (3, 7): FARBE_KOPF,
+    (0, 4): FARBE_KOPF, (4, 5): FARBE_KOPF, (5, 6): FARBE_KOPF, (6, 8): FARBE_KOPF,
+    (9, 10): FARBE_KOPF,
+    # Torso
+    (11, 12): FARBE_TORSO,
+    (11, 23): FARBE_TORSO, (12, 24): FARBE_TORSO, (23, 24): FARBE_TORSO,
+    # Arme
+    (11, 13): FARBE_ARME, (13, 15): FARBE_ARME,
+    (15, 17): FARBE_ARME, (15, 19): FARBE_ARME, (15, 21): FARBE_ARME, (17, 19): FARBE_ARME,
+    (12, 14): FARBE_ARME, (14, 16): FARBE_ARME,
+    (16, 18): FARBE_ARME, (16, 20): FARBE_ARME, (16, 22): FARBE_ARME, (18, 20): FARBE_ARME,
+    # Beine
+    (23, 25): FARBE_BEINE, (24, 26): FARBE_BEINE,
+    (25, 27): FARBE_BEINE, (26, 28): FARBE_BEINE,
+    (27, 29): FARBE_BEINE, (28, 30): FARBE_BEINE,
+    (29, 31): FARBE_BEINE, (30, 32): FARBE_BEINE,
+    (27, 31): FARBE_BEINE, (28, 32): FARBE_BEINE,
+}
+
+# ──────────────────────────────────────────────
+# Gelenkgrößen nach Wichtigkeit (Landmark-Index → Radius)
+# ──────────────────────────────────────────────
+
+_GROESSE_GROSS = 8    # Schultern, Hüften
+_GROESSE_MITTEL = 5   # Ellbogen, Knie, Handgelenke
+_GROESSE_KLEIN = 3    # Rest (Finger, Zehen, Gesicht)
+
+GELENK_GROESSEN = {i: _GROESSE_KLEIN for i in range(33)}
+for idx in (11, 12, 23, 24):                          # Schultern, Hüften
+    GELENK_GROESSEN[idx] = _GROESSE_GROSS
+for idx in (13, 14, 15, 16, 25, 26, 27, 28):          # Ellbogen, Handgelenke, Knie, Knöchel
+    GELENK_GROESSEN[idx] = _GROESSE_MITTEL
+
+# ──────────────────────────────────────────────
+# Check-zu-Landmark-Zuordnung (Modus 1–5)
+# ──────────────────────────────────────────────
+
+CHECK_LANDMARKS = {
+    1: {0, 7, 8},                   # Kopfneigung: Nase, Ohren
+    2: {11, 12},                    # Schulter-Asymmetrie: beide Schultern
+    3: {11, 13, 15},                # Handgelenk links: Schulter, Ellbogen, Handgelenk
+    4: {12, 14, 16},                # Ellbogen rechts: Schulter, Ellbogen, Handgelenk
+    5: {0, 11, 12},                 # Schulter-Protraktion: Nase, beide Schultern
+}
+
+# ──────────────────────────────────────────────
+# Modus-Namen
+# ──────────────────────────────────────────────
+
+MODUS_NAMEN = {
+    0: "Alle Checks",
+    1: "Kopfneigung",
+    2: "Schulter-Asymmetrie",
+    3: "Handgelenk links",
+    4: "Ellbogen rechts",
+    5: "Schulter-Protraktion",
+}
+
+
+# ──────────────────────────────────────────────
 # Konfiguration
 # ──────────────────────────────────────────────
 
@@ -108,6 +178,7 @@ class Warnung:
     schweregrad: str  # "leicht", "mittel", "stark"
     korrektur: str
     farbe: tuple  # BGR-Farbe für die Visualisierung
+    check_index: int = 0  # 1–5, zugehöriger Check (für Segment-Highlighting)
 
 
 # ──────────────────────────────────────────────
@@ -194,36 +265,31 @@ class HaltungsAnalyse:
     def __init__(self, grenzwerte: Optional[HaltungsGrenzwerte] = None):
         self.grenzwerte = grenzwerte or HaltungsGrenzwerte()
 
-    def analysiere(self, landmarks, breite: int, hoehe: int) -> list[Warnung]:
+    def analysiere(self, landmarks, breite: int, hoehe: int, modus: int = 0) -> list[Warnung]:
         """
-        Führt alle Haltungschecks durch und gibt eine Liste von Warnungen zurück.
+        Führt Haltungschecks durch und gibt eine Liste von Warnungen zurück.
+
+        Args:
+            modus: 0 = alle Checks, 1–5 = einzelner Check
         """
+        checks = {
+            1: lambda: self._pruefe_kopfneigung(landmarks, breite, hoehe),
+            2: lambda: self._pruefe_schulter_asymmetrie(landmarks, breite, hoehe),
+            3: lambda: self._pruefe_handgelenk_links(landmarks, breite, hoehe),
+            4: lambda: self._pruefe_ellbogen_rechts(landmarks, breite, hoehe),
+            5: lambda: self._pruefe_schulter_protraktion(landmarks),
+        }
+
+        if modus == 0:
+            auswahl = checks.values()
+        else:
+            auswahl = [checks[modus]] if modus in checks else []
+
         warnungen = []
-
-        # Check 1: Kopfneigung
-        w = self._pruefe_kopfneigung(landmarks, breite, hoehe)
-        if w:
-            warnungen.append(w)
-
-        # Check 2: Schulterhöhen-Asymmetrie
-        w = self._pruefe_schulter_asymmetrie(landmarks, breite, hoehe)
-        if w:
-            warnungen.append(w)
-
-        # Check 3: Handgelenkswinkel links (Griffhand)
-        w = self._pruefe_handgelenk_links(landmarks, breite, hoehe)
-        if w:
-            warnungen.append(w)
-
-        # Check 4: Ellbogen rechts (Bogenführung)
-        w = self._pruefe_ellbogen_rechts(landmarks, breite, hoehe)
-        if w:
-            warnungen.append(w)
-
-        # Check 5: Schulter-Protraktion
-        w = self._pruefe_schulter_protraktion(landmarks)
-        if w:
-            warnungen.append(w)
+        for check_fn in auswahl:
+            w = check_fn()
+            if w:
+                warnungen.append(w)
 
         return warnungen
 
@@ -246,7 +312,8 @@ class HaltungsAnalyse:
                 name=f"Kopfneigung: {neigung:.0f}°",
                 schweregrad=schweregrad,
                 korrektur="Kopf gerader halten – Kinnstütze prüfen",
-                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 165, 255)
+                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 165, 255),
+                check_index=1,
             )
         return None
 
@@ -271,7 +338,8 @@ class HaltungsAnalyse:
                 name=f"Schultern asymmetrisch ({hoehere} höher)",
                 schweregrad=schweregrad,
                 korrektur="Schultern entspannen und auf gleiche Höhe bringen",
-                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 165, 255)
+                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 165, 255),
+                check_index=2,
             )
         return None
 
@@ -292,7 +360,8 @@ class HaltungsAnalyse:
                 name=f"Handgelenk links: {winkel:.0f}°",
                 schweregrad=schweregrad,
                 korrektur="Linkes Handgelenk gerader halten – nicht abknicken",
-                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 255, 255)
+                farbe=(0, 0, 255) if schweregrad == "stark" else (0, 255, 255),
+                check_index=3,
             )
         return None
 
@@ -312,14 +381,16 @@ class HaltungsAnalyse:
                 name=f"Bogenarm-Ellbogen zu eng: {winkel:.0f}°",
                 schweregrad="mittel",
                 korrektur="Rechten Ellbogen etwas anheben",
-                farbe=(0, 165, 255)
+                farbe=(0, 165, 255),
+                check_index=4,
             )
         elif winkel > self.grenzwerte.ellbogen_rechts_max:
             return Warnung(
                 name=f"Bogenarm zu gestreckt: {winkel:.0f}°",
                 schweregrad="mittel",
                 korrektur="Rechten Ellbogen etwas mehr beugen",
-                farbe=(0, 165, 255)
+                farbe=(0, 165, 255),
+                check_index=4,
             )
         return None
 
@@ -347,7 +418,8 @@ class HaltungsAnalyse:
                 name="Rundrücken erkannt",
                 schweregrad="mittel",
                 korrektur="Brustbein heben, Schultern sanft zurückziehen",
-                farbe=(0, 100, 255)
+                farbe=(0, 100, 255),
+                check_index=5,
             )
         return None
 
@@ -365,54 +437,126 @@ class Visualisierung:
     FARBE_GELENK = (255, 255, 255) # Weiß
     FARBE_KNOCHEN = (0, 200, 100)  # Grün-Türkis
 
-    def zeichne_skelett(self, bild, landmarks):
-        """Zeichnet das erkannte Skelett auf das Bild."""
+    FARBE_GRAU = (100, 100, 100)   # Gedimmte Segmente
+    FARBE_ROT = (0, 0, 255)        # Fehlerhaftes Segment
+
+    def zeichne_skelett(self, bild, landmarks, warnungen: list[Warnung] = None,
+                        modus: int = 0):
+        """Zeichnet das erkannte Skelett mit Farben, Glow und Highlighting."""
         if not landmarks:
             return
         hoehe, breite = bild.shape[:2]
+        warnungen = warnungen or []
 
+        # Betroffene Landmarks aus aktiven Warnungen sammeln
+        fehler_landmarks = set()
+        for w in warnungen:
+            if w.check_index in CHECK_LANDMARKS:
+                fehler_landmarks |= CHECK_LANDMARKS[w.check_index]
+
+        # Relevante Landmarks für Single-Check-Modus
+        relevante_landmarks = CHECK_LANDMARKS.get(modus) if modus != 0 else None
+
+        # Verbindungen zeichnen (Glow + Farbe)
         for start_idx, end_idx in POSE_CONNECTIONS:
             start_lm = landmarks[start_idx]
             end_lm = landmarks[end_idx]
-            if start_lm.visibility > 0.5 and end_lm.visibility > 0.5:
-                start_pt = (int(start_lm.x * breite), int(start_lm.y * hoehe))
-                end_pt = (int(end_lm.x * breite), int(end_lm.y * hoehe))
-                cv2.line(bild, start_pt, end_pt, self.FARBE_KNOCHEN, 2)
+            if start_lm.visibility < 0.5 or end_lm.visibility < 0.5:
+                continue
 
-        for lm in landmarks:
-            if lm.visibility > 0.5:
-                pt = (int(lm.x * breite), int(lm.y * hoehe))
-                cv2.circle(bild, pt, 4, self.FARBE_GELENK, -1)
-                cv2.circle(bild, pt, 4, (0, 0, 0), 1)
+            start_pt = (int(start_lm.x * breite), int(start_lm.y * hoehe))
+            end_pt = (int(end_lm.x * breite), int(end_lm.y * hoehe))
 
-    def zeichne_warnungen(self, bild, warnungen: list[Warnung]):
-        """Zeichnet Warnungen als Textfeld auf das Bild."""
+            # Farbe bestimmen
+            if relevante_landmarks and not ({start_idx, end_idx} & relevante_landmarks):
+                farbe = self.FARBE_GRAU
+            elif {start_idx, end_idx} & fehler_landmarks:
+                farbe = self.FARBE_ROT
+            else:
+                farbe = SEGMENT_FARBEN.get((start_idx, end_idx), FARBE_TORSO)
+
+            # Glow: dunkle Linie darunter
+            cv2.line(bild, start_pt, end_pt, (20, 20, 20), 6)
+            cv2.line(bild, start_pt, end_pt, farbe, 2)
+
+        # Gelenke zeichnen (Glow + Größenhierarchie)
+        for idx, lm in enumerate(landmarks):
+            if lm.visibility < 0.5:
+                continue
+
+            pt = (int(lm.x * breite), int(lm.y * hoehe))
+            radius = GELENK_GROESSEN.get(idx, _GROESSE_KLEIN)
+
+            # Farbe bestimmen
+            if relevante_landmarks and idx not in relevante_landmarks:
+                farbe = self.FARBE_GRAU
+            elif idx in fehler_landmarks:
+                farbe = self.FARBE_ROT
+            else:
+                farbe = self.FARBE_GELENK
+
+            # Glow: dunkler Kreis darunter
+            cv2.circle(bild, pt, radius + 2, (20, 20, 20), -1)
+            cv2.circle(bild, pt, radius, farbe, -1)
+
+    def _zeichne_panel(self, bild, x, y, breite, hoehe, alpha=0.6):
+        """Zeichnet ein halbtransparentes dunkles Rechteck."""
+        bild_h, bild_b = bild.shape[:2]
+        x2 = min(x + breite, bild_b)
+        y2 = min(y + hoehe, bild_h)
+        roi = bild[y:y2, x:x2]
+        dunkel = np.zeros_like(roi)
+        cv2.addWeighted(dunkel, alpha, roi, 1 - alpha, 0, roi)
+
+    def zeichne_warnungen(self, bild, warnungen: list[Warnung], modus: int = 0):
+        """Zeichnet Warnungen mit halbtransparentem Panel."""
+        modus_text = f"Modus: {MODUS_NAMEN.get(modus, 'Unbekannt')}"
+        panel_x, panel_y = 8, 8
+        panel_breite = 420
+        zeilen_hoehe = 28
+
         if not warnungen:
-            # Alles gut – grüner Status
+            # Modus + "Haltung OK"
+            panel_hoehe = zeilen_hoehe * 2 + 16
+            self._zeichne_panel(bild, panel_x, panel_y, panel_breite, panel_hoehe)
+            cv2.putText(
+                bild, modus_text,
+                (panel_x + 8, panel_y + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+                (180, 180, 180), 1
+            )
             cv2.putText(
                 bild, "Haltung OK",
-                (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                (panel_x + 8, panel_y + 24 + zeilen_hoehe), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
                 self.FARBE_OK, 2
             )
             return
 
-        y_position = 30
+        # Modus-Zeile + pro Warnung 2 Zeilen (Name + Korrektur)
+        panel_hoehe = zeilen_hoehe + len(warnungen) * (zeilen_hoehe * 2) + 16
+        self._zeichne_panel(bild, panel_x, panel_y, panel_breite, panel_hoehe)
+
+        # Modus-Zeile
+        cv2.putText(
+            bild, modus_text,
+            (panel_x + 8, panel_y + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+            (180, 180, 180), 1
+        )
+
+        y_pos = panel_y + 24 + zeilen_hoehe
         for warnung in warnungen:
-            # Warnung anzeigen
             cv2.putText(
                 bild, f"! {warnung.name}",
-                (10, y_position), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                (panel_x + 8, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
                 warnung.farbe, 2
             )
-            y_position += 25
+            y_pos += zeilen_hoehe
 
-            # Korrekturhinweis
             cv2.putText(
                 bild, f"  -> {warnung.korrektur}",
-                (10, y_position), cv2.FONT_HERSHEY_SIMPLEX, 0.45,
+                (panel_x + 8, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.42,
                 (200, 200, 200), 1
             )
-            y_position += 30
+            y_pos += zeilen_hoehe
 
     def zeichne_status_leiste(self, bild, warnungen: list[Warnung]):
         """Zeichnet eine Statusleiste am unteren Bildrand."""
@@ -453,7 +597,9 @@ def main():
     sicherstellen_modell()
 
     print("Starte Webcam...")
-    print("Drücke 'q' oder ESC zum Beenden.")
+    print("Drücke 0-5 zum Moduswechsel, 'q' oder ESC zum Beenden.")
+    print("  0 = Alle Checks | 1 = Kopfneigung | 2 = Schulter-Asymmetrie")
+    print("  3 = Handgelenk links | 4 = Ellbogen rechts | 5 = Schulter-Protraktion")
     print()
 
     # MediaPipe PoseLandmarker initialisieren (Tasks API)
@@ -484,6 +630,7 @@ def main():
     print("Webcam bereit. Nimm deine Geige und spiel los!")
     print()
 
+    aktiver_modus = 0
     timestamp_ms = 0
 
     while True:
@@ -508,11 +655,11 @@ def main():
             hoehe, breite = bild.shape[:2]
 
             # Haltung analysieren
-            warnungen = analyse.analysiere(landmarks, breite, hoehe)
+            warnungen = analyse.analysiere(landmarks, breite, hoehe, modus=aktiver_modus)
 
             # Visualisierung
-            vis.zeichne_skelett(bild, landmarks)
-            vis.zeichne_warnungen(bild, warnungen)
+            vis.zeichne_skelett(bild, landmarks, warnungen=warnungen, modus=aktiver_modus)
+            vis.zeichne_warnungen(bild, warnungen, modus=aktiver_modus)
             vis.zeichne_status_leiste(bild, warnungen)
         else:
             cv2.putText(
@@ -528,6 +675,9 @@ def main():
         taste = cv2.waitKey(1) & 0xFF
         if taste == ord('q') or taste == 27:  # q oder ESC
             break
+        elif ord('0') <= taste <= ord('5'):
+            aktiver_modus = taste - ord('0')
+            print(f"Modus: {MODUS_NAMEN[aktiver_modus]}")
 
     # Aufräumen
     kamera.release()
