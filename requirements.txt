@@ -1,0 +1,10 @@
+# Pose Estimation & Computer Vision
+mediapipe>=0.10.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Visualisierung (Prototyping)
+matplotlib>=3.7.0
+
+# Tests
+pytest>=7.4.0
