@@ -20,6 +20,11 @@
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "mediapipe-usage": {
+      "source": "liuchiawei/agent-skills",
+      "sourceType": "github",
+      "computedHash": "860a69491bf101bdbe536c090ac0ed7e93e794a9350996bab07f8151deef7897"
     }
   }
 }
