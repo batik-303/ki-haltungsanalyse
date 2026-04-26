@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  /* Blue Anchor Brand Colors */
+  --color-background: #0a1628;
+  --color-foreground: #ffffff;
+  --color-muted: #1e3a5f;
+  --color-muted-foreground: #5a6a7a;
+  --color-border: #2a3a5c;
+  
+  /* Sapphire Blue Palette */
+  --color-sapphire: #2196F3;
+  --color-sapphire-light: #64B5F6;
+  --color-sapphire-deep: #1565C0;
+  --color-sapphire-darkest: #0D47A1;
+  
+  /* Gold Palette */
+  --color-gold: #DAA520;
+  --color-gold-bright: #FFD700;
+  --color-gold-dark: #B8860B;
+  
+  /* Status Colors */
+  --color-success: #2ecc71;
+  --color-warning: #f1c40f;
+  --color-alert: #9b59b6;
+  --color-error: #e74c3c;
+  --color-info: #5b9bd5;
+  
+  /* Layer Colors */
+  --color-layer-flow: #2196F3;
+  --color-layer-bewusst: #F1C40F;
+  --color-layer-achtung: #FF9800;
+  --color-layer-limit: #9B59B6;
+  
+  /* shadcn-compatible tokens */
+  --color-primary: #2196F3;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #1e3a5f;
+  --color-secondary-foreground: #ccdde8;
+  --color-accent: #DAA520;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: #e74c3c;
+  --color-destructive-foreground: #ffffff;
+  --color-card: #0d1b2a;
+  --color-card-foreground: #ccdde8;
+  --color-popover: #0d1b2a;
+  --color-popover-foreground: #ccdde8;
+  --color-input: #2a3a5c;
+  --color-ring: #2196F3;
+  
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

@@ -1,34 +1,24 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-venv/
-.env
-
-# Daten & Modelle (zu groß für Git)
-data/videos/*
-data/modelle/*
-!data/videos/.gitkeep
-!data/modelle/.gitkeep
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Node / React Native
-node_modules/
+# Logs
+logs
 *.log
-.expo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Secrets
-*.env
-*.key
-credentials.*
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
