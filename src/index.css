@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   /* Blue Anchor Brand Colors */
@@ -7,31 +11,31 @@
   --color-muted: #1e3a5f;
   --color-muted-foreground: #5a6a7a;
   --color-border: #2a3a5c;
-  
+
   /* Sapphire Blue Palette */
   --color-sapphire: #2196F3;
   --color-sapphire-light: #64B5F6;
   --color-sapphire-deep: #1565C0;
   --color-sapphire-darkest: #0D47A1;
-  
+
   /* Gold Palette */
   --color-gold: #DAA520;
   --color-gold-bright: #FFD700;
   --color-gold-dark: #B8860B;
-  
+
   /* Status Colors */
   --color-success: #2ecc71;
   --color-warning: #f1c40f;
   --color-alert: #9b59b6;
   --color-error: #e74c3c;
   --color-info: #5b9bd5;
-  
+
   /* Layer Colors */
   --color-layer-flow: #2196F3;
   --color-layer-bewusst: #F1C40F;
   --color-layer-achtung: #FF9800;
   --color-layer-limit: #9B59B6;
-  
+
   /* shadcn-compatible tokens */
   --color-primary: #2196F3;
   --color-primary-foreground: #ffffff;
@@ -47,23 +51,39 @@
   --color-popover-foreground: #ccdde8;
   --color-input: #2a3a5c;
   --color-ring: #2196F3;
-  
+
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@theme inline {
+  --color-sidebar-ring: var(--color-ring);
+  --color-sidebar-border: var(--color-border);
+  --color-sidebar-accent-foreground: var(--color-accent-foreground);
+  --color-sidebar-accent: var(--color-accent);
+  --color-sidebar-primary-foreground: var(--color-primary-foreground);
+  --color-sidebar-primary: var(--color-primary);
+  --color-sidebar-foreground: var(--color-foreground);
+  --color-sidebar: var(--color-background);
+  --color-chart-5: var(--color-layer-limit);
+  --color-chart-4: var(--color-layer-achtung);
+  --color-chart-3: var(--color-layer-bewusst);
+  --color-chart-2: var(--color-layer-flow);
+  --color-chart-1: var(--color-sapphire);
+  --radius-xl: calc(var(--radius-lg) * 1.4);
+  --radius-2xl: calc(var(--radius-lg) * 1.8);
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }

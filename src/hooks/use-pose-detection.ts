@@ -62,6 +62,11 @@ export function usePoseDetection(
           video: { width: 640, height: 480, facingMode: 'user' },
         })
 
+        // Pre-grant mic permission for voice commands (non-blocking)
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((s) => { s.getTracks().forEach((t) => t.stop()); console.log('[Pose] Mic permission pre-granted') })
+          .catch(() => { console.warn('[Pose] Mic not available — voice commands may not work') })
+
         const video = videoRef.current
         if (video) {
           video.srcObject = stream
@@ -214,5 +219,13 @@ export function usePoseDetection(
     animFrameRef.current = requestAnimationFrame(detect)
   }
 
-  return { resetAnalysisState, landmarkerRef }
+  const startTracking = useCallback(() => {
+    sessionRef.current.start()
+  }, [])
+
+  const stopTracking = useCallback(() => {
+    return sessionRef.current.stop()
+  }, [])
+
+  return { resetAnalysisState, landmarkerRef, startTracking, stopTracking }
 }

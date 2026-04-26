@@ -1,3 +1,17 @@
+// ── App Navigation ──
+export type AppScreen = 'home' | 'setup' | 'session' | 'results'
+
+// ── Instruments ──
+export type Instrument = 'violin'
+
+export interface InstrumentMeta {
+  id: Instrument
+  name: string
+  icon: string
+  description: string
+  modes: FocusMode[]
+}
+
 // ── Focus Modes ──
 export type FocusMode = 'violin' | 'shoulder' | 'wrist'
 
@@ -81,6 +95,12 @@ export interface ZoneCounters {
   limit: number
 }
 
+export interface TensionTimelineEntry {
+  t: number
+  tension: number
+  layer: Layer
+}
+
 export interface SessionStats {
   durationMs: number
   durationMinutes: number
@@ -93,6 +113,24 @@ export interface SessionStats {
     achtung: number
     limit: number
   }
+  tensionTimeline: TensionTimelineEntry[]
+}
+
+export interface StoredSession {
+  id: string
+  timestamp: number
+  instrument: Instrument
+  focusMode: FocusMode
+  sensitivity: SensitivityLevel
+  durationMs: number
+  zones: ZoneCounters
+  zonePercentages: {
+    flow: number
+    bewusst: number
+    achtung: number
+    limit: number
+  }
+  tensionTimeline: TensionTimelineEntry[]
 }
 
 // ── Canvas Rendering Context ──

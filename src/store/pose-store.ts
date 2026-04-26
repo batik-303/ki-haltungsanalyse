@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type {
+  AppScreen,
+  Instrument,
   FocusMode,
   SensitivityLevel,
   MasterPrint,
@@ -11,6 +13,10 @@ import type {
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 
 export interface PoseState {
+  // Navigation
+  appScreen: AppScreen
+  selectedInstrument: Instrument | null
+
   // Mode
   focusMode: FocusMode
   sensitivity: SensitivityLevel
@@ -43,12 +49,19 @@ export interface PoseState {
   // Violin-specific
   driftDirection: number
 
+  // Navigation actions
+  goToSetup: (instrument: Instrument) => void
+  goToSession: () => void
+  goToResults: (stats: SessionStats) => void
+  goHome: () => void
+
   // Actions
   setFocusMode: (mode: FocusMode) => void
   setSensitivity: (level: SensitivityLevel) => void
   setDistanceOk: (ok: boolean) => void
   setCalibrating: (calibrating: boolean) => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
+  startSession: () => void
   updateFrame: (data: FrameUpdate) => void
   endSession: (stats: SessionStats | null) => void
   reset: () => void
@@ -73,6 +86,10 @@ const DEFAULT_LAYER_INFO: LayerInfo = {
 }
 
 export const usePoseStore = create<PoseState>((set) => ({
+  // Navigation
+  appScreen: 'home',
+  selectedInstrument: null,
+
   // Mode
   focusMode: 'violin',
   sensitivity: 'med',
@@ -105,6 +122,57 @@ export const usePoseStore = create<PoseState>((set) => ({
   // Violin
   driftDirection: 1,
 
+  // Navigation actions
+  goToSetup: (instrument) => set({
+    appScreen: 'setup',
+    selectedInstrument: instrument,
+  }),
+
+  goToSession: () => set({
+    appScreen: 'session',
+    masterPrint: null,
+    calibratedShoulderWidth: null,
+    isCalibrating: false,
+    distanceOk: false,
+    tensionScore: 0,
+    smoothedDeviation: 0,
+    rawDeviation: 0,
+    currentLayer: 'flow',
+    currentLayerInfo: DEFAULT_LAYER_INFO,
+    sessionActive: false,
+    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+    returnGlowTimer: 0,
+    lastBendForward: true,
+    driftDirection: 1,
+    lastSessionStats: null,
+  }),
+
+  goToResults: (stats) => set({
+    appScreen: 'results',
+    sessionActive: false,
+    lastSessionStats: stats,
+  }),
+
+  goHome: () => set({
+    appScreen: 'home',
+    selectedInstrument: null,
+    masterPrint: null,
+    calibratedShoulderWidth: null,
+    isCalibrating: false,
+    distanceOk: false,
+    tensionScore: 0,
+    smoothedDeviation: 0,
+    rawDeviation: 0,
+    currentLayer: 'flow',
+    currentLayerInfo: DEFAULT_LAYER_INFO,
+    sessionActive: false,
+    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+    returnGlowTimer: 0,
+    lastBendForward: true,
+    driftDirection: 1,
+    lastSessionStats: null,
+  }),
+
   // Actions
   setFocusMode: (mode) => set({
     focusMode: mode,
@@ -135,13 +203,19 @@ export const usePoseStore = create<PoseState>((set) => ({
     tensionScore: 0,
     smoothedDeviation: 0,
     rawDeviation: 0,
-    sessionActive: true,
-    sessionStart: performance.now(),
+    sessionActive: false,
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     lastSessionStats: null,
     returnGlowTimer: 0,
     lastBendForward: true,
     driftDirection: 1,
+  }),
+
+  startSession: () => set({
+    sessionActive: true,
+    sessionStart: performance.now(),
+    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+    lastSessionStats: null,
   }),
 
   updateFrame: (data) => set({

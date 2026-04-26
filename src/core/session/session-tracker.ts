@@ -1,4 +1,4 @@
-import type { FocusMode, Layer, ZoneCounters, SessionStats } from '../types'
+import type { FocusMode, Layer, ZoneCounters, SessionStats, TensionTimelineEntry } from '../types'
 
 // Return-to-anchor thresholds per mode
 const ELEVATED_THRESHOLDS: Record<FocusMode, number> = {
@@ -14,6 +14,7 @@ const REWARD_THRESHOLDS: Record<FocusMode, number> = {
 }
 
 const GLOW_DURATION = 1.5 // seconds
+const TIMELINE_INTERVAL = 1.0 // sample every 1 second
 
 /**
  * Stateful session tracker. Handles zone counting and return-to-anchor events.
@@ -24,7 +25,9 @@ export function createSessionTracker(focusMode: FocusMode) {
   let totalFrames = 0
   let wasElevated = false
   let returnGlowTimer = 0
+  let timelineClock = 0
   const zones: ZoneCounters = { flow: 0, bewusst: 0, achtung: 0, limit: 0 }
+  const timeline: TensionTimelineEntry[] = []
 
   const elevatedThreshold = ELEVATED_THRESHOLDS[focusMode]
   const rewardThreshold = REWARD_THRESHOLDS[focusMode]
@@ -36,10 +39,12 @@ export function createSessionTracker(focusMode: FocusMode) {
       totalFrames = 0
       wasElevated = false
       returnGlowTimer = 0
+      timelineClock = 0
       zones.flow = 0
       zones.bewusst = 0
       zones.achtung = 0
       zones.limit = 0
+      timeline.length = 0
     },
 
     /**
@@ -54,6 +59,14 @@ export function createSessionTracker(focusMode: FocusMode) {
 
       totalFrames++
       zones[layer]++
+
+      // Timeline sampling at ~1Hz
+      timelineClock += dt
+      if (timelineClock >= TIMELINE_INTERVAL) {
+        timelineClock -= TIMELINE_INTERVAL
+        const t = Math.round((performance.now() - startTime) / 1000)
+        timeline.push({ t, tension: Math.round(tensionScore), layer })
+      }
 
       // Return-to-anchor detection
       if (tensionScore > elevatedThreshold) {
@@ -95,6 +108,7 @@ export function createSessionTracker(focusMode: FocusMode) {
           achtung: pct(zones.achtung),
           limit: pct(zones.limit),
         },
+        tensionTimeline: [...timeline],
       }
     },
 

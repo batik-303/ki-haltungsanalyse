@@ -1,5 +1,27 @@
 import type { PoseState } from './pose-store'
 
+// ── Session phase (derived from existing state) ──
+export type SessionPhase = 'positioning' | 'ready-to-calibrate' | 'calibrating' | 'ready-to-start' | 'tracking'
+
+export function selectSessionPhase(state: PoseState): SessionPhase {
+  if (state.isCalibrating) return 'calibrating'
+  if (!state.masterPrint && !state.distanceOk) return 'positioning'
+  if (!state.masterPrint && state.distanceOk) return 'ready-to-calibrate'
+  if (state.masterPrint && !state.sessionActive) return 'ready-to-start'
+  return 'tracking'
+}
+
+// ── Session phase hint text ──
+export function selectPhaseHint(state: PoseState): string {
+  switch (selectSessionPhase(state)) {
+    case 'positioning': return 'Positioniere dich vor der Kamera'
+    case 'ready-to-calibrate': return "Sage 'Kalibrieren' wenn bereit"
+    case 'calibrating': return 'Kalibrierung läuft...'
+    case 'ready-to-start': return "Sage 'Start' um die Session zu starten"
+    case 'tracking': return "Sage 'Stop' zum Beenden"
+  }
+}
+
 // ── Status color from layer ──
 export function selectStatusColor(state: PoseState): string {
   if (!state.masterPrint) return '#5b9bd5' // ready blue

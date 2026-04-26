@@ -1,12 +1,20 @@
-import { CameraView } from './components/camera-view'
+import { usePoseStore } from './store/pose-store'
+import { HomeScreen } from './components/screens/home-screen'
+import { SetupScreen } from './components/screens/setup-screen'
+import { SessionScreen } from './components/screens/session-screen'
+import { ResultsScreen } from './components/screens/results-screen'
 
 export default function App() {
-  return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center py-8 gap-4">
-      <h1 className="text-xl font-bold tracking-wide text-sapphire-light">
-        ⚓ Blue Anchor – KI-Haltungsanalyse
-      </h1>
-      <CameraView />
-    </div>
-  )
+  const appScreen = usePoseStore((s) => s.appScreen)
+
+  switch (appScreen) {
+    case 'home':
+      return <HomeScreen />
+    case 'setup':
+      return <SetupScreen />
+    case 'session':
+      return <SessionScreen />
+    case 'results':
+      return <ResultsScreen />
+  }
 }
