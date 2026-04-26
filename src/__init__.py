@@ -1,1 +1,0 @@
-# KI-Haltungsanalyse für Musiker

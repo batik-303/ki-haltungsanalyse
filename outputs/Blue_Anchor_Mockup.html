@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blue Anchor – App Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a1628;
+    color: #fff;
+    overflow: auto;
+    min-height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── PHONE FRAME ── */
+  .phone-frame {
+    width: 375px;
+    height: 812px;
+    margin: 20px auto;
+    border-radius: 40px;
+    border: 3px solid #2a3a5c;
+    background: #0d1b2a;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .status-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #8899aa;
+    background: rgba(13,27,42,0.9);
+    position: relative;
+    z-index: 10;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    width: 100%;
+    height: calc(100% - 44px);
+    position: absolute;
+    top: 44px;
+    left: 0;
+    animation: fadeIn 0.4s ease;
+  }
+  .screen.active { display: flex; flex-direction: column; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── START SCREEN ── */
+  .start-screen {
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #0d1b2a 0%, #1b2d4a 50%, #0d1b2a 100%);
+    padding: 40px 30px;
+    text-align: center;
+  }
+
+  .anchor-logo {
+    font-size: 72px;
+    margin-bottom: 16px;
+    animation: anchorFloat 3s ease-in-out infinite;
+  }
+  @keyframes anchorFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .app-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .app-subtitle {
+    font-size: 16px;
+    color: #5b9bd5;
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+
+  .tagline {
+    font-size: 14px;
+    color: #8899aa;
+    line-height: 1.6;
+    margin-bottom: 50px;
+    max-width: 280px;
+  }
+
+  .start-btn {
+    width: 220px;
+    padding: 16px 0;
+    border-radius: 30px;
+    border: none;
+    background: linear-gradient(135deg, #1b4f72, #2e86c1);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(46,134,193,0.3);
+  }
+  .start-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 30px rgba(46,134,193,0.5);
+  }
+
+  .version-tag {
+    margin-top: 24px;
+    font-size: 11px;
+    color: #4a5a6a;
+  }
+
+  /* ── SETUP SCREEN ── */
+  .setup-screen {
+    background: #0d1b2a;
+    padding: 24px;
+    align-items: center;
+  }
+
+  .setup-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+  .setup-desc {
+    font-size: 13px;
+    color: #7a8a9a;
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .setup-diagram {
+    width: 260px;
+    height: 300px;
+    background: #132238;
+    border-radius: 16px;
+    border: 1px solid #1e3a5f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .setup-person { position: relative; }
+  .setup-person .head {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid #5b9bd5;
+    margin: 0 auto 6px;
+  }
+  .setup-person .body { width: 2px; height: 60px; background: #5b9bd5; margin: 0 auto; }
+  .setup-person .arms {
+    width: 80px; height: 2px; background: #5b9bd5;
+    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
+  }
+  .setup-person .violin-arm {
+    position: absolute; top: 38px; left: -8px;
+    width: 50px; height: 2px; background: #5b9bd5;
+    transform: rotate(-35deg); transform-origin: right center;
+  }
+  .setup-person .violin {
+    position: absolute; top: 18px; left: -52px;
+    width: 44px; height: 14px; border-radius: 6px;
+    border: 1.5px solid #e8a838; transform: rotate(-10deg);
+  }
+  .setup-person .legs { display: flex; justify-content: center; gap: 16px; }
+  .setup-person .leg { width: 2px; height: 50px; background: #5b9bd5; }
+
+  .distance-label {
+    position: absolute; bottom: 16px;
+    font-size: 11px; color: #5b9bd5;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .distance-line {
+    width: 60px; height: 1px; background: #5b9bd5; position: relative;
+  }
+  .distance-line::before, .distance-line::after {
+    content: ''; position: absolute; top: -3px; width: 1px; height: 7px; background: #5b9bd5;
+  }
+  .distance-line::before { left: 0; }
+  .distance-line::after { right: 0; }
+
+  .setup-tips { width: 100%; margin-bottom: 24px; }
+  .tip {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; font-size: 13px; color: #aabbcc;
+  }
+  .tip-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(46,134,193,0.15); color: #5b9bd5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; flex-shrink: 0; margin-top: 1px;
+  }
+
+  .setup-btn, .action-btn {
+    width: 100%; padding: 15px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, #1b4f72, #2e86c1);
+    color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: auto; transition: all 0.3s;
+  }
+  .setup-btn:hover, .action-btn:hover { box-shadow: 0 4px 20px rgba(46,134,193,0.4); }
+
+  /* ── FOCUS SELECT SCREEN ── */
+  .focus-screen {
+    background: #0d1b2a;
+    padding: 24px;
+    align-items: center;
+  }
+  .focus-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .focus-desc { font-size: 13px; color: #7a8a9a; text-align: center; margin-bottom: 28px; line-height: 1.5; }
+
+  .focus-card {
+    width: 100%; padding: 20px;
+    background: #132238; border-radius: 16px;
+    border: 2px solid #1e3a5f; margin-bottom: 14px;
+    cursor: pointer; transition: all 0.3s;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .focus-card:hover, .focus-card.selected {
+    border-color: #2e86c1;
+    background: rgba(46,134,193,0.1);
+  }
+  .focus-card-icon { font-size: 32px; flex-shrink: 0; }
+  .focus-card-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .focus-card-desc { font-size: 12px; color: #7a8a9a; line-height: 1.4; }
+
+  /* ── PRACTICE SCREEN ── */
+  .practice-screen { background: #0a0a0a; position: relative; }
+
+  .camera-view {
+    flex: 1;
+    /* desaturated, calm background - not mirror-like */
+    background: linear-gradient(180deg, #181820 0%, #1a1e2e 50%, #141820 100%);
+    position: relative; overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .practice-top {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 56px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 16px;
+    background: linear-gradient(180deg, rgba(13,27,42,0.9), transparent);
+    z-index: 10;
+  }
+  .practice-top .back-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none;
+    color: #fff; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .timer { font-size: 14px; color: #8899aa; font-variant-numeric: tabular-nums; }
+  .mode-badge {
+    padding: 4px 12px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    transition: all 0.3s;
+  }
+  .mode-badge.flow { background: rgba(46,134,193,0.2); color: #5b9bd5; }
+  .mode-badge.analyse { background: rgba(232,168,56,0.2); color: #e8a838; }
+
+  /* ── FEEDBACK BAR ── */
+  .feedback-bar {
+    height: 64px; background: rgba(13,27,42,0.95);
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 12px;
+    border-top: 1px solid #1e3a5f;
+  }
+  .feedback-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .feedback-indicator.good { background: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,0.5); }
+  .feedback-indicator.warning-yellow { background: #f1c40f; box-shadow: 0 0 8px rgba(241,196,15,0.5); }
+  .feedback-indicator.warning-purple { background: #9b59b6; box-shadow: 0 0 8px rgba(155,89,182,0.5); }
+  .feedback-text { font-size: 13px; color: #ccdde8; flex: 1; line-height: 1.3; }
+
+  /* Analyse tap button */
+  .analyse-tap {
+    position: absolute; bottom: 12px; right: 12px;
+    padding: 8px 14px; border-radius: 20px;
+    background: rgba(232,168,56,0.15); border: 1px solid rgba(232,168,56,0.3);
+    color: #e8a838; font-size: 11px; cursor: pointer;
+    z-index: 10; transition: all 0.3s;
+  }
+  .analyse-tap:hover { background: rgba(232,168,56,0.25); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    height: 70px; background: rgba(13,27,42,0.98);
+    display: flex; align-items: center; justify-content: space-around;
+    border-top: 1px solid #1e3a5f;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px; cursor: pointer; opacity: 0.5; transition: opacity 0.2s;
+  }
+  .nav-item.active { opacity: 1; }
+  .nav-item-icon { font-size: 22px; }
+  .nav-item-label { font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; color: #8899aa; }
+  .nav-item.active .nav-item-label { color: #5b9bd5; }
+
+  /* ── DAILY FEEDBACK SCREEN ── */
+  .daily-screen { background: #0d1b2a; padding: 24px; align-items: center; }
+  .daily-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .daily-date { font-size: 12px; color: #5a6a7a; margin-bottom: 28px; }
+  .daily-card {
+    width: 100%; background: #132238; border-radius: 16px;
+    padding: 20px; margin-bottom: 14px; border: 1px solid #1e3a5f;
+  }
+  .daily-card-title { font-size: 13px; color: #5b9bd5; font-weight: 600; margin-bottom: 10px; }
+  .daily-card-value { font-size: 28px; font-weight: 700; }
+  .daily-card-desc { font-size: 12px; color: #7a8a9a; margin-top: 6px; line-height: 1.5; }
+  .daily-message {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(27,79,114,0.3), rgba(46,134,193,0.1));
+    border-radius: 16px; padding: 20px; margin-top: 10px;
+    border: 1px solid rgba(46,134,193,0.2);
+  }
+  .daily-message-text { font-size: 15px; color: #ccdde8; line-height: 1.6; font-style: italic; }
+
+  /* ── ANALYSE OVERLAY ── */
+  .analyse-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,15,30,0.92);
+    z-index: 20; display: none;
+    flex-direction: column; padding: 60px 20px 20px;
+    animation: fadeIn 0.3s ease;
+  }
+  .analyse-overlay.visible { display: flex; }
+
+  .analyse-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px;
+  }
+  .analyse-title { font-size: 16px; font-weight: 600; color: #e8a838; }
+  .analyse-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: none;
+    color: #fff; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .analyse-chart {
+    flex: 1; background: #0d1b2a; border-radius: 12px;
+    border: 1px solid #1e3a5f; padding: 16px; position: relative;
+    overflow: hidden;
+  }
+  .chart-label { font-size: 11px; color: #5a6a7a; margin-bottom: 8px; }
+  .chart-sublabel { font-size: 10px; color: #3a4a5a; position: absolute; bottom: 12px; left: 16px; }
+  .chart-time { font-size: 10px; color: #3a4a5a; position: absolute; bottom: 12px; right: 16px; }
+
+  /* Threshold lines */
+  .threshold-good {
+    position: absolute; left: 16px; right: 16px;
+    height: 1px; background: rgba(46,204,113,0.3);
+    top: 55%;
+  }
+  .threshold-label {
+    position: absolute; right: 0; top: -14px;
+    font-size: 9px; color: rgba(46,204,113,0.5);
+  }
+
+  .analyse-insight {
+    margin-top: 14px; padding: 14px;
+    background: rgba(46,134,193,0.08); border-radius: 10px;
+    border: 1px solid rgba(46,134,193,0.15);
+    font-size: 12px; color: #8899aa; line-height: 1.5;
+  }
+  .analyse-insight strong { color: #ccdde8; }
+
+  /* ── DEMO CONTROLS ── */
+  .demo-controls {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; justify-content: center;
+    max-width: 500px;
+  }
+  .demo-btn {
+    padding: 10px 16px; border-radius: 8px;
+    border: 1px solid #2a3a5c; background: #132238;
+    color: #5b9bd5; font-size: 11px; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .demo-btn:hover { background: #1e3a5f; }
+  .demo-btn.active-demo { background: #1b4f72; color: #fff; }
+
+  /* Responsive */
+  @media (max-height: 920px) {
+    .phone-frame { transform: scale(0.88); margin-top: -20px; }
+  }
+  @media (max-height: 780px) {
+    .phone-frame { transform: scale(0.75); margin-top: -60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="status-bar">9:41</div>
+
+  <!-- ═══ SCREEN 1: START ═══ -->
+  <div class="screen start-screen active" id="screen-start">
+    <div class="anchor-logo">⚓</div>
+    <div class="app-title">BLUE ANCHOR</div>
+    <div class="app-subtitle">Music AI</div>
+    <div class="tagline">Dein digitaler Spiegel beim Üben. Echtzeit-Haltungsfeedback – sanft, intuitiv, ohne Unterbrechung.</div>
+    <button class="start-btn" onclick="goTo('screen-setup')">Üben starten</button>
+    <div class="version-tag">V1 Beta · Geige</div>
+  </div>
+
+  <!-- ═══ SCREEN 2: SETUP ═══ -->
+  <div class="screen setup-screen" id="screen-setup">
+    <div class="setup-title">Kamera einrichten</div>
+    <div class="setup-desc">Stelle dein Gerät so auf, dass dein Oberkörper sichtbar ist.</div>
+    <div class="setup-diagram">
+      <div class="setup-person">
+        <div class="head"></div>
+        <div class="violin-arm"></div>
+        <div class="violin"></div>
+        <div class="arms"></div>
+        <div class="body"></div>
+        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+      </div>
+      <div class="distance-label">
+        <div class="distance-line"></div>
+        <span>1–1.5 m</span>
+        <div class="distance-line"></div>
+      </div>
+    </div>
+    <div class="setup-tips">
+      <div class="tip"><div class="tip-icon">1</div><span>Frontal zur Kamera stehen – beide Schultern sichtbar</span></div>
+      <div class="tip"><div class="tip-icon">2</div><span>Gute Beleuchtung – kein Gegenlicht</span></div>
+      <div class="tip"><div class="tip-icon">3</div><span>Geige in Spielposition – dann auf „Weiter" drücken</span></div>
+    </div>
+    <button class="setup-btn" onclick="goTo('screen-focus')">Weiter</button>
+  </div>
+
+  <!-- ═══ SCREEN 3: FOCUS SELECT ═══ -->
+  <div class="screen focus-screen" id="screen-focus">
+    <div class="focus-title">Heutiger Fokus</div>
+    <div class="focus-desc">Wähle ein Haltungsziel für diese Übesession.</div>
+
+    <div class="focus-card selected" id="focus-shoulder" onclick="selectFocus('shoulder')">
+      <div class="focus-card-icon">🎯</div>
+      <div>
+        <div class="focus-card-title">Schulterposition</div>
+        <div class="focus-card-desc">Erkennt, wenn deine linke Schulter zum Ohr hochzieht. Hilft gegen Verspannung.</div>
+      </div>
+    </div>
+
+    <div class="focus-card" id="focus-violin" onclick="selectFocus('violin')">
+      <div class="focus-card-icon">🎻</div>
+      <div>
+        <div class="focus-card-title">Geigenstabilität</div>
+        <div class="focus-card-desc">Erkennt, wenn dein Instrument absinkt. Hilft gegen Ermüdungshaltung.</div>
+      </div>
+    </div>
+
+    <div style="flex:1;"></div>
+    <button class="action-btn" onclick="goTo('screen-practice')">Session starten</button>
+  </div>
+
+  <!-- ═══ SCREEN 4: PRACTICE (Flow-Modus) ═══ -->
+  <div class="screen practice-screen" id="screen-practice">
+    <div class="camera-view" id="cameraView">
+      <div class="practice-top">
+        <button class="back-btn" onclick="goTo('screen-start')">←</button>
+        <div class="timer" id="timer">00:00</div>
+        <div class="mode-badge flow" id="modeBadge">FLOW</div>
+      </div>
+
+      <!-- SVG Scene -->
+      <svg id="skeletonSvg" width="100%" height="100%" style="position:absolute;top:0;left:0;z-index:3;">
+        <defs>
+          <!-- Gummiband gradient: Blue → Yellow → Purple -->
+          <linearGradient id="gummibandGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" style="stop-color:#2e86c1;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#f1c40f;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#9b59b6;stop-opacity:1" />
+          </linearGradient>
+          <linearGradient id="gummibandMild" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" style="stop-color:#2e86c1;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#f1c40f;stop-opacity:1" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="softGlow">
+            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Body silhouette - very faint, 12% opacity, no joints -->
+        <g opacity="0.12">
+          <!-- Head silhouette -->
+          <ellipse cx="187" cy="152" rx="22" ry="26" fill="#5b9bd5" />
+          <!-- Neck -->
+          <rect x="181" y="175" width="12" height="18" fill="#5b9bd5" rx="4"/>
+          <!-- Torso -->
+          <path d="M155,193 Q155,190 160,190 L214,190 Q219,190 219,193 L225,310 Q225,315 220,315 L154,315 Q149,315 149,310 Z" fill="#5b9bd5"/>
+          <!-- Left arm -->
+          <path d="M155,195 L120,198 L95,260 L72,218 L80,215 L100,255 L125,195 Z" fill="#5b9bd5"/>
+          <!-- Right arm -->
+          <path d="M219,195 L254,200 L280,280 L230,310 L233,305 L275,275 L250,198 Z" fill="#5b9bd5"/>
+        </g>
+
+        <!-- Violin (subtle golden line) -->
+        <line id="violin-line" x1="178" y1="174" x2="72" y2="218" stroke="#c8963e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+        <ellipse cx="163" cy="181" rx="16" ry="9" fill="none" stroke="#c8963e" stroke-width="1.2" opacity="0.35" transform="rotate(-15 163 181)"/>
+
+        <!-- Gummiband - initially hidden -->
+        <g id="gummiband-group" opacity="0" style="transition: opacity 0.8s ease;">
+          <line id="gummiband-line" x1="120" y1="195" x2="120" y2="195"
+            stroke="url(#gummibandMild)" stroke-width="8" stroke-linecap="round" filter="url(#softGlow)"
+            style="transition: all 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);"/>
+          <!-- Small return arrow -->
+          <polygon id="gummiband-arrow" points="0,0 0,0 0,0" fill="rgba(241,196,15,0.7)"
+            style="transition: all 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);"/>
+        </g>
+
+        <!-- ANCHOR POINT (left shoulder) - dark blue, subtle pulse -->
+        <circle id="anchor-left" cx="120" cy="195" r="10" fill="#1b4f72" stroke="#2e86c1" stroke-width="3"
+          filter="url(#glow)" style="transition: all 1s ease;">
+          <animate attributeName="r" values="10;12;10" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Anchor label -->
+        <text id="anchor-label-l" x="120" y="180" text-anchor="middle" fill="#2e86c1"
+          font-size="9" font-family="sans-serif" font-weight="600" opacity="0.7">ANKER</text>
+
+        <!-- Status pill -->
+        <g id="status-good" opacity="1" style="transition: opacity 0.6s ease;">
+          <rect x="130" y="430" width="115" height="28" rx="14" fill="rgba(46,204,113,0.12)" stroke="rgba(46,204,113,0.25)" stroke-width="1"/>
+          <circle cx="148" cy="444" r="4" fill="#2ecc71"/>
+          <text x="160" y="449" fill="rgba(46,204,113,0.8)" font-size="11" font-family="sans-serif">Im Anker</text>
+        </g>
+
+        <g id="status-warning-yellow" opacity="0" style="transition: opacity 0.6s ease;">
+          <rect x="115" y="430" width="145" height="28" rx="14" fill="rgba(241,196,15,0.12)" stroke="rgba(241,196,15,0.25)" stroke-width="1"/>
+          <circle cx="133" cy="444" r="4" fill="#f1c40f">
+            <animate attributeName="r" values="4;5;4" dur="1.2s" repeatCount="indefinite"/>
+          </circle>
+          <text x="145" y="449" fill="rgba(241,196,15,0.8)" font-size="11" font-family="sans-serif">Schulter lösen</text>
+        </g>
+
+        <g id="status-warning-purple" opacity="0" style="transition: opacity 0.6s ease;">
+          <rect x="110" y="430" width="155" height="28" rx="14" fill="rgba(155,89,182,0.12)" stroke="rgba(155,89,182,0.25)" stroke-width="1"/>
+          <circle cx="128" cy="444" r="4" fill="#9b59b6">
+            <animate attributeName="r" values="4;6;4" dur="0.8s" repeatCount="indefinite"/>
+          </circle>
+          <text x="140" y="449" fill="rgba(155,89,182,0.8)" font-size="11" font-family="sans-serif">Zurück zum Anker</text>
+        </g>
+      </svg>
+
+      <!-- Analyse tap button -->
+      <div class="analyse-tap" id="analyseTap" onclick="toggleAnalyse()">🔍 Analyse</div>
+
+      <!-- ── ANALYSE OVERLAY ── -->
+      <div class="analyse-overlay" id="analyseOverlay">
+        <div class="analyse-header">
+          <div class="analyse-title">🔍 Analyse – Schulterposition</div>
+          <button class="analyse-close" onclick="toggleAnalyse()">✕</button>
+        </div>
+
+        <div class="analyse-chart">
+          <div class="chart-label">Schulterhöhe (links) – letzte 30 Sekunden</div>
+          <div class="threshold-good">
+            <div class="threshold-label">Anker-Zone</div>
+          </div>
+          <!-- Simulated chart line via SVG -->
+          <svg width="100%" height="80%" viewBox="0 0 300 100" preserveAspectRatio="none" style="position:absolute;bottom:30px;left:16px;right:16px;width:calc(100% - 32px);">
+            <path d="M0,60 C20,58 40,55 60,52 C80,49 90,40 100,35 C110,30 115,25 120,32 C130,42 140,55 150,58 C160,60 170,58 180,56 C190,54 200,50 210,42 C220,34 225,28 230,26 C240,30 250,45 260,55 C270,58 280,60 300,60"
+              fill="none" stroke="#5b9bd5" stroke-width="2" opacity="0.8"/>
+            <!-- Warning zone highlights -->
+            <path d="M90,40 C100,35 110,30 115,25 L120,32 C115,25 110,30 100,35 Z" fill="rgba(241,196,15,0.2)" stroke="none"/>
+            <path d="M210,42 C220,34 225,28 230,26" fill="none" stroke="#f1c40f" stroke-width="2.5"/>
+          </svg>
+          <div class="chart-sublabel">▲ höher = mehr Spannung</div>
+          <div class="chart-time">0s ————————— 30s</div>
+        </div>
+
+        <div class="analyse-insight">
+          <strong>2 kurze Spannungsmomente</strong> in den letzten 30 Sekunden (bei Sekunde 10 und 22). Beide Male hast du schnell korrigiert – durchschnittlich in 1.6s. Das ist besser als gestern (2.1s).
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback bar -->
+    <div class="feedback-bar" id="feedbackBar">
+      <div class="feedback-indicator good" id="feedbackDot"></div>
+      <div class="feedback-text" id="feedbackText">Schöne stabile Haltung – weiter so.</div>
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <div class="nav-item-icon">⚓</div>
+        <div class="nav-item-label">Üben</div>
+      </div>
+      <div class="nav-item" onclick="goTo('screen-daily')">
+        <div class="nav-item-icon">📊</div>
+        <div class="nav-item-label">Heute</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-item-icon">👤</div>
+        <div class="nav-item-label">Profil</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN 5: DAILY FEEDBACK ═══ -->
+  <div class="screen daily-screen" id="screen-daily">
+    <div class="daily-title">Dein Tag</div>
+    <div class="daily-date">18. April 2026</div>
+
+    <div class="daily-card">
+      <div class="daily-card-title">⚓ Zeit im Anker</div>
+      <div class="daily-card-value" style="color:#2ecc71;">78%</div>
+      <div class="daily-card-desc">Deine stabilen Phasen wurden heute deutlich länger als gestern.</div>
+    </div>
+
+    <div class="daily-card">
+      <div class="daily-card-title">🔄 Rückkehr-Geschwindigkeit</div>
+      <div class="daily-card-value" style="color:#5b9bd5;">1.8s</div>
+      <div class="daily-card-desc">Du bist schneller zurückgekommen als gestern (2.4s).</div>
+    </div>
+
+    <div class="daily-card">
+      <div class="daily-card-title">🎻 Übedauer</div>
+      <div class="daily-card-value" style="color:#e8a838;">23 min</div>
+      <div class="daily-card-desc">Heute 3 Minuten länger als dein 7-Tage-Schnitt.</div>
+    </div>
+
+    <div class="daily-message">
+      <div class="daily-message-text">„Viele ruhige Momente im Anker heute. Dein Körper lernt, die Balance zu halten." ⚓</div>
+    </div>
+
+    <button class="action-btn" style="margin-top:20px;" onclick="goTo('screen-practice')">← Zurück zum Üben</button>
+  </div>
+</div>
+
+<!-- Demo controls -->
+<div class="demo-controls">
+  <button class="demo-btn active-demo" id="btn-good" onclick="showGoodPosture()">✓ Stabil</button>
+  <button class="demo-btn" id="btn-mild" onclick="showMildDeviation()">🟡 Leicht</button>
+  <button class="demo-btn" id="btn-bad" onclick="showBadPosture()">🟣 Deutlich</button>
+  <button class="demo-btn" id="btn-analyse" onclick="toggleAnalyseDemo()">🔍 Analyse</button>
+  <button class="demo-btn" id="btn-screens" onclick="cycleScreens()">Screens →</button>
+</div>
+
+<script>
+  let selectedFocus = 'shoulder';
+
+  // ── Navigation ──
+  function goTo(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    if (screenId === 'screen-practice') {
+      startTimer();
+      closeAnalyse();
+    }
+  }
+
+  // ── Focus selection ──
+  function selectFocus(type) {
+    selectedFocus = type;
+    document.querySelectorAll('.focus-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('focus-' + type).classList.add('selected');
+  }
+
+  // ── Timer ──
+  let seconds = 0, timerInterval = null;
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    seconds = 0;
+    timerInterval = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const s = String(seconds % 60).padStart(2, '0');
+      document.getElementById('timer').textContent = m + ':' + s;
+    }, 1000);
+  }
+
+  // ── Posture states ──
+  function clearDemoBtns() {
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active-demo'));
+  }
+
+  function showGoodPosture() {
+    closeAnalyse();
+    clearDemoBtns();
+    document.getElementById('btn-good').classList.add('active-demo');
+
+    const anchor = document.getElementById('anchor-left');
+    anchor.setAttribute('cy', '195');
+    anchor.setAttribute('fill', '#1b4f72');
+    anchor.setAttribute('stroke', '#2e86c1');
+    document.getElementById('anchor-label-l').setAttribute('y', '180');
+
+    document.getElementById('gummiband-group').setAttribute('opacity', '0');
+
+    document.getElementById('status-good').setAttribute('opacity', '1');
+    document.getElementById('status-warning-yellow').setAttribute('opacity', '0');
+    document.getElementById('status-warning-purple').setAttribute('opacity', '0');
+
+    document.getElementById('feedbackDot').className = 'feedback-indicator good';
+    document.getElementById('feedbackText').textContent = 'Schöne stabile Haltung – weiter so.';
+    document.getElementById('modeBadge').textContent = 'FLOW';
+    document.getElementById('modeBadge').className = 'mode-badge flow';
+  }
+
+  function showMildDeviation() {
+    closeAnalyse();
+    clearDemoBtns();
+    document.getElementById('btn-mild').classList.add('active-demo');
+
+    const shiftY = 183;
+    const anchor = document.getElementById('anchor-left');
+    anchor.setAttribute('cy', String(shiftY));
+    anchor.setAttribute('fill', '#7d6608');
+    anchor.setAttribute('stroke', '#f1c40f');
+    document.getElementById('anchor-label-l').setAttribute('y', String(shiftY - 15));
+
+    const gGroup = document.getElementById('gummiband-group');
+    const gLine = document.getElementById('gummiband-line');
+    const gArrow = document.getElementById('gummiband-arrow');
+    gGroup.setAttribute('opacity', '1');
+    gLine.setAttribute('stroke', 'url(#gummibandMild)');
+    gLine.setAttribute('stroke-width', '6');
+    gLine.setAttribute('y1', '195');
+    gLine.setAttribute('y2', String(shiftY));
+    const ay = shiftY + 4;
+    gArrow.setAttribute('points', `115,${ay} 125,${ay} 120,${ay + 8}`);
+    gArrow.setAttribute('fill', 'rgba(241,196,15,0.6)');
+
+    document.getElementById('status-good').setAttribute('opacity', '0');
+    document.getElementById('status-warning-yellow').setAttribute('opacity', '1');
+    document.getElementById('status-warning-purple').setAttribute('opacity', '0');
+
+    document.getElementById('feedbackDot').className = 'feedback-indicator warning-yellow';
+    document.getElementById('feedbackText').textContent = 'Leichte Spannung – sanft lösen.';
+    document.getElementById('modeBadge').textContent = 'FLOW';
+    document.getElementById('modeBadge').className = 'mode-badge flow';
+  }
+
+  function showBadPosture() {
+    closeAnalyse();
+    clearDemoBtns();
+    document.getElementById('btn-bad').classList.add('active-demo');
+
+    const shiftY = 168;
+    const anchor = document.getElementById('anchor-left');
+    anchor.setAttribute('cy', String(shiftY));
+    anchor.setAttribute('fill', '#6c3483');
+    anchor.setAttribute('stroke', '#9b59b6');
+    document.getElementById('anchor-label-l').setAttribute('y', String(shiftY - 15));
+
+    const gGroup = document.getElementById('gummiband-group');
+    const gLine = document.getElementById('gummiband-line');
+    const gArrow = document.getElementById('gummiband-arrow');
+    gGroup.setAttribute('opacity', '1');
+    gLine.setAttribute('stroke', 'url(#gummibandGradient)');
+    gLine.setAttribute('stroke-width', '10');
+    gLine.setAttribute('y1', '195');
+    gLine.setAttribute('y2', String(shiftY));
+    const ay = shiftY + 4;
+    gArrow.setAttribute('points', `113,${ay} 127,${ay} 120,${ay + 12}`);
+    gArrow.setAttribute('fill', 'rgba(155,89,182,0.7)');
+
+    document.getElementById('status-good').setAttribute('opacity', '0');
+    document.getElementById('status-warning-yellow').setAttribute('opacity', '0');
+    document.getElementById('status-warning-purple').setAttribute('opacity', '1');
+
+    document.getElementById('feedbackDot').className = 'feedback-indicator warning-purple';
+    document.getElementById('feedbackText').textContent = 'Schulter spannt – zurück zum Anker.';
+    document.getElementById('modeBadge').textContent = 'FLOW';
+    document.getElementById('modeBadge').className = 'mode-badge flow';
+  }
+
+  // ── Analyse mode ──
+  let analyseOpen = false;
+
+  function toggleAnalyse() {
+    analyseOpen = !analyseOpen;
+    const overlay = document.getElementById('analyseOverlay');
+    const badge = document.getElementById('modeBadge');
+    if (analyseOpen) {
+      overlay.classList.add('visible');
+      badge.textContent = 'ANALYSE';
+      badge.className = 'mode-badge analyse';
+    } else {
+      overlay.classList.remove('visible');
+      badge.textContent = 'FLOW';
+      badge.className = 'mode-badge flow';
+    }
+  }
+  function closeAnalyse() {
+    analyseOpen = false;
+    document.getElementById('analyseOverlay').classList.remove('visible');
+  }
+
+  function toggleAnalyseDemo() {
+    goTo('screen-practice');
+    clearDemoBtns();
+    document.getElementById('btn-analyse').classList.add('active-demo');
+    if (!analyseOpen) toggleAnalyse();
+  }
+
+  // ── Cycle screens ──
+  let currentScreenIndex = 0;
+  const screenIds = ['screen-start', 'screen-setup', 'screen-focus', 'screen-practice', 'screen-daily'];
+  function cycleScreens() {
+    closeAnalyse();
+    currentScreenIndex = (currentScreenIndex + 1) % screenIds.length;
+    goTo(screenIds[currentScreenIndex]);
+  }
+</script>
+</body>
+</html>
