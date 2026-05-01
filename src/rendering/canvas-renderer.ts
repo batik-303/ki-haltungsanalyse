@@ -8,9 +8,6 @@ import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
 
-// --- Schnecken-Projektion experimentell ---
-const SNAIL_MODE = true
-
 // Module-level glow state for wrist feedback (persists across frames)
 let wristGlowLevel = 0
 let wristGlowDecay = 0
@@ -209,64 +206,18 @@ export function renderFrame(
     const wx = wrist.x * width, wy = wrist.y * height
 
     if (masterPrint && masterPrint.mode === 'violin' && !isCalibrating) {
-      // --- Schnecken-Projektion ---
-      const snailX = 48, snailY = 48 // Feste Position oben links
-      const anchorX = masterPrint.calibWristX * width
-      const anchorY = masterPrint.calibWristY * height
+      const calibY = masterPrint.calibWristY * height
       const coreR = 14 + Math.sin(now / 600) * 1.5
       const inDeadzone = tensionScore <= 10
 
-      // Schnecke zeichnen (Kreis, experimentell)
-      if (SNAIL_MODE) {
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(snailX, snailY, 18, 0, Math.PI * 2)
-        ctx.fillStyle = '#bfa76f'
-        ctx.globalAlpha = 0.7
-        ctx.fill()
-        ctx.globalAlpha = 1
-        ctx.lineWidth = 2
-        ctx.strokeStyle = '#7c5a1e'
-        ctx.stroke()
-        // Spirale
-        ctx.beginPath()
-        ctx.arc(snailX, snailY, 10, 0, 2 * Math.PI)
-        ctx.moveTo(snailX + 10, snailY)
-        ctx.arc(snailX, snailY, 7, 0, 2 * Math.PI)
-        ctx.moveTo(snailX + 7, snailY)
-        ctx.arc(snailX, snailY, 4, 0, 2 * Math.PI)
-        ctx.strokeStyle = '#7c5a1e'
-        ctx.lineWidth = 1.2
-        ctx.stroke()
-        ctx.restore()
-      }
+      // Sapphire anchor moves with wrist (sits on the hand)
+      drawSapphireAnchor(ctx, wx, wy, coreR, now, inDeadzone ? flowStreak + 2 : 0)
+      drawReturnGlow(ctx, wx, wy, coreR, returnGlowTimer, true)
 
-      // Ankerpunkt: leuchtet/pulsiert in Deadzone (Belohnung)
-      drawSapphireAnchor(
-        ctx,
-        anchorX,
-        anchorY,
-        coreR,
-        now,
-        inDeadzone ? flowStreak + 2 : 0 // Glow nur in Deadzone
-      )
-      drawReturnGlow(ctx, anchorX, anchorY, coreR, returnGlowTimer, true)
-
-      // Band/Strich: nur bei Abweichung sichtbar
+      // Yellow band from wrist to correct Y height (same X, calibrated Y)
       if (!inDeadzone) {
-        // Band von Schnecke zum Ankerpunkt
-        if (SNAIL_MODE) {
-          drawGoldenBand(ctx, snailX, snailY, anchorX, anchorY, tensionScore, now, driftDirection)
-        } else {
-          drawGoldenBand(ctx, anchorX, anchorY, wx, wy, tensionScore, now, driftDirection)
-        }
+        drawGoldenBand(ctx, wx, wy, wx, calibY, tensionScore, now, driftDirection)
       }
-
-      // Kleiner Punkt an aktueller Handposition (Debug/optional)
-      ctx.beginPath()
-      ctx.arc(wx, wy, 5, 0, Math.PI * 2)
-      ctx.fillStyle = tensionScore < 10 ? '#2196F344' : '#DAA52088'
-      ctx.fill()
     } else if (!isCalibrating && !isFlow) {
       // Pre-calibration preview
       const pulseR = 12 + Math.sin(now / 400) * 2

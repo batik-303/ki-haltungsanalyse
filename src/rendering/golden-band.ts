@@ -1,7 +1,6 @@
 /**
- * Render a directional elastic line from the fixed anchor to the live wrist position.
- * Gold line = violin sinking, silver-blue line = violin rising.
- * Thickness + opacity scale with tension. Invisible at tension < 3.
+ * Render a yellow elastic band from the fixed anchor to the live wrist position.
+ * Always gold — thickness + opacity scale with tension. Invisible at tension < 3.
  */
 export function drawGoldenBand(
   ctx: CanvasRenderingContext2D,
@@ -16,16 +15,13 @@ export function drawGoldenBand(
   if (tensionScore <= 3) return
 
   const intensity = Math.min(1, tensionScore / 100)
-  // Sinken: driftDirection > 0, Steigen: < 0
   const sinking = driftDirection > 0
 
-  // Farben und Dicke je nach Richtung
-  const coreColor = sinking ? '#FFD700' : '#64B5F6'
-  const glowColor = sinking ? '#DAA520' : '#90CAF9'
-  // Sinken: dicker (bis 14px), Steigen: dünner (bis 6px)
-  const lineWidth = sinking
-    ? 3 + intensity * 11 // 3–14px
-    : 1 + intensity * 5 // 1–6px
+  // Always gold
+  const coreColor = '#FFD700'
+  const glowColor = '#DAA520'
+  // Unified thickness: 3–14px
+  const lineWidth = 3 + intensity * 11
 
   // Opazität: 0.15 → 0.7
   const baseOpacity = 0.15 + intensity * 0.55
@@ -89,7 +85,7 @@ export function drawGoldenBand(
     ctx.moveTo(anchorX, anchorY)
     ctx.lineTo(wristX, wristY)
     ctx.strokeStyle = coreColor
-    ctx.lineWidth = lineWidth + pulse * (sinking ? 6 : 2)
+    ctx.lineWidth = lineWidth + pulse * 6
     ctx.lineCap = 'round'
     ctx.globalAlpha = (1 - pulse) * 0.2
     ctx.stroke()
