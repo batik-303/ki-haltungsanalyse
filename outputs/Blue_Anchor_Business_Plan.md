@@ -257,4 +257,4 @@ Blue Anchor verfolgt einen klaren Fokus: Zuerst das Musikprodukt validieren, Nut
 
 # **12\. Kernidee in einem Satz**
 
-**_Blue Anchor verwandelt Haltung von einer bewussten Aufgabe in eine intuitive, visuell gesteuerte Selbstregulation._**
+**_Blue Anchor verwandelt Haltung von einer bewussten Aufgabe in eine intuitive, visuell gesteuerte Selbstregulation._**3

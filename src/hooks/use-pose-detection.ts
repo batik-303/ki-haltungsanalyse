@@ -1,17 +1,53 @@
+import { createWristRepairStatus } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { analyzeWrist, updateBendLock } from '../core/analysis/wrist-analyzer'
+import { analyzeWrist, updateBendLock, computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
+import { createOneEuroFilter } from '../core/signal/one-euro-filter'
 import { computeTension } from '../core/signal/tension'
-import { computeShoulderWidth, checkDistance, checkDistanceDrift } from '../core/calibration/distance-check'
+import { computeShoulderWidth, checkDistance } from '../core/calibration/distance-check'
 import { createSessionTracker } from '../core/session/session-tracker'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
+
+// One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
+const WRIST_FILTER_MIN_CUTOFF = 1.2   // niedriger = ruhiger, höher = reaktiver
+const WRIST_FILTER_BETA = 0.006       // niedriger = ruhiger, höher = reaktiver
+const WRIST_FILTER_D_CUTOFF = 1.0     // Standardwert
+
+/**
+ * Erstellt One Euro Filter für alle relevanten Landmarken (Elbow, Wrist, Index)
+ * Werte können zentral angepasst werden (siehe oben)
+ */
+function createWristRenderFilters() {
+  return {
+    ex: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    ey: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    wx: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    wy: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    ix: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    iy: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+  }
+}
+
+// Stronger smoothing for z-values (noisier than x/y from MediaPipe)
+// beta=0.003 provides proven stability for wrist angle detection
+function createWristZFilters() {
+  return {
+    elbowZ: createOneEuroFilter(0.6, 0.003, 1.0),
+    wristZ: createOneEuroFilter(0.6, 0.003, 1.0),
+    indexZ: createOneEuroFilter(0.6, 0.003, 1.0),
+  }
+}
+
+const WRIST_SLIDE_SPEED_THRESHOLD = 0.45
+const WRIST_SLIDE_SHIELD_SECONDS = 0.22
+const WRIST_SLIDE_DAMPING = 0.35
 
 export function usePoseDetection(
   videoRef: React.RefObject<HTMLVideoElement | null>,
@@ -23,17 +59,33 @@ export function usePoseDetection(
   const loadingRef = useRef(false)
 
   // Mutable analysis state (not in React, not in store — owned by rAF loop)
+  // Moving Average für Arm-Hand-Winkel (Glättung, 30 Frames)
   const smootherRef = useRef(createMovingAverage(30))
   const violinRef = useRef(createViolinAnalyzer())
   const sessionRef = useRef(createSessionTracker('violin'))
   const tensionRef = useRef(0)
   const bendForwardRef = useRef(true)
+  // Wrist repair status closure (Deadzone/Hysterese)
+  const wristRepairStatusRef = useRef(createWristRepairStatus(10, 200))
+  const wristPrevPosRef = useRef<{ x: number; y: number } | null>(null)
+  const wristSlideShieldRef = useRef(0)
+  let wristRepairStatus: any = undefined
+
+  // One-Euro filters for wrist render coordinates (ex, ey, wx, wy, ix, iy)
+  const wristFiltersRef = useRef(createWristRenderFilters())
+
+  // One-Euro filters for z-values used in 3D angle analysis
+  const wristZFiltersRef = useRef(createWristZFilters())
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
     violinRef.current.reset()
     tensionRef.current = 0
     bendForwardRef.current = true
+    wristPrevPosRef.current = null
+    wristSlideShieldRef.current = 0
+    wristFiltersRef.current = createWristRenderFilters()
+    wristZFiltersRef.current = createWristZFilters()
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -127,14 +179,6 @@ export function usePoseDetection(
         const distStatus = checkDistance(shoulderWidth)
         const distOk = distStatus === 'good'
 
-        // Check drift after calibration
-        let effectiveDistOk = distOk
-        if (distOk && store.calibratedShoulderWidth && store.masterPrint) {
-          if (checkDistanceDrift(shoulderWidth, store.calibratedShoulderWidth)) {
-            effectiveDistOk = true // Still ok for analysis, just show warning
-          }
-        }
-
         if (store.distanceOk !== distOk) {
           usePoseStore.setState({ distanceOk: distOk })
         }
@@ -147,6 +191,8 @@ export function usePoseDetection(
           let smoothedDev = 0
           let driftDir: number | undefined
           let bendFwd: boolean | undefined
+          let filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number } | undefined
+          let wristForeConf: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
             const leftEar = landmarks[7]!
@@ -157,10 +203,41 @@ export function usePoseDetection(
             const elbow = landmarks[13]!
             const wrist = landmarks[15]!
             const index = landmarks[19]!
-            const result = analyzeWrist(elbow, wrist, index, store.masterPrint, sensitivity)
+
+            // Symmetric position-shift shield: damp sensitivity briefly during fast slides.
+            const prevWrist = wristPrevPosRef.current
+            if (prevWrist && dt > 0) {
+              const dx = wrist.x - prevWrist.x
+              const dy = wrist.y - prevWrist.y
+              const wristSpeed = Math.sqrt(dx * dx + dy * dy) / dt
+              if (wristSpeed > WRIST_SLIDE_SPEED_THRESHOLD) {
+                wristSlideShieldRef.current = WRIST_SLIDE_SHIELD_SECONDS
+              }
+            }
+            wristPrevPosRef.current = { x: wrist.x, y: wrist.y }
+            if (wristSlideShieldRef.current > 0) {
+              wristSlideShieldRef.current = Math.max(0, wristSlideShieldRef.current - dt)
+            }
+            const slideShieldFactor = wristSlideShieldRef.current > 0 ? WRIST_SLIDE_DAMPING : 1
+
+            // Foreshortening detection: compare current 2D arm length vs calibrated
+            const armLen2D = computeArmLength2D(elbow, wrist)
+            const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
+
+            // Filter z-values — use stronger smoothing when foreshortened
+            const t = now / 1000
+            const zf = wristZFiltersRef.current
+            const elbowF = { ...elbow, z: zf.elbowZ(elbow.z, t) }
+            const wristF = { ...wrist, z: zf.wristZ(wrist.z, t) }
+            const indexF = { ...index, z: zf.indexZ(index.z, t) }
+
+            const result = analyzeWrist(elbowF, wristF, indexF, store.masterPrint, sensitivity)
             rawDev = result.angleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
-            tensionTarget = result.tensionTarget
+
+            // Cap tension by foreshortening confidence — avoid false alarms
+            tensionTarget = result.tensionTarget * foreConf * slideShieldFactor
+
             bendFwd = updateBendLock(
               result.angleDiff,
               result.bendDir,
@@ -168,6 +245,26 @@ export function usePoseDetection(
               bendForwardRef.current,
             )
             bendForwardRef.current = bendFwd
+
+            // Wrist repair status update
+            wristRepairStatus = wristRepairStatusRef.current(
+              result.angleDiff,
+              now
+            )
+
+            // One-Euro filtered coordinates for smooth rendering
+            const f = wristFiltersRef.current
+            filteredWristCoords = {
+              ex: f.ex(elbow.x * canvas.width, t),
+              ey: f.ey(elbow.y * canvas.height, t),
+              wx: f.wx(wrist.x * canvas.width, t),
+              wy: f.wy(wrist.y * canvas.height, t),
+              ix: f.ix(index.x * canvas.width, t),
+              iy: f.iy(index.y * canvas.height, t),
+            }
+
+            // Store confidence for renderer warning
+            wristForeConf = foreConf
           } else if (store.focusMode === 'violin' && store.masterPrint.mode === 'violin') {
             const wrist = landmarks[15]!
             const result = violinRef.current.analyze(wrist.y, store.masterPrint)
@@ -176,37 +273,74 @@ export function usePoseDetection(
             tensionTarget = result.tensionTarget
             driftDir = result.driftDirection
 
+            // Deadzone ±4 Grad um Zielhöhe
+            const DEADZONE_DEGREES = 4
+            // rawDev ist in normierten Einheiten, Umrechnung auf Grad:
+            // Annahme: 1.0 = 90 Grad, also 1 Grad ≈ 1/90
+            const deviationDeg = rawDev * 90
+            const inDeadzone = Math.abs(deviationDeg) <= DEADZONE_DEGREES
+
             // Dual-speed for violin: faster return
             const fallingRate = result.isLargeMove ? 0.35 : 0.15
             tensionRef.current = computeTension(tensionRef.current, tensionTarget, result.isLargeMove ? 0.15 : 0.05, fallingRate)
+
+            // Session-Tracking inkl. Deadzone/Belohnungslogik
+            const trackResult = sessionRef.current.recordFrame(
+              tensionRef.current,
+              classifyLayer(tensionRef.current, 'violin').layer,
+              dt,
+              inDeadzone
+            )
+
+            // Push to store (batched, Zustand merges)
+            usePoseStore.getState().updateFrame({
+              tensionScore: tensionRef.current,
+              smoothedDeviation: smoothedDev,
+              rawDeviation: rawDev,
+              layerInfo: classifyLayer(tensionRef.current, 'violin'),
+              returnGlowTimer: trackResult.glowTimer,
+              driftDirection: driftDir,
+              streakSeconds: trackResult.streakSeconds,
+              maxStreak: trackResult.maxStreak,
+              // Deadzone-Status für Rendering
+              violinDeadzone: inDeadzone,
+            })
           }
 
-          // Tension update (shoulder/wrist use standard rates)
+          // Tension update (shoulder/wrist use slower rising rate for calm color transitions)
           if (store.focusMode !== 'violin') {
-            tensionRef.current = computeTension(tensionRef.current, tensionTarget)
+            tensionRef.current = computeTension(tensionRef.current, tensionTarget, 0.08, 0.15)
+
+            const layerInfo = classifyLayer(tensionRef.current, store.focusMode, driftDir)
+
+            // Session tracking
+            const trackResult = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt)
+
+            // Push to store (batched, Zustand merges)
+            usePoseStore.getState().updateFrame({
+              tensionScore: tensionRef.current,
+              smoothedDeviation: smoothedDev,
+              rawDeviation: rawDev,
+              layerInfo,
+              returnGlowTimer: trackResult.glowTimer,
+              lastBendForward: bendFwd,
+              driftDirection: driftDir,
+              filteredWristCoords,
+              wristForeshorteningConfidence: wristForeConf,
+              streakSeconds: trackResult.streakSeconds,
+              maxStreak: trackResult.maxStreak,
+              // Wrist repair status for rendering/feedback
+              wristRepairStatus: wristRepairStatus,
+            })
           }
-
-          const layerInfo = classifyLayer(tensionRef.current, store.focusMode, driftDir)
-
-          // Session tracking
-          const glowTimer = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt)
-
-          // Push to store (batched, Zustand merges)
-          usePoseStore.getState().updateFrame({
-            tensionScore: tensionRef.current,
-            smoothedDeviation: smoothedDev,
-            rawDeviation: rawDev,
-            layerInfo,
-            returnGlowTimer: glowTimer,
-            lastBendForward: bendFwd,
-            driftDirection: driftDir,
-          })
         }
 
         // Render (reads store via getState, plus direct landmarks)
         renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt)
       } else {
         // No body detected
+        wristPrevPosRef.current = null
+        wristSlideShieldRef.current = 0
         if (store.distanceOk) {
           usePoseStore.setState({ distanceOk: false })
         }

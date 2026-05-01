@@ -7,7 +7,7 @@ import type {
   ViolinMasterPrint,
 } from '../types'
 import { computeEarShoulderDistance } from '../analysis/shoulder-analyzer'
-import { computeWristAngle, computeWristBendDirection } from '../analysis/wrist-analyzer'
+import { computeWristAngle, computeWristBendDirection, computeArmLength2D } from '../analysis/wrist-analyzer'
 
 /**
  * Create a Master Print from current pose landmarks for the given focus mode.
@@ -33,12 +33,14 @@ export function createMasterPrint(
         mode: 'wrist',
         wristAngle: computeWristAngle(elbow, wrist, index),
         wristBendDir: computeWristBendDirection(elbow, wrist, index),
+        calibArmLength2D: computeArmLength2D(elbow, wrist),
       } satisfies WristMasterPrint
     }
     case 'violin': {
       const leftWrist = landmarks[15]!
       return {
         mode: 'violin',
+        calibWristX: leftWrist.x,
         calibWristY: leftWrist.y,
       } satisfies ViolinMasterPrint
     }

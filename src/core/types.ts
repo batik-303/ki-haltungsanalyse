@@ -15,6 +15,9 @@ export interface InstrumentMeta {
 // ── Focus Modes ──
 export type FocusMode = 'violin' | 'shoulder' | 'wrist'
 
+// ── View Modes ──
+export type ViewMode = 'flow' | 'analyse'
+
 // ── Sensitivity ──
 export type SensitivityLevel = 'low' | 'med' | 'high'
 
@@ -65,10 +68,12 @@ export interface WristMasterPrint {
   mode: 'wrist'
   wristAngle: number
   wristBendDir: number
+  calibArmLength2D: number // 2D elbow-wrist distance at calibration (normalized)
 }
 
 export interface ViolinMasterPrint {
   mode: 'violin'
+  calibWristX: number
   calibWristY: number
 }
 
@@ -114,6 +119,10 @@ export interface SessionStats {
     limit: number
   }
   tensionTimeline: TensionTimelineEntry[]
+  maxFlowStreak: number
+  // Ankerpunkte und aufsummierte Reparaturzeit
+  anchorPoints?: number
+  repairedTime?: number
 }
 
 export interface StoredSession {
@@ -131,6 +140,7 @@ export interface StoredSession {
     limit: number
   }
   tensionTimeline: TensionTimelineEntry[]
+  maxFlowStreak: number
 }
 
 // ── Canvas Rendering Context ──

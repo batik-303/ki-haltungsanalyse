@@ -7,6 +7,7 @@ import type {
   MasterPrint,
   Layer,
   LayerInfo,
+  ViewMode,
   ZoneCounters,
   SessionStats,
 } from '../core/types'
@@ -20,6 +21,7 @@ export interface PoseState {
   // Mode
   focusMode: FocusMode
   sensitivity: SensitivityLevel
+  viewMode: ViewMode
 
   // Calibration
   masterPrint: MasterPrint | null
@@ -43,11 +45,27 @@ export interface PoseState {
   // Return-to-anchor
   returnGlowTimer: number
 
+
   // Wrist-specific
   lastBendForward: boolean
+  // Reparatur-Status-Objekt (Deadzone/Hysterese)
+  wristRepairStatus?: { repaired: boolean; [key: string]: any }
+
+  // Violin-specific
+  violinDeadzone?: boolean
+
+  // Filtered wrist render coordinates (pixel space)
+  filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number } | null
+
+  // Wrist foreshortening confidence (0 = arm points at camera, 1 = fully visible)
+  wristForeshorteningConfidence: number
 
   // Violin-specific
   driftDirection: number
+
+  // Streak
+  flowStreak: number
+  maxFlowStreak: number
 
   // Navigation actions
   goToSetup: (instrument: Instrument) => void
@@ -58,6 +76,7 @@ export interface PoseState {
   // Actions
   setFocusMode: (mode: FocusMode) => void
   setSensitivity: (level: SensitivityLevel) => void
+  setViewMode: (mode: ViewMode) => void
   setDistanceOk: (ok: boolean) => void
   setCalibrating: (calibrating: boolean) => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
@@ -76,6 +95,17 @@ export interface FrameUpdate {
   lastBendForward?: boolean
   driftDirection?: number
   sessionZones?: ZoneCounters
+  // Filtered wrist render coordinates (pixel space)
+  filteredWristCoords?: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number }
+  // Wrist foreshortening confidence (0..1)
+  wristForeshorteningConfidence?: number
+  // Reparatur-Status-Objekt (Deadzone/Hysterese)
+  wristRepairStatus?: { repaired: boolean; [key: string]: any }
+  // Violin-Deadzone-Status
+  violinDeadzone?: boolean
+  // Streak
+  streakSeconds?: number
+  maxStreak?: number
 }
 
 const DEFAULT_LAYER_INFO: LayerInfo = {
@@ -93,6 +123,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   // Mode
   focusMode: 'violin',
   sensitivity: 'med',
+  viewMode: 'analyse',
 
   // Calibration
   masterPrint: null,
@@ -119,8 +150,18 @@ export const usePoseStore = create<PoseState>((set) => ({
   // Wrist
   lastBendForward: true,
 
+  // Filtered wrist render coords
+  filteredWristCoords: null,
+
+  // Wrist foreshortening
+  wristForeshorteningConfidence: 1,
+
   // Violin
   driftDirection: 1,
+
+  // Streak
+  flowStreak: 0,
+  maxFlowStreak: 0,
 
   // Navigation actions
   goToSetup: (instrument) => set({
@@ -145,6 +186,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     driftDirection: 1,
     lastSessionStats: null,
+    flowStreak: 0,
+    maxFlowStreak: 0,
   }),
 
   goToResults: (stats) => set({
@@ -171,6 +214,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     driftDirection: 1,
     lastSessionStats: null,
+    flowStreak: 0,
+    maxFlowStreak: 0,
   }),
 
   // Actions
@@ -191,6 +236,8 @@ export const usePoseStore = create<PoseState>((set) => ({
   }),
 
   setSensitivity: (level) => set({ sensitivity: level }),
+
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   setDistanceOk: (ok) => set({ distanceOk: ok }),
 
@@ -228,6 +275,11 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.lastBendForward !== undefined && { lastBendForward: data.lastBendForward }),
     ...(data.driftDirection !== undefined && { driftDirection: data.driftDirection }),
     ...(data.sessionZones && { sessionZones: data.sessionZones }),
+    ...(data.filteredWristCoords && { filteredWristCoords: data.filteredWristCoords }),
+    ...(data.wristForeshorteningConfidence !== undefined && { wristForeshorteningConfidence: data.wristForeshorteningConfidence }),
+    ...(data.streakSeconds !== undefined && { flowStreak: data.streakSeconds }),
+    ...(data.maxStreak !== undefined && { maxFlowStreak: data.maxStreak }),
+    ...(data.wristRepairStatus !== undefined && { wristRepairStatus: data.wristRepairStatus }),
   }),
 
   endSession: (stats) => set({

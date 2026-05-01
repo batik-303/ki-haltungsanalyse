@@ -1,0 +1,5 @@
+- [ ] Side-View-Linie zeigt synchron Knick und Richtung wie Hauptlinie
+- [ ] Linie bleibt im reparierten Zustand waagerecht und ruhig
+- [ ] Glow/Ankerpunkt erscheint beim Reparieren auch im Side-View
+- [ ] Logik modularisieren für spätere Erweiterungen
+- [ ] Tests und UI-Check

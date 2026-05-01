@@ -1,5 +1,5 @@
 import { usePoseStore } from '@/store/pose-store'
-import type { Instrument, InstrumentMeta } from '@/core/types'
+import type { InstrumentMeta } from '@/core/types'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 const INSTRUMENTS: InstrumentMeta[] = [

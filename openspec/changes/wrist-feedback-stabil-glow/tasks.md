@@ -1,0 +1,15 @@
+r
+- [x] One Euro Filter für relevante Landmarken aktivieren/feintunen
+- [x] Moving Average für Arm-Hand-Winkel implementieren
+- [x] Deadzone (±10°) und Hysterese (200ms) in Status-Logik einbauen
+- [x] Pure Funktion für Status-Erkennung in core/analysis/wrist-analyzer.ts
+- [x] Unit-Tests für Status-Logik (bent/repariert)
+- [x] Rendering-Logik für Glow am Ankerpunkt (Fade-in/out, Intensität)
+- [x] Linie: ruhig, hell bei „repariert“, Knick und ggf. Farbe bei Abweichung
+- [x] Parameter für Schwellenwerte und Dauer zentral konfigurierbar machen
+- [x] Feedback bleibt ruhig, kein Zittern
+- [x] Glow erscheint nur bei stabil reparierter Linie
+- [x] Funktioniert für beide Richtungen (vor/zurück)
+- [x] Glow motiviert, lenkt aber nicht ab
+- [ ] Schwellenwerte und Filter ggf. nachjustieren
+- [ ] Optionale Empfindlichkeitseinstellung prüfen

@@ -1,4 +1,5 @@
 import { usePoseStore } from '@/store/pose-store'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -9,6 +10,7 @@ import {
 } from '@/components/ui/chart'
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { Home, RotateCcw } from 'lucide-react'
+import { getPersonalBestStreak } from '@/core/persistence/session-db'
 
 const LAYER_COLORS = {
   flow: '#2196F3',
@@ -56,9 +58,24 @@ export function ResultsScreen() {
     )
   }
 
-  const { durationMinutes, durationSeconds, zonePercentages, tensionTimeline } = lastStats
+  const { durationMinutes, durationSeconds, zonePercentages, tensionTimeline, maxFlowStreak, anchorPoints, repairedTime } = lastStats
 
   const durationStr = `${durationMinutes}:${String(durationSeconds).padStart(2, '0')}`
+
+  // Personal best comparison
+  const [isNewRecord, setIsNewRecord] = useState(false)
+  const [personalBest, setPersonalBest] = useState(0)
+
+  useEffect(() => {
+    getPersonalBestStreak().then((best) => {
+      // The current session is already saved, so best includes this session.
+      // It's a new record if this session's streak equals the best and is > 0.
+      setPersonalBest(best)
+      if (maxFlowStreak > 0 && maxFlowStreak >= best) {
+        setIsNewRecord(true)
+      }
+    })
+  }, [maxFlowStreak])
 
   const donutData = [
     { name: 'flow', value: Math.round(zonePercentages.flow), fill: LAYER_COLORS.flow },
@@ -139,6 +156,18 @@ export function ResultsScreen() {
             <StatRow label="Ø Spannung" value={`${avgTension}%`} />
             <StatRow label="Maximale Spannung" value={`${peakTension}%`} />
             <StatRow label="Flow-Anteil" value={`${Math.round(zonePercentages.flow)}%`} highlight />
+            <StatRow label="Längster Flow-Streak" value={`${Math.floor(maxFlowStreak)}s`} highlight />
+            {typeof anchorPoints === 'number' && (
+              <StatRow label="Ankerpunkte (je 5s)" value={`${anchorPoints}`} highlight />
+            )}
+            {typeof repairedTime === 'number' && (
+              <StatRow label="Zeit im Ankerpunkt" value={`${repairedTime}s`} />
+            )}
+            {isNewRecord && (
+              <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-center animate-pulse">
+                <span className="text-amber-400 text-sm font-semibold">🏆 Neuer persönlicher Rekord!</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

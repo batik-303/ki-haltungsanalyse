@@ -1,4 +1,4 @@
-import { get, set, createStore } from 'idb-keyval'
+import { get, set, createStore, entries } from 'idb-keyval'
 import type { StoredSession } from '../types'
 
 const sessionStore = createStore('blue-anchor', 'sessions')
@@ -15,4 +15,20 @@ export async function loadLatestSession(): Promise<StoredSession | null> {
   if (!latestId) return null
   const session = await get<StoredSession>(latestId, sessionStore)
   return session ?? null
+}
+
+/**
+ * Query the personal best flow streak across all stored sessions.
+ * Returns 0 if no sessions exist.
+ */
+export async function getPersonalBestStreak(): Promise<number> {
+  const all = await entries<string, StoredSession>(sessionStore)
+  let best = 0
+  for (const [key, session] of all) {
+    if (key === LATEST_KEY) continue
+    if (session?.maxFlowStreak && session.maxFlowStreak > best) {
+      best = session.maxFlowStreak
+    }
+  }
+  return best
 }

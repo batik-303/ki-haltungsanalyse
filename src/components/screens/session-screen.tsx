@@ -5,7 +5,7 @@ import { useCalibration } from '@/hooks/use-calibration'
 import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-control'
 import { CalibrationOverlay, updateCalibrationUI } from '@/components/calibration-overlay'
 import { DistanceIndicator } from '@/components/distance-indicator'
-import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor } from '@/store/selectors'
+import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
 import { saveSession } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
 import type { StoredSession } from '@/core/types'
@@ -29,6 +29,8 @@ export function SessionScreen() {
   const statusColor = usePoseStore(selectStatusColor)
   const goToResults = usePoseStore((s) => s.goToResults)
   const startSession = usePoseStore((s) => s.startSession)
+  const viewMode = usePoseStore((s) => s.viewMode)
+  const hudFaded = usePoseStore(selectHudFaded)
 
   const { resetAnalysisState, landmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
@@ -79,6 +81,7 @@ export function SessionScreen() {
         zones: trackerStats.zones,
         zonePercentages: trackerStats.zonePercentages,
         tensionTimeline: trackerStats.tensionTimeline,
+        maxFlowStreak: trackerStats.maxFlowStreak,
       }
       saveSession(stored).catch(console.error)
 
@@ -95,6 +98,7 @@ export function SessionScreen() {
         zones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
         zonePercentages: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
         tensionTimeline: [],
+        maxFlowStreak: 0,
       })
     }
   }, [goToResults, stopTracking])
@@ -111,6 +115,8 @@ export function SessionScreen() {
     start: handleStart,
     stop: handleStop,
     neu: handleRecalibrate,
+    flow: () => usePoseStore.getState().setViewMode('flow'),
+    analyse: () => usePoseStore.getState().setViewMode('analyse'),
   }), [handleCalibrate, handleStart, handleStop, handleRecalibrate])
 
   const { startListening } = useVoiceCommands(voiceCommands, true)
@@ -123,12 +129,15 @@ export function SessionScreen() {
 
   return (
     <div className="fixed inset-0 bg-black">
-      {/* Video feed — fills viewport */}
+      {/* Video feed — fills viewport, hidden in flow mode */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
-        className="absolute inset-0 w-full h-full object-cover scale-x-[-1] saturate-[0.4] brightness-[0.85]"
+        className={cn(
+          "absolute inset-0 w-full h-full object-cover scale-x-[-1] saturate-[0.4] brightness-[0.85]",
+          viewMode === 'flow' && "opacity-0"
+        )}
       />
 
       {/* Canvas overlay */}
@@ -144,7 +153,7 @@ export function SessionScreen() {
       <DistanceIndicator />
 
       {/* HUD: Mode badge — top left */}
-      <div className="absolute top-4 left-4 z-10">
+      <div className={cn("absolute top-4 left-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
         <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
           {MODE_LABELS[focusMode] ?? focusMode}
         </Badge>
@@ -152,7 +161,7 @@ export function SessionScreen() {
 
       {/* HUD: Session timer — top right */}
       {phase === 'tracking' && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className={cn("absolute top-4 right-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
           <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur tabular-nums">
             {duration}
           </Badge>
@@ -161,7 +170,7 @@ export function SessionScreen() {
 
       {/* HUD: Tension bar — bottom left */}
       {(phase === 'ready-to-start' || phase === 'tracking') && (
-        <div className="absolute bottom-20 left-4 z-10 w-48">
+        <div className={cn("absolute bottom-20 left-4 z-10 w-48 transition-opacity duration-700", hudFaded && "opacity-20")}>
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>Spannung</span>
@@ -181,7 +190,7 @@ export function SessionScreen() {
       )}
 
       {/* HUD: Voice hint / mic activation — bottom right */}
-      <div className="absolute bottom-20 right-4 z-10">
+      <div className={cn("absolute bottom-20 right-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
         {micActive ? (
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2 text-xs text-muted-foreground">
             🎤 {hint}
@@ -202,7 +211,7 @@ export function SessionScreen() {
       </div>
 
       {/* Fallback buttons — bottom center */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-3">
+      <div className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-3 transition-opacity duration-300", hudFaded && "opacity-20")}>
         {phase === 'ready-to-calibrate' && (
           <FallbackButton onClick={handleCalibrate}>Kalibrieren</FallbackButton>
         )}

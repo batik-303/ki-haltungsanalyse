@@ -13,6 +13,8 @@ const COMMAND_KEYWORDS: Record<string, string[]> = {
   start: ['start', 'los'],
   stop: ['stop', 'stopp', 'ende'],
   neu: ['neu', 'nochmal', 'erneut'],
+  flow: ['flow'],
+  analyse: ['analyse', 'analys'],
 }
 
 const COMMAND_COOLDOWN_MS = 2000
