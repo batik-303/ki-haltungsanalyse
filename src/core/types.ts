@@ -55,6 +55,7 @@ export const LANDMARKS = {
   RIGHT_SHOULDER: 12,
   LEFT_ELBOW: 13,
   LEFT_WRIST: 15,
+  LEFT_PINKY: 17,
   LEFT_INDEX: 19,
 } as const
 
@@ -66,9 +67,9 @@ export interface ShoulderMasterPrint {
 
 export interface WristMasterPrint {
   mode: 'wrist'
-  wristAngle: number
-  wristBendDir: number
-  calibArmLength2D: number // 2D elbow-wrist distance at calibration (normalized)
+  flexAngle: number           // Projected flexion/extension angle at calibration
+  flexBendDir: number         // Bend direction sign at calibration
+  calibArmLength2D: number    // 2D elbow-wrist distance at calibration (normalized)
 }
 
 export interface ViolinMasterPrint {

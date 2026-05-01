@@ -1,99 +1,31 @@
-import { getTensionColor, lerpColor } from './colors'
-
-// Smooth tension for color transitions — prevents color flicker
-let visualTension = 0
-// Glow Hysterese
-// (Legacy, wird jetzt synchronisiert)
-// let glowActive = false
+// Smooth visual angle for side-view (asymmetric IIR: slow rise, fast fall)
+let visualAngle = 0
 
 /**
- * Render a polished schematic side-view of the wrist.
- * Layout: Hand (line, top) → Anchor (wrist, middle) → Arm (line, bottom).
- * Drawn on RIGHT side of canvas → appears on LEFT of screen (CSS scale-x-[-1]).
+ * Render simplified peripheral side-view of wrist.
+ * Layout: Hand line (top) → Sapphire Anchor (center) → Arm line (bottom).
+ * Drawn on RIGHT side of canvas → appears on LEFT of screen (CSS mirror).
  *
- * Both directions look identical to the user — the technical difference
- * (heavier damping for forward/z-axis) is invisible in the output.
- */
-
-// Modular: Handlinie (knickend, farbig, erweiterbar)
-function drawAngledHandLine(
-  ctx: CanvasRenderingContext2D,
-  wx: number,
-  wy: number,
-  angleRad: number,
-  handLen: number,
-  handWidth: number,
-  baseBlue: string,
-  tipColor: string,
-) {
-  const hx = wx + Math.sin(angleRad) * handLen
-  const hy = wy - Math.cos(angleRad) * handLen
-  ctx.beginPath()
-  ctx.moveTo(wx, wy)
-  ctx.lineTo(hx, hy)
-  const handGrad = ctx.createLinearGradient(wx, wy, hx, hy)
-  handGrad.addColorStop(0, baseBlue)
-  handGrad.addColorStop(1, tipColor)
-  ctx.strokeStyle = handGrad
-  ctx.lineWidth = handWidth
-  ctx.globalAlpha = 0.85
-  ctx.lineCap = 'round'
-  ctx.stroke()
-  ctx.globalAlpha = 1
-}
-
-// Modular: Status-Logik für Deadzone, Glow, Farben
-function getSideViewStatus(tensionScore: number, wristRepairStatus?: { repaired: boolean }, wristGlowLevel?: number) {
-  const inDeadzone = wristRepairStatus?.repaired ?? true
-  const glow = wristGlowLevel ?? 0
-  return { inDeadzone, glow }
-}
-
-function getSideViewColors(tension: number, inDeadzone: boolean) {
-  const baseBlue = '#2196F3'
-  const vt = tension
-  const lineColor = inDeadzone ? baseBlue : (vt < 12 ? baseBlue : getTensionColor(vt))
-  const tipColor = inDeadzone ? '#64B5F6' : (vt < 12 ? '#64B5F6' : lerpColor(baseBlue, getTensionColor(vt), 0.7))
-  return { baseBlue, lineColor, tipColor }
-}
-
-/**
- * Zeichnet die Seitenansicht des Handgelenks mit knickender Handlinie.
- * @param ctx Canvas-Kontext
- * @param width Canvas-Breite
- * @param height Canvas-Höhe
- * @param tensionScore Tensionswert
- * @param angleDiff Winkelabweichung (in Grad, 0 = perfekt gestreckt)
- * @param lastBendForward Richtung (optional, für spätere Features)
- * @param now Zeitstempel
- */
-/**
- * Zeichnet die Seitenansicht des Handgelenks mit knickender Handlinie und synchronisiertem Glow.
- * @param ctx Canvas-Kontext
- * @param width Canvas-Breite
- * @param height Canvas-Höhe
- * @param tensionScore Tensionswert
- * @param angleDiff Winkelabweichung (in Grad, 0 = perfekt gestreckt)
- * @param lastBendForward Richtung (optional, für spätere Features)
- * @param now Zeitstempel
- * @param wristRepairStatus Statusobjekt aus Analyse (z.B. { repaired: boolean, ... })
- * @param wristGlowLevel Glow-Intensität (0..1)
+ * Shows same elements as main overlay: anchor, hand line, yellow on deviation.
  */
 export function drawWristSideView(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  tensionScore: number,
-  angleDiff: number, // in Grad, 0 = gestreckt
-  lastBendForward: boolean, // für spätere Features
+  _tensionScore: number,
+  angleDiff: number,
+  lastBendForward: boolean,
   now: number,
   wristRepairStatus?: { repaired: boolean },
   wristGlowLevel?: number,
 ) {
-  // Smooth tension for color — prevents abrupt color jumps
-  const tensionLerp = tensionScore > visualTension ? 0.06 : 0.18
-  visualTension += (tensionScore - visualTension) * tensionLerp
-  if (visualTension < 0.5) visualTension = 0
+  const DEADZONE_DEG = 10
+
+  // Asymmetric smoothing: slow rise (dampens jitter), fast fall (rewards return)
+  const targetAngle = angleDiff > 5 ? angleDiff : 0
+  const lerpRate = targetAngle > visualAngle ? 0.12 : 0.35
+  visualAngle += (targetAngle - visualAngle) * lerpRate
+  if (visualAngle < 0.3) visualAngle = 0
 
   // Scale to screen height — total figure ~30% of canvas
   const totalLen = height * 0.3
@@ -108,14 +40,13 @@ export function drawWristSideView(
   const ax = cx
   const ay = cy + armLen
 
-  // Status und Farben modular beziehen
-  const { inDeadzone, glow } = getSideViewStatus(tensionScore, wristRepairStatus, wristGlowLevel)
-  const { baseBlue, lineColor, tipColor } = getSideViewColors(visualTension, inDeadzone)
+  const inDeadzone = angleDiff <= DEADZONE_DEG
+  const glow = wristGlowLevel ?? 0
 
-  // Breathing cycle — subtle shared pulse across the whole figure
-  const breath = Math.sin(now / 1200) * 0.5 + 0.5  // 0..1, ~0.8s period
+  // Breathing cycle
+  const breath = Math.sin(now / 1200) * 0.5 + 0.5
 
-  // ─── Background pill with soft gradient ───
+  // ─── Background pill ───
   const pillW = 58
   const pillTop = wy - handLen - 24
   const pillBottom = ay + 24
@@ -129,30 +60,7 @@ export function drawWristSideView(
   ctx.fillStyle = pillGrad
   ctx.fill()
 
-  // Subtle border glow on pill when tension rises
-  const vt = visualTension
-  if (vt > 20) {
-    ctx.strokeStyle = lineColor
-    ctx.lineWidth = 1
-    ctx.globalAlpha = (vt / 100) * 0.12
-    ctx.stroke()
-    ctx.globalAlpha = 1
-  }
-
-  // ─── Reference line (ideal hand position) ───
-  ctx.setLineDash([6, 8])
-  ctx.beginPath()
-  ctx.moveTo(wx, wy)
-  ctx.lineTo(wx, wy - handLen)
-  ctx.strokeStyle = baseBlue
-  ctx.lineWidth = 2
-  ctx.globalAlpha = 0.15 + breath * 0.05
-  ctx.lineCap = 'round'
-  ctx.stroke()
-  ctx.globalAlpha = 1
-  ctx.setLineDash([])
-
-  // ─── Arm line (vertical, downward) with gradient ───
+  // ─── Arm line (vertical, downward) ───
   const armGrad = ctx.createLinearGradient(wx, wy, ax, ay)
   armGrad.addColorStop(0, '#5b9bd5')
   armGrad.addColorStop(1, '#3a6d99')
@@ -166,30 +74,64 @@ export function drawWristSideView(
   ctx.stroke()
   ctx.globalAlpha = 1
 
+  // ─── Hand line (angled by deviation) ───
+  // Direction: lastBendForward=true → bend to LEFT on canvas (= RIGHT on screen after CSS mirror)
+  // This matches the user's visual: hand bending inward shows line going same direction
+  const dirSign = lastBendForward ? -1 : 1
+  const angleRad = (visualAngle * Math.PI) / 180
+  const hx = wx + Math.sin(angleRad) * dirSign * handLen
+  const hy = wy - Math.cos(angleRad) * handLen
 
-  // Handlinie folgt Handgelenkswinkel (knickend)
-  // Umrechnung: 0° = gestreckt (nach oben), positiver Winkel = nach rechts (aus Sicht des Musikers)
-  const handWidth = 6 // Optional: anpassbar für spätere Features
-  const angleRad = (angleDiff * Math.PI) / 180
-  drawAngledHandLine(ctx, wx, wy, angleRad, handLen, handWidth, baseBlue, tipColor)
-
-  // ─── Synchronisierter Glow bei Reparatur ───
-  if (glow > 0 && inDeadzone) {
+  if (!inDeadzone && visualAngle > 0) {
+    // Yellow dashed line on deviation (matches main overlay)
+    const intensity = Math.min(1, (visualAngle - DEADZONE_DEG) / 20)
     ctx.save()
-    ctx.globalAlpha = 0.18 * glow
+    ctx.setLineDash([8, 5])
     ctx.beginPath()
     ctx.moveTo(wx, wy)
-    ctx.lineTo(wx + Math.sin(angleRad) * handLen, wy - Math.cos(angleRad) * handLen)
-    ctx.strokeStyle = '#fffde4'
-    ctx.shadowColor = '#fffde4'
-    ctx.shadowBlur = 18 + 18 * glow
-    ctx.lineWidth = handWidth + 7 * glow
+    ctx.lineTo(hx, hy)
+    ctx.strokeStyle = '#F5C842'
+    ctx.lineWidth = 5 + intensity * 3
+    ctx.globalAlpha = 0.6 + intensity * 0.3
+    ctx.lineCap = 'round'
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
+    // Endpoint dot
+    ctx.beginPath()
+    ctx.arc(hx, hy, 3 + intensity * 1.5, 0, Math.PI * 2)
+    ctx.fillStyle = '#F5C842'
+    ctx.globalAlpha = 0.7
+    ctx.fill()
+    ctx.globalAlpha = 1
+  } else {
+    // Correct position: subtle blue line straight up
+    ctx.beginPath()
+    ctx.moveTo(wx, wy)
+    ctx.lineTo(wx, wy - handLen)
+    ctx.strokeStyle = '#5b9bd5'
+    ctx.lineWidth = 5
+    ctx.globalAlpha = 0.5 + breath * 0.1
+    ctx.lineCap = 'round'
+    ctx.stroke()
+    ctx.globalAlpha = 1
+  }
+
+  // ─── Synchronized glow on return ───
+  if (glow > 0 && inDeadzone) {
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(wx, wy)
+    ctx.lineTo(wx, wy - handLen)
+    ctx.strokeStyle = '#5b9bd5'
+    ctx.shadowColor = '#5b9bd5'
+    ctx.shadowBlur = 16 + 20 * glow
+    ctx.lineWidth = 5 + 8 * glow
+    ctx.globalAlpha = 0.2 + 0.3 * glow
     ctx.stroke()
     ctx.restore()
   }
-
-  // ─── Soft glow aura um die waagerechte Handlinie (Erweiterbar) ───
-  // (Aktuell deaktiviert, da Linie immer waagerecht ist. Für spätere Features wie Belohnungs-Glow.)
 
   // ─── Sapphire anchor (wrist joint) ───
   const pulseR = 10 + Math.sin(now / 800) * 1.2
@@ -215,12 +157,17 @@ export function drawWristSideView(
   ctx.lineWidth = 1.2
   ctx.stroke()
 
-  // ─── Endpoint accents ───
-  // Arm end: soft blue dot
+  // Enhanced anchor glow when returning
+  if (glow > 0) {
+    ctx.beginPath()
+    ctx.arc(wx, wy, pulseR + 4 * glow, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(33, 150, 243, ${0.2 * glow})`
+    ctx.fill()
+  }
+
+  // ─── Arm endpoint dot ───
   ctx.beginPath()
   ctx.arc(ax, ay, 3.5, 0, Math.PI * 2)
   ctx.fillStyle = '#5b9bd566'
   ctx.fill()
-  // Hand end: (Erweiterbar für Glow/Belohnung)
-  // (Optional: Glow oder Akzent am Hand-Endpunkt)
 }

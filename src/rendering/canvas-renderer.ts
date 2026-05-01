@@ -107,16 +107,14 @@ export function renderFrame(
     const wrist = landmarks[15]
     const index = landmarks[19]
     if (!elbow || !wrist || !index) return
-    const ex = elbow.x * width, ey = elbow.y * height
     const wx = wrist.x * width, wy = wrist.y * height
     const ix = index.x * width, iy = index.y * height
 
     if (masterPrint && !isCalibrating) {
       // Use filtered coordinates for smooth rendering (fallback to raw)
       const fc = state.filteredWristCoords
-      const fex = fc?.ex ?? ex, fey = fc?.ey ?? ey
       const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
-      const fix = fc?.ix ?? ix, fiy = fc?.iy ?? iy
+      const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
 
       // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", Decay in 350ms
       if (!lastWristRepaired && state.wristRepairStatus?.repaired) {
@@ -131,20 +129,10 @@ export function renderFrame(
       lastWristRepaired = state.wristRepairStatus?.repaired ?? false
 
       if (!isFlow) {
-        const repairStatus = {
-          repaired: true,
-          inDeadzone: true,
-          timeInZone: 0,
-          ...(state.wristRepairStatus ?? {})
-        }
         drawWristLines(
-          ctx, fex, fey, fwx, fwy, fix, fiy,
-          tensionScore,
-          lastBendForward,
+          ctx, fwx, fwy, fmx, fmy,
           rawDeviation * 30,
-          repairStatus,
           wristGlowLevel,
-          masterPrint?.mode === 'wrist' ? masterPrint.wristAngle : undefined,
         )
 
         // ── Side-View synchronisiert ──
@@ -154,7 +142,7 @@ export function renderFrame(
           rawDeviation * 30,
           lastBendForward,
           now,
-          repairStatus,
+          state.wristRepairStatus ?? undefined,
           wristGlowLevel
         )
       }
@@ -184,10 +172,9 @@ export function renderFrame(
         ctx.globalAlpha = 1
       }
     } else if (!isCalibrating && !isFlow) {
-      // Preview (analyse only)
+      // Preview (analyse only) — show wrist→index line preview
       ctx.beginPath()
-      ctx.moveTo(ex, ey)
-      ctx.lineTo(wx, wy)
+      ctx.moveTo(wx, wy)
       ctx.lineTo(ix, iy)
       ctx.strokeStyle = '#2e86c1'
       ctx.lineWidth = 2

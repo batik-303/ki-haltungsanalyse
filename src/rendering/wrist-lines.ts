@@ -1,196 +1,81 @@
-import { getTensionColor } from './colors'
-
 /**
- * Render wrist analysis lines: arm line, hand line (color-coded), dashed reference.
+ * Render wrist feedback: yellow dashed line (wrist→MCP) on deviation, nothing on correct.
+ * Minimal, peripherally readable. Anchor is drawn separately by sapphire-anchor module.
  */
 export function drawWristLines(
   ctx: CanvasRenderingContext2D,
-  ex: number, ey: number,  // elbow
-  wx: number, wy: number,  // wrist
-  ix: number, iy: number,  // index finger
-  tensionScore: number,
-  lastBendForward: boolean,
-  angleDiff: number,
-  wristRepairStatus?: { repaired: boolean; inDeadzone: boolean; timeInZone: number },
+  wx: number, wy: number,  // wrist (anchor position)
+  mx: number, my: number,  // MCP (hand endpoint)
+  angleDiff: number,        // degrees deviation from calibration
   wristGlowLevel?: number,
-  masterPrintAngle?: number,
 ) {
-  // Color: pure blue in dead zone (< 10), then tension color for clear peripheral readability.
-  const lineColor = tensionScore < 10 ? '#2196F3' : getTensionColor(tensionScore)
+  const DEADZONE_DEG = 10
+  const MIN_LINE_LEN = 60 // minimum visible length in pixels
 
-  // Dashed reference line (straight extension of arm through wrist)
-  const armDirX = wx - ex
-  const armDirY = wy - ey
-  const armLen = Math.sqrt(armDirX * armDirX + armDirY * armDirY)
-  const handLen = Math.sqrt((ix - wx) ** 2 + (iy - wy) ** 2)
-  const refEndX = wx + (armDirX / armLen) * handLen
-  const refEndY = wy + (armDirY / armLen) * handLen
+  // Compute direction from wrist to MCP, ensure minimum length
+  let dx = mx - wx
+  let dy = my - wy
+  const dist = Math.sqrt(dx * dx + dy * dy)
+  // Normalize and extend to minimum length for visibility
+  if (dist > 0) {
+    const len = Math.max(dist, MIN_LINE_LEN)
+    dx = (dx / dist) * len
+    dy = (dy / dist) * len
+  } else {
+    // Fallback: straight up if MCP overlaps wrist
+    dx = 0
+    dy = -MIN_LINE_LEN
+  }
+  const endX = wx + dx
+  const endY = wy + dy
 
-  ctx.setLineDash([8, 5])
-  ctx.beginPath()
-  ctx.moveTo(wx, wy)
-  ctx.lineTo(refEndX, refEndY)
-  ctx.strokeStyle = '#2196F3'
-  ctx.lineWidth = 4
-  ctx.globalAlpha = 0.5
-  ctx.stroke()
-  ctx.globalAlpha = 1
-  ctx.setLineDash([])
-
-
-
-  // ── Gerade Linie im reparierten Zustand ──
-  if (wristRepairStatus?.repaired && masterPrintAngle !== undefined) {
-    // Berechne Zielpunkt für "gerade" Linie nach MasterPrint-Winkel
-    const armLen = Math.sqrt((wx - ex) ** 2 + (wy - ey) ** 2)
-    const handLen = Math.sqrt((ix - wx) ** 2 + (iy - wy) ** 2)
-    // Richtung: Armvektor
-    const armDirX = (wx - ex) / (armLen || 1)
-    const armDirY = (wy - ey) / (armLen || 1)
-    // Gerade Linie: wrist → Zielpunkt (gleiche Länge wie Hand)
-    const straightX = wx + armDirX * handLen
-    const straightY = wy + armDirY * handLen
-    // Dezente Linie
-    ctx.beginPath()
-    ctx.moveTo(wx, wy)
-    ctx.lineTo(straightX, straightY)
-    ctx.strokeStyle = '#bfc9d1'
-    ctx.lineWidth = 8
-    ctx.globalAlpha = 0.18
-    ctx.stroke()
-    ctx.globalAlpha = 1
-    // Optional: dezenter Punkt am Ziel
-    ctx.beginPath()
-    ctx.arc(straightX, straightY, 5, 0, Math.PI * 2)
-    ctx.fillStyle = '#bfc9d1'
-    ctx.globalAlpha = 0.12
-    ctx.fill()
-    ctx.globalAlpha = 1
-    // Arm-Linie bleibt wie gehabt
-    ctx.beginPath()
-    ctx.moveTo(ex, ey)
-    ctx.lineTo(wx, wy)
-    ctx.strokeStyle = '#bfc9d1'
-    ctx.lineWidth = 8
-    ctx.globalAlpha = 0.12
-    ctx.stroke()
-    ctx.globalAlpha = 1
-    // Glow wie gehabt
-    if (wristGlowLevel && wristGlowLevel > 0) {
-      ctx.save()
-      ctx.beginPath()
-      ctx.moveTo(wx, wy)
-      ctx.lineTo(straightX, straightY)
-      ctx.strokeStyle = '#5b9bd5'
-      ctx.shadowColor = '#5b9bd5'
-      ctx.shadowBlur = 32
-      ctx.lineWidth = 18
-      ctx.globalAlpha = 0.18 + 0.22 * wristGlowLevel
-      ctx.stroke()
-      ctx.shadowBlur = 0
-      ctx.globalAlpha = 1
-      ctx.restore()
-    }
+  // Within deadzone: nothing to draw (clean state)
+  if (angleDiff <= DEADZONE_DEG && (!wristGlowLevel || wristGlowLevel <= 0)) {
     return
   }
 
-  // ── Sapphire Glow nur bei "repariert" ──
-  if (wristRepairStatus?.repaired || (wristGlowLevel && wristGlowLevel > 0)) {
-    const t = wristRepairStatus?.timeInZone ?? 0
-    const baseGlow = Math.min(1, t / 1200)
-    const flash = wristGlowLevel ?? 0
-    const intensity = Math.max(baseGlow, flash)
-    // Gerade Linie für Glow
-    const armLen = Math.sqrt((wx - ex) ** 2 + (wy - ey) ** 2)
-    const handLen = Math.sqrt((ix - wx) ** 2 + (iy - wy) ** 2)
-    const armDirX = (wx - ex) / (armLen || 1)
-    const armDirY = (wy - ey) / (armLen || 1)
-    const straightX = wx + armDirX * handLen
-    const straightY = wy + armDirY * handLen;
+  // ── Return glow (sapphire flash on wrist→MCP line when returning to correct) ──
+  if (wristGlowLevel && wristGlowLevel > 0 && angleDiff <= DEADZONE_DEG) {
     ctx.save()
     ctx.beginPath()
     ctx.moveTo(wx, wy)
-    ctx.lineTo(straightX, straightY)
+    ctx.lineTo(endX, endY)
     ctx.strokeStyle = '#5b9bd5'
     ctx.shadowColor = '#5b9bd5'
-    ctx.shadowBlur = 22 + 38 * intensity
-    const lineWidth = 8 + (tensionScore / 100) * 14
-    ctx.lineWidth = lineWidth + 28 * intensity
-    ctx.globalAlpha = 0.18 + 0.22 * intensity
+    ctx.shadowBlur = 18 + 24 * wristGlowLevel
+    ctx.lineWidth = 6 + 10 * wristGlowLevel
+    ctx.globalAlpha = 0.2 + 0.3 * wristGlowLevel
     ctx.stroke()
-    ctx.shadowBlur = 0
-    ctx.globalAlpha = 1
     ctx.restore()
+    return
   }
 
-  // Broken hand line (wrist -> kink -> finger) für Knick-Visualisierung
-  const perpX = -armDirY / armLen
-  const perpY = armDirX / armLen
-  const bendStrength = Math.min(1, angleDiff / 20)
-  // Larger kink for forward bend to compensate for 2D foreshortening
-  const baseKink = lastBendForward ? 24 : 18
-  const kinkOffset = (baseKink + (tensionScore / 100) * 14) * bendStrength * (lastBendForward ? 1 : -1)
-  const kinkX = wx + (ix - wx) * 0.35 + perpX * kinkOffset
-  const kinkY = wy + (iy - wy) * 0.35 + perpY * kinkOffset
+  // ── Deviation: yellow dashed line from wrist toward MCP ──
+  if (angleDiff > DEADZONE_DEG) {
+    // Intensity scales with deviation (subtle at 10°, strong at 30°+)
+    const intensity = Math.min(1, (angleDiff - DEADZONE_DEG) / 20)
+    const lineWidth = 4 + intensity * 6
+    const alpha = 0.6 + intensity * 0.3
 
-  // Hand line (wrist -> kink -> finger) — thicker scaling for peripheral visibility
-  const lineWidth = 8 + (tensionScore / 100) * 14
-  ctx.beginPath()
-  ctx.moveTo(wx, wy)
-  ctx.lineTo(kinkX, kinkY)
-  ctx.lineTo(ix, iy)
-  ctx.strokeStyle = lineColor
-  ctx.lineWidth = lineWidth
-  ctx.globalAlpha = 0.9
-  ctx.stroke()
-  ctx.globalAlpha = 1
-
-  // Edge highlights
-  ctx.beginPath()
-  ctx.moveTo(ex, ey)
-  ctx.lineTo(wx, wy)
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 1
-  ctx.globalAlpha = 0.3
-  ctx.stroke()
-  ctx.globalAlpha = 1
-  ctx.beginPath()
-  ctx.moveTo(wx, wy)
-  ctx.lineTo(kinkX, kinkY)
-  ctx.lineTo(ix, iy)
-  ctx.strokeStyle = '#ffffff'
-  ctx.lineWidth = 1
-  ctx.globalAlpha = 0.25
-  ctx.stroke()
-  ctx.globalAlpha = 1
-
-  // Kein Tension-Glow mehr bei Abweichung – nur Knick und Farbe zeigen die Abweichung.
-
-  // Highlight the "break" point.
-  if (angleDiff > 1) {
+    ctx.save()
+    ctx.setLineDash([10, 6])
     ctx.beginPath()
-    ctx.arc(kinkX, kinkY, 4 + bendStrength * 2, 0, Math.PI * 2)
-    ctx.fillStyle = lineColor
-    ctx.globalAlpha = 0.8
+    ctx.moveTo(wx, wy)
+    ctx.lineTo(endX, endY)
+    ctx.strokeStyle = '#F5C842' // warm yellow
+    ctx.lineWidth = lineWidth
+    ctx.globalAlpha = alpha
+    ctx.lineCap = 'round'
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
+    // Small dot at endpoint
+    ctx.beginPath()
+    ctx.arc(endX, endY, 3 + intensity * 2, 0, Math.PI * 2)
+    ctx.fillStyle = '#F5C842'
+    ctx.globalAlpha = alpha * 0.8
     ctx.fill()
     ctx.globalAlpha = 1
   }
-
-  // Angle display
-  ctx.font = 'bold 14px sans-serif'
-  ctx.fillStyle = lineColor
-  ctx.globalAlpha = 0.8
-  ctx.textAlign = 'left'
-  ctx.fillText(Math.round(angleDiff) + '°', wx + 25, wy - 5)
-  ctx.globalAlpha = 1
-
-  // Small dots at elbow and finger
-  ctx.beginPath()
-  ctx.arc(ex, ey, 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#5b9bd544'
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(ix, iy, 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#5b9bd544'
-  ctx.fill()
 }

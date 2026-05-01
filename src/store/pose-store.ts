@@ -55,7 +55,7 @@ export interface PoseState {
   violinDeadzone?: boolean
 
   // Filtered wrist render coordinates (pixel space)
-  filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number } | null
+  filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number; mx: number; my: number } | null
 
   // Wrist foreshortening confidence (0 = arm points at camera, 1 = fully visible)
   wristForeshorteningConfidence: number
@@ -96,7 +96,7 @@ export interface FrameUpdate {
   driftDirection?: number
   sessionZones?: ZoneCounters
   // Filtered wrist render coordinates (pixel space)
-  filteredWristCoords?: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number }
+  filteredWristCoords?: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number; mx: number; my: number }
   // Wrist foreshortening confidence (0..1)
   wristForeshorteningConfidence?: number
   // Reparatur-Status-Objekt (Deadzone/Hysterese)

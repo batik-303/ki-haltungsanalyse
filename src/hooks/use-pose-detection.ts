@@ -32,6 +32,8 @@ function createWristRenderFilters() {
     wy: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
     ix: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
     iy: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    mx: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
+    my: createOneEuroFilter(WRIST_FILTER_MIN_CUTOFF, WRIST_FILTER_BETA, WRIST_FILTER_D_CUTOFF),
   }
 }
 
@@ -191,7 +193,7 @@ export function usePoseDetection(
           let smoothedDev = 0
           let driftDir: number | undefined
           let bendFwd: boolean | undefined
-          let filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number } | undefined
+          let filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number; mx: number; my: number } | undefined
           let wristForeConf: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
@@ -241,7 +243,7 @@ export function usePoseDetection(
             bendFwd = updateBendLock(
               result.angleDiff,
               result.bendDir,
-              store.masterPrint.wristBendDir,
+              store.masterPrint.flexBendDir,
               bendForwardRef.current,
             )
             bendForwardRef.current = bendFwd
@@ -261,6 +263,8 @@ export function usePoseDetection(
               wy: f.wy(wrist.y * canvas.height, t),
               ix: f.ix(index.x * canvas.width, t),
               iy: f.iy(index.y * canvas.height, t),
+              mx: f.mx(index.x * canvas.width, t),
+              my: f.my(index.y * canvas.height, t),
             }
 
             // Store confidence for renderer warning
