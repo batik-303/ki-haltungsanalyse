@@ -249,10 +249,138 @@ export function computeWristTensionTarget(
   return Math.min(100, high)
 }
 
+// ── 2D Collinearity (Rail) ──────────────────────────────────────────
+
+/**
+ * Measure wrist bend as the 2D angle at the wrist in the triangle
+ * Elbow→Wrist→MCP using only screen-space x,y coordinates (no z).
+ * Returns deviation in degrees: 0° = perfectly straight, 90° = right angle.
+ */
+export function computeCollinearityAngle2D(
+  elbow: Landmark,
+  wrist: Landmark,
+  mcp: Landmark,
+): number {
+  // Forearm vector (elbow → wrist)
+  const ax = wrist.x - elbow.x
+  const ay = wrist.y - elbow.y
+  // Hand vector (wrist → mcp)
+  const bx = mcp.x - wrist.x
+  const by = mcp.y - wrist.y
+
+  const magA = Math.sqrt(ax * ax + ay * ay)
+  const magB = Math.sqrt(bx * bx + by * by)
+  if (magA === 0 || magB === 0) return 0
+
+  const dot = ax * bx + ay * by
+  const cos = Math.min(1, Math.max(-1, dot / (magA * magB)))
+  // acos returns 0 when vectors are aligned (straight), π when opposite
+  return Math.acos(cos) * (180 / Math.PI)
+}
+
+/**
+ * Determine 2D bend direction sign via 2D cross product.
+ * Positive = one side (e.g. toward scroll), negative = other (toward neck).
+ */
+export function computeBendDirection2D(
+  elbow: Landmark,
+  wrist: Landmark,
+  mcp: Landmark,
+): number {
+  const ax = wrist.x - elbow.x
+  const ay = wrist.y - elbow.y
+  const bx = mcp.x - wrist.x
+  const by = mcp.y - wrist.y
+  // 2D cross product (z-component of 3D cross)
+  return ax * by - ay * bx
+}
+
+/**
+ * Apply z-boost when 2D angle is below threshold but filtered z-delta
+ * between MCP and wrist indicates a depth-direction bend.
+ * Returns the effective angleDiff (may be boosted).
+ */
+export function computeZBoost(
+  angleDiff2D: number,
+  zMcp: number,
+  zWrist: number,
+  threshold = 0.02,
+  boostDeg = 8,
+): number {
+  if (angleDiff2D >= 3) return angleDiff2D
+  const zDelta = Math.abs(zMcp - zWrist)
+  if (zDelta > threshold) {
+    return Math.max(angleDiff2D, boostDeg)
+  }
+  return angleDiff2D
+}
+
+/**
+ * Lerp + normalize a 2D direction vector for temporal smoothing.
+ * Prevents rail flicker from frame-to-frame landmark jitter.
+ */
+export function smoothDirection2D(
+  prevDirX: number,
+  prevDirY: number,
+  currentDirX: number,
+  currentDirY: number,
+  alpha = 0.15,
+): { x: number; y: number } {
+  let x = prevDirX + (currentDirX - prevDirX) * alpha
+  let y = prevDirY + (currentDirY - prevDirY) * alpha
+  const mag = Math.sqrt(x * x + y * y)
+  if (mag > 0) {
+    x /= mag
+    y /= mag
+  }
+  return { x, y }
+}
+
+// ── Rail Timer (5-Second Challenge) ────────────────────────────────
+
+/**
+ * Factory: 5-second decay timer for sustained straight-wrist challenge.
+ * Timer rises at real-time speed when straight, decays at multiplier speed when bent.
+ * Fires success event when target reached, then resets.
+ */
+export function createWristRailTimer(durationTarget = 5, decayMultiplier = 3) {
+  let timerValue = 0
+  let successGlow = 0
+  let lastSuccessTime = 0
+
+  return function update(isStraight: boolean, dt: number, nowMs: number) {
+    // Update timer
+    if (isStraight) {
+      timerValue += dt
+    } else {
+      timerValue -= dt * decayMultiplier
+    }
+    timerValue = Math.max(0, Math.min(durationTarget, timerValue))
+
+    // Check success
+    let success = false
+    if (timerValue >= durationTarget) {
+      success = true
+      timerValue = 0
+      successGlow = 1.0
+      lastSuccessTime = nowMs
+    }
+
+    // Decay glow (600ms)
+    if (successGlow > 0 && lastSuccessTime > 0) {
+      const elapsed = nowMs - lastSuccessTime
+      successGlow = Math.max(0, 1 - elapsed / 600)
+    }
+
+    return { timerValue, success, successGlow }
+  }
+}
+
 /**
  * Full wrist analysis for a single frame.
  * Uses plane-projected Flexion/Extension angle with MCP approximation.
  * Radial/Ulnar deviation is ignored.
+ * @deprecated Use computeCollinearityAngle2D() for primary measurement.
  */
 export function analyzeWrist(
   elbow: Landmark,

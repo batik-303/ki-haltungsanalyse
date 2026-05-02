@@ -29,7 +29,7 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, smoothedRailDir, railSuccessGlow } = state
   const isFlow = viewMode === 'flow'
 
   // ── Flow mode: black background ──
@@ -113,6 +113,7 @@ export function renderFrame(
     if (masterPrint && !isCalibrating) {
       // Use filtered coordinates for smooth rendering (fallback to raw)
       const fc = state.filteredWristCoords
+      const fex = fc?.ex ?? (elbow.x * width), fey = fc?.ey ?? (elbow.y * height)
       const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
       const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
 
@@ -131,7 +132,10 @@ export function renderFrame(
       if (!isFlow) {
         drawWristLines(
           ctx, fwx, fwy, fmx, fmy,
+          fex, fey,
           rawDeviation * 30,
+          smoothedRailDir ?? null,
+          railSuccessGlow ?? 0,
           wristGlowLevel,
         )
 
@@ -143,7 +147,8 @@ export function renderFrame(
           lastBendForward,
           now,
           state.wristRepairStatus ?? undefined,
-          wristGlowLevel
+          wristGlowLevel,
+          railSuccessGlow ?? 0,
         )
       }
 
@@ -153,10 +158,26 @@ export function renderFrame(
         const coreR = 13 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak)
         drawReturnGlow(ctx, flowX, height / 2, coreR, returnGlowTimer, false)
+        // Golden flash on 5s challenge (flow mode)
+        const rsg = railSuccessGlow ?? 0
+        if (rsg > 0) {
+          ctx.beginPath()
+          ctx.arc(flowX, height / 2, coreR + 6 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * rsg})`
+          ctx.fill()
+        }
       } else {
         const coreR = 11 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, fwx, fwy, coreR, now)
         drawReturnGlow(ctx, fwx, fwy, coreR, returnGlowTimer, false)
+        // Golden flash on 5s challenge (analyse mode)
+        const rsg = railSuccessGlow ?? 0
+        if (rsg > 0) {
+          ctx.beginPath()
+          ctx.arc(fwx, fwy, coreR + 6 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * rsg})`
+          ctx.fill()
+        }
       }
 
       // Foreshortening confidence warning (below side-view — right of canvas = left of screen)

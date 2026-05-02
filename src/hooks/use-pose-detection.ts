@@ -1,4 +1,4 @@
-import { createWristRepairStatus } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
@@ -79,6 +79,11 @@ export function usePoseDetection(
   // One-Euro filters for z-values used in 3D angle analysis
   const wristZFiltersRef = useRef(createWristZFilters())
 
+  // Rail direction smoothing state (2D normalized vector)
+  const railDirRef = useRef<{ x: number; y: number } | null>(null)
+  // Rail 5-second challenge timer
+  const railTimerRef = useRef(createWristRailTimer(5, 3))
+
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
     violinRef.current.reset()
@@ -88,6 +93,8 @@ export function usePoseDetection(
     wristSlideShieldRef.current = 0
     wristFiltersRef.current = createWristRenderFilters()
     wristZFiltersRef.current = createWristZFilters()
+    railDirRef.current = null
+    railTimerRef.current = createWristRailTimer(5, 3)
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -195,6 +202,9 @@ export function usePoseDetection(
           let bendFwd: boolean | undefined
           let filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number; mx: number; my: number } | undefined
           let wristForeConf: number | undefined
+          let smoothedRailDir: { x: number; y: number } | undefined
+          let railTimerValue: number | undefined
+          let railSuccessGlow: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
             const leftEar = landmarks[7]!
@@ -226,23 +236,27 @@ export function usePoseDetection(
             const armLen2D = computeArmLength2D(elbow, wrist)
             const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
 
-            // Filter z-values — use stronger smoothing when foreshortened
+            // ── 2D Collinearity measurement (primary) ──
+            const angleDiff2D = computeCollinearityAngle2D(elbow, wrist, index)
+
+            // ── Z-boost for neck-direction detection ──
             const t = now / 1000
             const zf = wristZFiltersRef.current
-            const elbowF = { ...elbow, z: zf.elbowZ(elbow.z, t) }
-            const wristF = { ...wrist, z: zf.wristZ(wrist.z, t) }
-            const indexF = { ...index, z: zf.indexZ(index.z, t) }
+            const zWristF = zf.wristZ(wrist.z, t)
+            const zIndexF = zf.indexZ(index.z, t)
+            const effectiveAngleDiff = computeZBoost(angleDiff2D, zIndexF, zWristF)
 
-            const result = analyzeWrist(elbowF, wristF, indexF, store.masterPrint, sensitivity)
-            rawDev = result.angleDiff / 30 // Normalize for display
+            rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
 
             // Cap tension by foreshortening confidence — avoid false alarms
-            tensionTarget = result.tensionTarget * foreConf * slideShieldFactor
+            tensionTarget = computeWristTensionTarget(effectiveAngleDiff, sensitivity) * foreConf * slideShieldFactor
 
+            // Bend direction (2D cross product)
+            const bendDir2D = computeBendDirection2D(elbow, wrist, index)
             bendFwd = updateBendLock(
-              result.angleDiff,
-              result.bendDir,
+              effectiveAngleDiff,
+              bendDir2D,
               store.masterPrint.flexBendDir,
               bendForwardRef.current,
             )
@@ -250,9 +264,31 @@ export function usePoseDetection(
 
             // Wrist repair status update
             wristRepairStatus = wristRepairStatusRef.current(
-              result.angleDiff,
+              effectiveAngleDiff,
               now
             )
+
+            // ── Rail direction smoothing ──
+            const armDx = wrist.x - elbow.x
+            const armDy = wrist.y - elbow.y
+            const armMag = Math.sqrt(armDx * armDx + armDy * armDy)
+            if (armMag > 0) {
+              const currentDirX = armDx / armMag
+              const currentDirY = armDy / armMag
+              if (railDirRef.current) {
+                railDirRef.current = smoothDirection2D(
+                  railDirRef.current.x, railDirRef.current.y,
+                  currentDirX, currentDirY, 0.15,
+                )
+              } else {
+                railDirRef.current = { x: currentDirX, y: currentDirY }
+              }
+            }
+
+            // ── Rail 5-second challenge timer ──
+            const RAIL_DEADZONE_DEG = 10
+            const isStraight = effectiveAngleDiff <= RAIL_DEADZONE_DEG
+            const railResult = railTimerRef.current(isStraight, dt, now)
 
             // One-Euro filtered coordinates for smooth rendering
             const f = wristFiltersRef.current
@@ -269,6 +305,11 @@ export function usePoseDetection(
 
             // Store confidence for renderer warning
             wristForeConf = foreConf
+
+            // Rail-specific store fields
+            smoothedRailDir = railDirRef.current ?? undefined
+            railTimerValue = railResult.timerValue
+            railSuccessGlow = railResult.successGlow
           } else if (store.focusMode === 'violin' && store.masterPrint.mode === 'violin') {
             const wrist = landmarks[15]!
             const result = violinRef.current.analyze(wrist.y, store.masterPrint)
@@ -335,6 +376,10 @@ export function usePoseDetection(
               maxStreak: trackResult.maxStreak,
               // Wrist repair status for rendering/feedback
               wristRepairStatus: wristRepairStatus,
+              // Rail state
+              smoothedRailDir,
+              railTimerValue,
+              railSuccessGlow,
             })
           }
         }

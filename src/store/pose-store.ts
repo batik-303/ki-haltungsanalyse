@@ -51,6 +51,11 @@ export interface PoseState {
   // Reparatur-Status-Objekt (Deadzone/Hysterese)
   wristRepairStatus?: { repaired: boolean; [key: string]: any }
 
+  // Wrist rail (Schiene)
+  smoothedRailDir: { x: number; y: number } | null
+  railTimerValue: number
+  railSuccessGlow: number
+
   // Violin-specific
   violinDeadzone?: boolean
 
@@ -101,6 +106,10 @@ export interface FrameUpdate {
   wristForeshorteningConfidence?: number
   // Reparatur-Status-Objekt (Deadzone/Hysterese)
   wristRepairStatus?: { repaired: boolean; [key: string]: any }
+  // Wrist rail (Schiene)
+  smoothedRailDir?: { x: number; y: number }
+  railTimerValue?: number
+  railSuccessGlow?: number
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
   // Streak
@@ -149,6 +158,11 @@ export const usePoseStore = create<PoseState>((set) => ({
 
   // Wrist
   lastBendForward: true,
+
+  // Wrist rail
+  smoothedRailDir: null,
+  railTimerValue: 0,
+  railSuccessGlow: 0,
 
   // Filtered wrist render coords
   filteredWristCoords: null,
@@ -280,6 +294,9 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.streakSeconds !== undefined && { flowStreak: data.streakSeconds }),
     ...(data.maxStreak !== undefined && { maxFlowStreak: data.maxStreak }),
     ...(data.wristRepairStatus !== undefined && { wristRepairStatus: data.wristRepairStatus }),
+    ...(data.smoothedRailDir !== undefined && { smoothedRailDir: data.smoothedRailDir }),
+    ...(data.railTimerValue !== undefined && { railTimerValue: data.railTimerValue }),
+    ...(data.railSuccessGlow !== undefined && { railSuccessGlow: data.railSuccessGlow }),
   }),
 
   endSession: (stats) => set({

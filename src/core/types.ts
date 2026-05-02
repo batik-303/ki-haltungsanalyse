@@ -70,6 +70,7 @@ export interface WristMasterPrint {
   flexAngle: number           // Projected flexion/extension angle at calibration
   flexBendDir: number         // Bend direction sign at calibration
   calibArmLength2D: number    // 2D elbow-wrist distance at calibration (normalized)
+  calib2DAngle?: number       // 2D collinearity angle at calibration (backward-compatible)
 }
 
 export interface ViolinMasterPrint {

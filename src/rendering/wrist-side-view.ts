@@ -18,6 +18,7 @@ export function drawWristSideView(
   now: number,
   wristRepairStatus?: { repaired: boolean },
   wristGlowLevel?: number,
+  railSuccessGlow?: number,
 ) {
   const DEADZONE_DEG = 10
 
@@ -98,6 +99,20 @@ export function drawWristSideView(
     ctx.setLineDash([])
     ctx.restore()
 
+    // Ghost rail line (where hand should be) — subtle straight line
+    ctx.save()
+    ctx.beginPath()
+    ctx.moveTo(wx, wy)
+    ctx.lineTo(wx, wy - handLen)
+    ctx.strokeStyle = '#8899aa'
+    ctx.lineWidth = 2
+    ctx.globalAlpha = 0.2
+    ctx.lineCap = 'round'
+    ctx.setLineDash([4, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
     // Endpoint dot
     ctx.beginPath()
     ctx.arc(hx, hy, 3 + intensity * 1.5, 0, Math.PI * 2)
@@ -106,7 +121,7 @@ export function drawWristSideView(
     ctx.fill()
     ctx.globalAlpha = 1
   } else {
-    // Correct position: subtle blue line straight up
+    // Correct position: blue line straight up (always visible as rail)
     ctx.beginPath()
     ctx.moveTo(wx, wy)
     ctx.lineTo(wx, wy - handLen)
@@ -163,6 +178,22 @@ export function drawWristSideView(
     ctx.arc(wx, wy, pulseR + 4 * glow, 0, Math.PI * 2)
     ctx.fillStyle = `rgba(33, 150, 243, ${0.2 * glow})`
     ctx.fill()
+  }
+
+  // Golden flash on 5s challenge success
+  const goldGlow = railSuccessGlow ?? 0
+  if (goldGlow > 0) {
+    ctx.beginPath()
+    ctx.arc(wx, wy, pulseR + 6 * goldGlow, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * goldGlow})`
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(wx, wy, pulseR + 2, 0, Math.PI * 2)
+    ctx.strokeStyle = '#FFD700'
+    ctx.lineWidth = 2
+    ctx.globalAlpha = 0.5 * goldGlow
+    ctx.stroke()
+    ctx.globalAlpha = 1
   }
 
   // ─── Arm endpoint dot ───
