@@ -82,7 +82,7 @@ export function usePoseDetection(
   // Rail direction smoothing state (2D normalized vector)
   const railDirRef = useRef<{ x: number; y: number } | null>(null)
   // Rail 5-second challenge timer
-  const railTimerRef = useRef(createWristRailTimer(5, 3))
+  const railTimerRef = useRef(createWristRailTimer())
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
@@ -94,7 +94,7 @@ export function usePoseDetection(
     wristFiltersRef.current = createWristRenderFilters()
     wristZFiltersRef.current = createWristZFilters()
     railDirRef.current = null
-    railTimerRef.current = createWristRailTimer(5, 3)
+    railTimerRef.current = createWristRailTimer()
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -205,6 +205,8 @@ export function usePoseDetection(
           let smoothedRailDir: { x: number; y: number } | undefined
           let railTimerValue: number | undefined
           let railSuccessGlow: number | undefined
+          let railSuccess: boolean | undefined
+          let railMilestoneLevel: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
             const leftEar = landmarks[7]!
@@ -310,6 +312,8 @@ export function usePoseDetection(
             smoothedRailDir = railDirRef.current ?? undefined
             railTimerValue = railResult.timerValue
             railSuccessGlow = railResult.successGlow
+            railSuccess = railResult.success
+            railMilestoneLevel = railResult.milestoneLevel
           } else if (store.focusMode === 'violin' && store.masterPrint.mode === 'violin') {
             const wrist = landmarks[15]!
             const result = violinRef.current.analyze(wrist.y, store.masterPrint)
@@ -329,12 +333,20 @@ export function usePoseDetection(
             const fallingRate = result.isLargeMove ? 0.35 : 0.15
             tensionRef.current = computeTension(tensionRef.current, tensionTarget, result.isLargeMove ? 0.15 : 0.05, fallingRate)
 
+            // ── Hold milestone timer (same timer, mode-agnostic) ──
+            const violinRailResult = railTimerRef.current(inDeadzone, dt, now)
+            railSuccessGlow = violinRailResult.successGlow
+            railSuccess = violinRailResult.success
+            railMilestoneLevel = violinRailResult.milestoneLevel
+
             // Session-Tracking inkl. Deadzone/Belohnungslogik
             const trackResult = sessionRef.current.recordFrame(
               tensionRef.current,
               classifyLayer(tensionRef.current, 'violin').layer,
               dt,
-              inDeadzone
+              inDeadzone,
+              railSuccess,
+              railMilestoneLevel,
             )
 
             // Push to store (batched, Zustand merges)
@@ -349,6 +361,9 @@ export function usePoseDetection(
               maxStreak: trackResult.maxStreak,
               // Deadzone-Status für Rendering
               violinDeadzone: inDeadzone,
+              // Hold milestone golden flash
+              railSuccessGlow,
+              holdMilestoneLevel: railMilestoneLevel,
             })
           }
 
@@ -359,7 +374,8 @@ export function usePoseDetection(
             const layerInfo = classifyLayer(tensionRef.current, store.focusMode, driftDir)
 
             // Session tracking
-            const trackResult = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt)
+            const isRepaired = wristRepairStatus?.repaired ?? undefined
+            const trackResult = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt, isRepaired, railSuccess, railMilestoneLevel)
 
             // Push to store (batched, Zustand merges)
             usePoseStore.getState().updateFrame({
@@ -380,6 +396,7 @@ export function usePoseDetection(
               smoothedRailDir,
               railTimerValue,
               railSuccessGlow,
+              holdMilestoneLevel: railMilestoneLevel,
             })
           }
         }

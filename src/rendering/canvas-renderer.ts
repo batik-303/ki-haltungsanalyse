@@ -12,6 +12,8 @@ import { drawTargetZone } from './target-zone'
 let wristGlowLevel = 0
 let wristGlowDecay = 0
 let lastWristRepaired = false
+let repairGoldenGlow = 0
+let repairGoldenDecay = 0
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -121,11 +123,19 @@ export function renderFrame(
       if (!lastWristRepaired && state.wristRepairStatus?.repaired) {
         wristGlowLevel = 1.0
         wristGlowDecay = performance.now()
+        // Golden flash on repair (immediate reward)
+        repairGoldenGlow = 1.0
+        repairGoldenDecay = performance.now()
       }
       // Decay
       if (wristGlowLevel > 0) {
         const elapsed = performance.now() - wristGlowDecay
         wristGlowLevel = Math.max(0, 1 - elapsed / 350)
+      }
+      // Repair golden glow decay (500ms)
+      if (repairGoldenGlow > 0) {
+        const elapsed = performance.now() - repairGoldenDecay
+        repairGoldenGlow = Math.max(0, 1 - elapsed / 500)
       }
       lastWristRepaired = state.wristRepairStatus?.repaired ?? false
 
@@ -158,25 +168,49 @@ export function renderFrame(
         const coreR = 13 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak)
         drawReturnGlow(ctx, flowX, height / 2, coreR, returnGlowTimer, false)
-        // Golden flash on 5s challenge (flow mode)
-        const rsg = railSuccessGlow ?? 0
+        // Golden flash: combine milestone glow + repair glow
+        const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)
         if (rsg > 0) {
+          ctx.save()
           ctx.beginPath()
-          ctx.arc(flowX, height / 2, coreR + 6 * rsg, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * rsg})`
+          ctx.arc(flowX, height / 2, coreR + 25 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
+          ctx.shadowColor = '#FFD700'
+          ctx.shadowBlur = 30 * rsg
           ctx.fill()
+          ctx.restore()
+          // Inner bright ring
+          ctx.beginPath()
+          ctx.arc(flowX, height / 2, coreR + 4, 0, Math.PI * 2)
+          ctx.strokeStyle = '#FFD700'
+          ctx.lineWidth = 3 * rsg
+          ctx.globalAlpha = 0.6 * rsg
+          ctx.stroke()
+          ctx.globalAlpha = 1
         }
       } else {
         const coreR = 11 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, fwx, fwy, coreR, now)
         drawReturnGlow(ctx, fwx, fwy, coreR, returnGlowTimer, false)
-        // Golden flash on 5s challenge (analyse mode)
-        const rsg = railSuccessGlow ?? 0
+        // Golden flash: combine milestone glow + repair glow
+        const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)
         if (rsg > 0) {
+          ctx.save()
           ctx.beginPath()
-          ctx.arc(fwx, fwy, coreR + 6 * rsg, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * rsg})`
+          ctx.arc(fwx, fwy, coreR + 25 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
+          ctx.shadowColor = '#FFD700'
+          ctx.shadowBlur = 30 * rsg
           ctx.fill()
+          ctx.restore()
+          // Inner bright ring
+          ctx.beginPath()
+          ctx.arc(fwx, fwy, coreR + 4, 0, Math.PI * 2)
+          ctx.strokeStyle = '#FFD700'
+          ctx.lineWidth = 3 * rsg
+          ctx.globalAlpha = 0.6 * rsg
+          ctx.stroke()
+          ctx.globalAlpha = 1
         }
       }
 
@@ -221,6 +255,26 @@ export function renderFrame(
       // Sapphire anchor moves with wrist (sits on the hand)
       drawSapphireAnchor(ctx, wx, wy, coreR, now, inDeadzone ? flowStreak + 2 : 0)
       drawReturnGlow(ctx, wx, wy, coreR, returnGlowTimer, true)
+
+      // Golden flash on milestone success
+      const rsg = railSuccessGlow ?? 0
+      if (rsg > 0) {
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(wx, wy, coreR + 25 * rsg, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
+        ctx.shadowColor = '#FFD700'
+        ctx.shadowBlur = 30 * rsg
+        ctx.fill()
+        ctx.restore()
+        ctx.beginPath()
+        ctx.arc(wx, wy, coreR + 4, 0, Math.PI * 2)
+        ctx.strokeStyle = '#FFD700'
+        ctx.lineWidth = 3 * rsg
+        ctx.globalAlpha = 0.6 * rsg
+        ctx.stroke()
+        ctx.globalAlpha = 1
+      }
 
       // Yellow band from wrist to correct Y height (same X, calibrated Y)
       if (!inDeadzone) {

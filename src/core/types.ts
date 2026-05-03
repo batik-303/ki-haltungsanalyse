@@ -125,6 +125,9 @@ export interface SessionStats {
   // Ankerpunkte und aufsummierte Reparaturzeit
   anchorPoints?: number
   repairedTime?: number
+  // Progressive Haltungs-Meilensteine
+  holdMilestones?: number
+  bestMilestoneLevel?: number
 }
 
 export interface StoredSession {
@@ -143,6 +146,8 @@ export interface StoredSession {
   }
   tensionTimeline: TensionTimelineEntry[]
   maxFlowStreak: number
+  holdMilestones?: number
+  bestMilestoneLevel?: number
 }
 
 // ── Canvas Rendering Context ──

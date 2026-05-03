@@ -179,23 +179,4 @@ export function drawWristLines(
       ctx.restore()
     }
   }
-
-  // ── 4. Golden flash on 5s challenge success ──
-  if (railSuccessGlow > 0) {
-    // Golden glow on the hand line
-    const railEndX = wx + dirX * handLen
-    const railEndY = wy + dirY * handLen
-    ctx.save()
-    ctx.beginPath()
-    ctx.moveTo(wx, wy)
-    ctx.lineTo(railEndX, railEndY)
-    ctx.strokeStyle = '#FFD700'
-    ctx.shadowColor = '#FFD700'
-    ctx.shadowBlur = 20 + 30 * railSuccessGlow
-    ctx.lineWidth = 6 + 12 * railSuccessGlow
-    ctx.globalAlpha = 0.3 * railSuccessGlow
-    ctx.lineCap = 'round'
-    ctx.stroke()
-    ctx.restore()
-  }
 }

@@ -180,17 +180,21 @@ export function drawWristSideView(
     ctx.fill()
   }
 
-  // Golden flash on 5s challenge success
+  // Golden flash on milestone/repair success
   const goldGlow = railSuccessGlow ?? 0
   if (goldGlow > 0) {
+    ctx.save()
     ctx.beginPath()
-    ctx.arc(wx, wy, pulseR + 6 * goldGlow, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(255, 215, 0, ${0.3 * goldGlow})`
+    ctx.arc(wx, wy, pulseR + 20 * goldGlow, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * goldGlow})`
+    ctx.shadowColor = '#FFD700'
+    ctx.shadowBlur = 25 * goldGlow
     ctx.fill()
+    ctx.restore()
     ctx.beginPath()
-    ctx.arc(wx, wy, pulseR + 2, 0, Math.PI * 2)
+    ctx.arc(wx, wy, pulseR + 3, 0, Math.PI * 2)
     ctx.strokeStyle = '#FFD700'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2 * goldGlow
     ctx.globalAlpha = 0.5 * goldGlow
     ctx.stroke()
     ctx.globalAlpha = 1

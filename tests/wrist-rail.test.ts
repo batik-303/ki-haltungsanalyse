@@ -129,61 +129,108 @@ describe('smoothDirection2D', () => {
 
 describe('createWristRailTimer', () => {
   it('rises at +dt when straight', () => {
-    const timer = createWristRailTimer(5, 3)
+    const timer = createWristRailTimer([3, 5, 10, 15])
     const r = timer(true, 1, 1000)
     expect(r.timerValue).toBeCloseTo(1)
     expect(r.success).toBe(false)
+    expect(r.milestoneLevel).toBe(0)
+    expect(r.currentTarget).toBe(3)
   })
 
-  it('decays at -3×dt when bent', () => {
-    const timer = createWristRailTimer(5, 3)
+  it('freezes (not decays) when bent', () => {
+    const timer = createWristRailTimer([5])
     timer(true, 3, 3000) // rise to 3
-    const r = timer(false, 1, 4000) // decay 3×1 = 3
-    expect(r.timerValue).toBeCloseTo(0)
+    const r = timer(false, 1, 4000) // freeze — stays at 3
+    expect(r.timerValue).toBeCloseTo(3)
   })
 
-  it('clamps to 0 (never negative)', () => {
-    const timer = createWristRailTimer(5, 3)
+  it('timer stays at 0 when never straight', () => {
+    const timer = createWristRailTimer([3])
     const r = timer(false, 2, 2000)
     expect(r.timerValue).toBe(0)
   })
 
-  it('fires success at 5s and resets', () => {
-    const timer = createWristRailTimer(5, 3)
-    timer(true, 4.5, 4500)
-    const r = timer(true, 0.6, 5100) // pushes past 5
+  it('fires success at first milestone (3s) and resets', () => {
+    const timer = createWristRailTimer([3, 5, 10, 15])
+    timer(true, 2.5, 2500)
+    const r = timer(true, 0.6, 3100) // pushes past 3
     expect(r.success).toBe(true)
     expect(r.timerValue).toBe(0) // reset
     expect(r.successGlow).toBeCloseTo(1)
+    expect(r.milestoneLevel).toBe(1) // advanced
+    // currentTarget was the target that triggered success (3), next call will show 5
+  })
+
+  it('progresses through ladder: 3 → 5 → 10 → 15', () => {
+    const timer = createWristRailTimer([3, 5, 10, 15])
+
+    // Milestone 1: 3s
+    const r1 = timer(true, 3, 3000)
+    expect(r1.success).toBe(true)
+    expect(r1.milestoneLevel).toBe(1)
+
+    // Milestone 2: 5s
+    const r2 = timer(true, 5, 8000)
+    expect(r2.success).toBe(true)
+    expect(r2.milestoneLevel).toBe(2)
+
+    // Milestone 3: 10s
+    const r3 = timer(true, 10, 18000)
+    expect(r3.success).toBe(true)
+    expect(r3.milestoneLevel).toBe(3)
+
+    // Milestone 4: 15s
+    const r4 = timer(true, 15, 33000)
+    expect(r4.success).toBe(true)
+    expect(r4.milestoneLevel).toBe(4)
+  })
+
+  it('repeats last ladder value in steady state', () => {
+    const timer = createWristRailTimer([3, 5])
+
+    // Exhaust ladder
+    timer(true, 3, 3000) // milestone 1
+    timer(true, 5, 8000) // milestone 2
+
+    // Steady state: should require 5s (last value)
+    const r = timer(true, 5, 13000)
+    expect(r.success).toBe(true)
+    expect(r.milestoneLevel).toBe(3)
+    expect(r.currentTarget).toBe(5)
   })
 
   it('glow decays over 600ms after success', () => {
-    const timer = createWristRailTimer(5, 3)
-    timer(true, 4.5, 4500)
-    timer(true, 0.6, 5100) // success at 5100ms
-    const r = timer(true, 0.3, 5400) // 300ms later
+    const timer = createWristRailTimer([3])
+    timer(true, 3, 3000) // success at 3000ms
+    const r = timer(true, 0.3, 3300) // 300ms later
     expect(r.successGlow).toBeCloseTo(0.5, 1)
-    const r2 = timer(true, 0.3, 5700) // 600ms later
+    const r2 = timer(true, 0.3, 3600) // 600ms later
     expect(r2.successGlow).toBeCloseTo(0, 1)
   })
 
-  it('brief deviation is recoverable', () => {
-    const timer = createWristRailTimer(5, 3)
+  it('freeze preserves progress across deviation', () => {
+    const timer = createWristRailTimer([5])
     timer(true, 4, 4000) // 4s built up
-    timer(false, 0.2, 4200) // brief 0.2s bend → lose 0.6s
-    const r = timer(true, 0, 4200) // check value
-    expect(r.timerValue).toBeCloseTo(3.4, 1) // 4 - 0.6
+    timer(false, 2, 6000) // 2s deviation — freezes at 4
+    const r = timer(true, 0, 6000) // check value
+    expect(r.timerValue).toBeCloseTo(4)
     expect(r.success).toBe(false)
   })
 
-  it('can fire multiple times in one session', () => {
-    const timer = createWristRailTimer(5, 3)
-    const r1 = timer(true, 5, 5000) // first success
-    expect(r1.success).toBe(true)
-    expect(r1.timerValue).toBe(0)
-    // Build up again
-    const r2 = timer(true, 5, 10000) // second success
-    expect(r2.success).toBe(true)
-    expect(r2.timerValue).toBe(0)
+  it('completes after freeze + resume', () => {
+    const timer = createWristRailTimer([5])
+    timer(true, 3, 3000) // 3s
+    timer(false, 5, 8000) // freeze at 3
+    const r = timer(true, 2, 10000) // resume +2 = 5 → success
+    expect(r.success).toBe(true)
+    expect(r.timerValue).toBe(0)
+  })
+
+  it('milestone level tracks correctly across multiple successes', () => {
+    const timer = createWristRailTimer([3, 5, 10, 15])
+    timer(true, 3, 3000)
+    expect(timer(true, 0, 3000).milestoneLevel).toBe(1)
+    timer(true, 5, 8000)
+    expect(timer(true, 0, 8000).milestoneLevel).toBe(2)
   })
 })

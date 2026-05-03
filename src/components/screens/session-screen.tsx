@@ -6,7 +6,7 @@ import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-contro
 import { CalibrationOverlay, updateCalibrationUI } from '@/components/calibration-overlay'
 import { DistanceIndicator } from '@/components/distance-indicator'
 import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
-import { saveSession } from '@/core/persistence/session-db'
+import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
 import type { StoredSession } from '@/core/types'
 import { cn } from '@/lib/utils'
@@ -82,8 +82,13 @@ export function SessionScreen() {
         zonePercentages: trackerStats.zonePercentages,
         tensionTimeline: trackerStats.tensionTimeline,
         maxFlowStreak: trackerStats.maxFlowStreak,
+        holdMilestones: trackerStats.holdMilestones,
+        bestMilestoneLevel: trackerStats.bestMilestoneLevel,
       }
       saveSession(stored).catch(console.error)
+      if (trackerStats.holdMilestones && trackerStats.holdMilestones > 0) {
+        addHoldMilestones(trackerStats.holdMilestones).catch(console.error)
+      }
 
       store.endSession(trackerStats)
       goToResults(trackerStats)

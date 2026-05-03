@@ -55,6 +55,7 @@ export interface PoseState {
   smoothedRailDir: { x: number; y: number } | null
   railTimerValue: number
   railSuccessGlow: number
+  holdMilestoneLevel: number
 
   // Violin-specific
   violinDeadzone?: boolean
@@ -110,6 +111,7 @@ export interface FrameUpdate {
   smoothedRailDir?: { x: number; y: number }
   railTimerValue?: number
   railSuccessGlow?: number
+  holdMilestoneLevel?: number
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
   // Streak
@@ -163,6 +165,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   smoothedRailDir: null,
   railTimerValue: 0,
   railSuccessGlow: 0,
+  holdMilestoneLevel: 0,
 
   // Filtered wrist render coords
   filteredWristCoords: null,
@@ -297,6 +300,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.smoothedRailDir !== undefined && { smoothedRailDir: data.smoothedRailDir }),
     ...(data.railTimerValue !== undefined && { railTimerValue: data.railTimerValue }),
     ...(data.railSuccessGlow !== undefined && { railSuccessGlow: data.railSuccessGlow }),
+    ...(data.holdMilestoneLevel !== undefined && { holdMilestoneLevel: data.holdMilestoneLevel }),
   }),
 
   endSession: (stats) => set({

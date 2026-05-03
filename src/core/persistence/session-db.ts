@@ -32,3 +32,18 @@ export async function getPersonalBestStreak(): Promise<number> {
   }
   return best
 }
+
+const MILESTONES_KEY = 'total-hold-milestones'
+
+export async function getTotalHoldMilestones(): Promise<number> {
+  const total = await get<number>(MILESTONES_KEY, sessionStore)
+  return total ?? 0
+}
+
+export async function addHoldMilestones(count: number): Promise<number> {
+  if (count <= 0) return await getTotalHoldMilestones()
+  const current = await getTotalHoldMilestones()
+  const newTotal = current + count
+  await set(MILESTONES_KEY, newTotal, sessionStore)
+  return newTotal
+}

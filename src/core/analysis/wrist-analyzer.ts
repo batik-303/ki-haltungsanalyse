@@ -339,29 +339,38 @@ export function smoothDirection2D(
 // ── Rail Timer (5-Second Challenge) ────────────────────────────────
 
 /**
- * Factory: 5-second decay timer for sustained straight-wrist challenge.
- * Timer rises at real-time speed when straight, decays at multiplier speed when bent.
- * Fires success event when target reached, then resets.
+ * Factory: Progressive freeze-timer with milestone ladder.
+ * Timer rises at real-time speed when in correct posture, freezes (pauses) on deviation.
+ * Fires success event at each milestone, then advances to next target.
+ * @param ladder - Progressive target durations in seconds (default: [3, 5, 10, 15])
  */
-export function createWristRailTimer(durationTarget = 5, decayMultiplier = 3) {
+export function createWristRailTimer(ladder: number[] = [3, 5, 10, 15]) {
   let timerValue = 0
   let successGlow = 0
   let lastSuccessTime = 0
+  let milestoneLevel = 0 // index into ladder (0-based during current milestone)
+
+  function currentTarget() {
+    if (milestoneLevel < ladder.length) return ladder[milestoneLevel]
+    return ladder[ladder.length - 1] // steady state: repeat last
+  }
 
   return function update(isStraight: boolean, dt: number, nowMs: number) {
-    // Update timer
+    // Update timer: rise when straight, freeze when deviated
     if (isStraight) {
       timerValue += dt
-    } else {
-      timerValue -= dt * decayMultiplier
     }
-    timerValue = Math.max(0, Math.min(durationTarget, timerValue))
+    // No decay — timer just pauses on deviation
+
+    const target = currentTarget()
+    timerValue = Math.min(target, timerValue)
 
     // Check success
     let success = false
-    if (timerValue >= durationTarget) {
+    if (timerValue >= target) {
       success = true
       timerValue = 0
+      milestoneLevel++
       successGlow = 1.0
       lastSuccessTime = nowMs
     }
@@ -372,7 +381,7 @@ export function createWristRailTimer(durationTarget = 5, decayMultiplier = 3) {
       successGlow = Math.max(0, 1 - elapsed / 600)
     }
 
-    return { timerValue, success, successGlow }
+    return { timerValue, success, successGlow, milestoneLevel, currentTarget: target }
   }
 }
 

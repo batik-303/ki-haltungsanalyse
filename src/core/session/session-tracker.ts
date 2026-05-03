@@ -40,6 +40,9 @@ export function createSessionTracker(focusMode: FocusMode) {
   // Ankerpunkt-Logik
   let repairedTime = 0 // aufsummierte Zeit im reparierten Zustand (Sekunden)
   let wasRepaired = false
+  // Hold-Meilensteine
+  let holdMilestones = 0
+  let bestMilestoneLevel = 0
 
   const elevatedThreshold = ELEVATED_THRESHOLDS[focusMode]
   const rewardThreshold = REWARD_THRESHOLDS[focusMode]
@@ -56,6 +59,8 @@ export function createSessionTracker(focusMode: FocusMode) {
       streakSeconds = 0
       streakGraceTimer = 0
       maxStreak = 0
+      holdMilestones = 0
+      bestMilestoneLevel = 0
       zones.flow = 0
       zones.bewusst = 0
       zones.achtung = 0
@@ -76,8 +81,18 @@ export function createSessionTracker(focusMode: FocusMode) {
      * @param layer - Current classified layer
      * @param dt - Delta time in seconds since last frame
      * @param repaired - Aktueller Reparaturstatus (true = in Deadzone)
+     * @param holdSuccess - Whether a hold milestone was just achieved this frame
+     * @param currentMilestoneLevel - Current milestone level from hold timer
      */
-    recordFrame(tensionScore: number, layer: Layer, dt: number, repaired?: boolean): { glowTimer: number; streakSeconds: number; maxStreak: number } {
+    recordFrame(tensionScore: number, layer: Layer, dt: number, repaired?: boolean, holdSuccess?: boolean, currentMilestoneLevel?: number): { glowTimer: number; streakSeconds: number; maxStreak: number } {
+      // Hold-Meilenstein zählen
+      if (holdSuccess) {
+        holdMilestones++
+        if (currentMilestoneLevel !== undefined && currentMilestoneLevel > bestMilestoneLevel) {
+          bestMilestoneLevel = currentMilestoneLevel
+        }
+      }
+
       // Ankerpunkt-Zeit aufsummieren
       if (repaired) {
         repairedTime += dt
@@ -168,6 +183,8 @@ export function createSessionTracker(focusMode: FocusMode) {
         maxFlowStreak: maxStreak,
         anchorPoints,
         repairedTime: Math.round(repairedTime),
+        holdMilestones,
+        bestMilestoneLevel,
       }
     },
 

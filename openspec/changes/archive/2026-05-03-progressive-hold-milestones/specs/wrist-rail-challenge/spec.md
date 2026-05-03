@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: 5-second decay timer
 The system SHALL maintain a continuous timer that tracks sustained correct posture. The timer SHALL rise at real-time speed (+dt per frame) when the player is in the correct posture, and freeze (value unchanged) when the player deviates. The timer SHALL use a progressive target ladder (3s → 5s → 10s → 15s, then 15s steady state) instead of a fixed 5-second target.
@@ -44,14 +44,3 @@ The system SHALL render a golden glow exclusively on the sapphire anchor when a 
 #### Scenario: No flash on hand line
 - **WHEN** a milestone completes
 - **THEN** no golden glow effect SHALL be rendered on the wrist-to-MCP hand line
-
-### Requirement: Timer state as closure factory
-The timer SHALL be implemented as a factory function `createWristRailTimer()` returning a closure, consistent with the project's `createWristRepairStatus()` pattern.
-
-#### Scenario: Timer instantiation
-- **WHEN** the detection hook initializes
-- **THEN** the timer is created via `createWristRailTimer()` and held in a `useRef`
-
-#### Scenario: Timer reset on recalibration
-- **WHEN** the user recalibrates
-- **THEN** the timer resets to 0.0
