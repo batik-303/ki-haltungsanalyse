@@ -317,6 +317,7 @@ export function computeBendDirection2D(
 /**
  * Apply z-boost when 2D angle is below threshold but filtered z-delta
  * between MCP and wrist indicates a depth-direction bend.
+ * Uses a linear ramp instead of binary threshold to avoid flicker.
  * Returns the effective angleDiff (may be boosted).
  */
 export function computeZBoost(
@@ -328,10 +329,11 @@ export function computeZBoost(
 ): number {
   if (angleDiff2D >= 3) return angleDiff2D
   const zDelta = Math.abs(zMcp - zWrist)
-  if (zDelta > threshold) {
-    return Math.max(angleDiff2D, boostDeg)
-  }
-  return angleDiff2D
+  if (zDelta <= threshold) return angleDiff2D
+  // Linear ramp: threshold → threshold×3 maps to 0..boostDeg
+  const ramp = Math.min(1, (zDelta - threshold) / (threshold * 2))
+  const zContribution = boostDeg * ramp
+  return Math.max(angleDiff2D, zContribution)
 }
 
 /**

@@ -41,9 +41,9 @@ function createWristRenderFilters() {
 // beta=0.003 provides proven stability for wrist angle detection
 function createWristZFilters() {
   return {
-    elbowZ: createOneEuroFilter(0.6, 0.003, 1.0),
-    wristZ: createOneEuroFilter(0.6, 0.003, 1.0),
-    indexZ: createOneEuroFilter(0.6, 0.003, 1.0),
+    elbowZ: createOneEuroFilter(0.3, 0.001, 1.0),
+    wristZ: createOneEuroFilter(0.3, 0.001, 1.0),
+    indexZ: createOneEuroFilter(0.3, 0.001, 1.0),
   }
 }
 
@@ -85,6 +85,8 @@ export function usePoseDetection(
   const railTimerRef = useRef(createWristRailTimer())
   // Sticky-blue hysteresis for wrist rail color
   const wristRailColorRef = useRef(createWristRailColor())
+  // EMA post-smoothing for effectiveAngleDiff (eliminates Z-axis micro-jitter)
+  const angleDiffEmaRef = useRef(0)
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
@@ -98,6 +100,7 @@ export function usePoseDetection(
     railDirRef.current = null
     railTimerRef.current = createWristRailTimer()
     wristRailColorRef.current = createWristRailColor()
+    angleDiffEmaRef.current = 0
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -255,7 +258,11 @@ export function usePoseDetection(
             const zf = wristZFiltersRef.current
             const zWristF = zf.wristZ(wrist.z, t)
             const zIndexF = zf.indexZ(index.z, t)
-            const effectiveAngleDiff = computeZBoost(baselineCorrected, zIndexF, zWristF)
+            const rawZBoosted = computeZBoost(baselineCorrected, zIndexF, zWristF)
+
+            // ── EMA post-smoothing (alpha=0.25, ~100ms time constant at 30fps) ──
+            angleDiffEmaRef.current = angleDiffEmaRef.current * 0.75 + rawZBoosted * 0.25
+            const effectiveAngleDiff = angleDiffEmaRef.current
 
             // ── Sticky-blue rail color with grace buffer ──
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0

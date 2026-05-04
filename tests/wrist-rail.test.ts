@@ -68,23 +68,38 @@ describe('computeBendDirection2D', () => {
 
 describe('computeZBoost', () => {
   it('does not boost when 2D angle >= 3°', () => {
-    expect(computeZBoost(5, 0.1, 0, 0.02, 8)).toBe(5)
-    expect(computeZBoost(3, 0.1, 0, 0.02, 8)).toBe(3)
-  })
-
-  it('boosts when 2D < 3° and z-delta exceeds threshold', () => {
-    expect(computeZBoost(1, 0.05, 0, 0.02, 8)).toBe(8)
+    expect(computeZBoost(5, 0.1, 0, 0.02, 4)).toBe(5)
+    expect(computeZBoost(3, 0.1, 0, 0.02, 4)).toBe(3)
   })
 
   it('does not boost when z-delta is below threshold', () => {
-    expect(computeZBoost(1, 0.01, 0, 0.02, 8)).toBe(1)
+    expect(computeZBoost(1, 0.01, 0, 0.02, 4)).toBe(1)
+    expect(computeZBoost(0, 0.02, 0, 0.02, 4)).toBe(0) // exactly at threshold = no boost
   })
 
-  it('returns max of 2D and boost (not always boost)', () => {
-    // 2D is 2.5, boost would be 8 → 8
-    expect(computeZBoost(2.5, 0.05, 0, 0.02, 8)).toBe(8)
+  it('applies partial boost at midpoint of ramp', () => {
+    // zDelta = 0.04 (midpoint: threshold=0.02, 3×threshold=0.06)
+    // ramp = (0.04 - 0.02) / (0.02 * 2) = 0.5 → zContribution = 4 * 0.5 = 2
+    expect(computeZBoost(0, 0.04, 0, 0.02, 4)).toBeCloseTo(2, 1)
+  })
+
+  it('applies full boost above 3×threshold', () => {
+    // zDelta = 0.08 > 3×threshold=0.06 → ramp clamped to 1 → full boostDeg
+    expect(computeZBoost(1, 0.08, 0, 0.02, 4)).toBe(4)
+  })
+
+  it('ramps linearly between threshold and 3×threshold', () => {
+    // zDelta = 0.03 → ramp = (0.03-0.02)/(0.04) = 0.25 → 4*0.25 = 1
+    expect(computeZBoost(0, 0.03, 0, 0.02, 4)).toBeCloseTo(1, 1)
+    // zDelta = 0.05 → ramp = (0.05-0.02)/(0.04) = 0.75 → 4*0.75 = 3
+    expect(computeZBoost(0, 0.05, 0, 0.02, 4)).toBeCloseTo(3, 1)
+  })
+
+  it('returns max of 2D and z-contribution', () => {
+    // 2D is 2.5, zContribution at full ramp = 4 → max(2.5, 4) = 4
+    expect(computeZBoost(2.5, 0.08, 0, 0.02, 4)).toBe(4)
     // 2D is 0, z below threshold → 0
-    expect(computeZBoost(0, 0.01, 0, 0.02, 8)).toBe(0)
+    expect(computeZBoost(0, 0.01, 0, 0.02, 4)).toBe(0)
   })
 })
 
