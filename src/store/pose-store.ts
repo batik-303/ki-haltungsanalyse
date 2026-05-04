@@ -26,6 +26,7 @@ export interface PoseState {
   // Calibration
   masterPrint: MasterPrint | null
   calibratedShoulderWidth: number | null
+  lastCalibrationAt: number | null
   isCalibrating: boolean
   distanceOk: boolean
 
@@ -56,6 +57,8 @@ export interface PoseState {
   railTimerValue: number
   railSuccessGlow: number
   holdMilestoneLevel: number
+  wristRailAngleDeg: number
+  wristRailIsBlue: boolean
 
   // Violin-specific
   violinDeadzone?: boolean
@@ -112,6 +115,8 @@ export interface FrameUpdate {
   railTimerValue?: number
   railSuccessGlow?: number
   holdMilestoneLevel?: number
+  wristRailAngleDeg?: number
+  wristRailIsBlue?: boolean
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
   // Streak
@@ -139,6 +144,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   // Calibration
   masterPrint: null,
   calibratedShoulderWidth: null,
+  lastCalibrationAt: null,
   isCalibrating: false,
   distanceOk: false,
 
@@ -166,6 +172,8 @@ export const usePoseStore = create<PoseState>((set) => ({
   railTimerValue: 0,
   railSuccessGlow: 0,
   holdMilestoneLevel: 0,
+  wristRailAngleDeg: 0,
+  wristRailIsBlue: true,
 
   // Filtered wrist render coords
   filteredWristCoords: null,
@@ -190,6 +198,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     appScreen: 'session',
     masterPrint: null,
     calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
     isCalibrating: false,
     distanceOk: false,
     tensionScore: 0,
@@ -201,6 +210,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
     lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -218,6 +229,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     selectedInstrument: null,
     masterPrint: null,
     calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
     isCalibrating: false,
     distanceOk: false,
     tensionScore: 0,
@@ -229,6 +241,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
     lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -240,6 +254,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     focusMode: mode,
     masterPrint: null,
     calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
     tensionScore: 0,
     smoothedDeviation: 0,
     rawDeviation: 0,
@@ -249,6 +264,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
     lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     driftDirection: 1,
   }),
 
@@ -263,6 +280,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   calibrate: (masterPrint, shoulderWidth) => set({
     masterPrint,
     calibratedShoulderWidth: shoulderWidth,
+    lastCalibrationAt: performance.now(),
     isCalibrating: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -272,6 +290,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastSessionStats: null,
     returnGlowTimer: 0,
     lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     driftDirection: 1,
   }),
 
@@ -301,21 +321,27 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.railTimerValue !== undefined && { railTimerValue: data.railTimerValue }),
     ...(data.railSuccessGlow !== undefined && { railSuccessGlow: data.railSuccessGlow }),
     ...(data.holdMilestoneLevel !== undefined && { holdMilestoneLevel: data.holdMilestoneLevel }),
+    ...(data.wristRailAngleDeg !== undefined && { wristRailAngleDeg: data.wristRailAngleDeg }),
+    ...(data.wristRailIsBlue !== undefined && { wristRailIsBlue: data.wristRailIsBlue }),
   }),
 
   endSession: (stats) => set({
     sessionActive: false,
     masterPrint: null,
+    lastCalibrationAt: null,
     tensionScore: 0,
     smoothedDeviation: 0,
     rawDeviation: 0,
     returnGlowTimer: 0,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     lastSessionStats: stats,
   }),
 
   reset: () => set({
     masterPrint: null,
     calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
     isCalibrating: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -326,6 +352,8 @@ export const usePoseStore = create<PoseState>((set) => ({
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
     lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
     driftDirection: 1,
   }),
 }))

@@ -19,8 +19,9 @@ export function drawWristSideView(
   wristRepairStatus?: { repaired: boolean },
   wristGlowLevel?: number,
   railSuccessGlow?: number,
+  isBlue?: boolean,
 ) {
-  const DEADZONE_DEG = 10
+  const inDeadzone = isBlue ?? (angleDiff <= 10)
 
   // Asymmetric smoothing: slow rise (dampens jitter), fast fall (rewards return)
   const targetAngle = angleDiff > 5 ? angleDiff : 0
@@ -41,7 +42,6 @@ export function drawWristSideView(
   const ax = cx
   const ay = cy + armLen
 
-  const inDeadzone = angleDiff <= DEADZONE_DEG
   const glow = wristGlowLevel ?? 0
 
   // Breathing cycle
@@ -85,7 +85,7 @@ export function drawWristSideView(
 
   if (!inDeadzone && visualAngle > 0) {
     // Yellow dashed line on deviation (matches main overlay)
-    const intensity = Math.min(1, (visualAngle - DEADZONE_DEG) / 20)
+    const intensity = Math.min(1, visualAngle / 20)
     ctx.save()
     ctx.setLineDash([8, 5])
     ctx.beginPath()

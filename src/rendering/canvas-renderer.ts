@@ -31,7 +31,7 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, smoothedRailDir, railSuccessGlow } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, smoothedRailDir, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg } = state
   const isFlow = viewMode === 'flow'
 
   // ── Flow mode: black background ──
@@ -143,22 +143,24 @@ export function renderFrame(
         drawWristLines(
           ctx, fwx, fwy, fmx, fmy,
           fex, fey,
-          rawDeviation * 30,
+          wristRailAngleDeg ?? rawDeviation * 30,
           smoothedRailDir ?? null,
           railSuccessGlow ?? 0,
           wristGlowLevel,
+          wristRailIsBlue,
         )
 
         // ── Side-View synchronisiert ──
         drawWristSideView(
           ctx, width, height,
           tensionScore,
-          rawDeviation * 30,
+          wristRailAngleDeg ?? rawDeviation * 30,
           lastBendForward,
           now,
           state.wristRepairStatus ?? undefined,
           wristGlowLevel,
           railSuccessGlow ?? 0,
+          wristRailIsBlue,
         )
       }
 

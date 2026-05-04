@@ -1,4 +1,4 @@
-import { createWristRepairStatus, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
@@ -83,6 +83,8 @@ export function usePoseDetection(
   const railDirRef = useRef<{ x: number; y: number } | null>(null)
   // Rail 5-second challenge timer
   const railTimerRef = useRef(createWristRailTimer())
+  // Sticky-blue hysteresis for wrist rail color
+  const wristRailColorRef = useRef(createWristRailColor())
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
@@ -95,6 +97,7 @@ export function usePoseDetection(
     wristZFiltersRef.current = createWristZFilters()
     railDirRef.current = null
     railTimerRef.current = createWristRailTimer()
+    wristRailColorRef.current = createWristRailColor()
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -207,6 +210,8 @@ export function usePoseDetection(
           let railSuccessGlow: number | undefined
           let railSuccess: boolean | undefined
           let railMilestoneLevel: number | undefined
+          let wristRailIsBlue: boolean | undefined
+          let wristRailAngleDeg: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
             const leftEar = landmarks[7]!
@@ -241,12 +246,21 @@ export function usePoseDetection(
             // ── 2D Collinearity measurement (primary) ──
             const angleDiff2D = computeCollinearityAngle2D(elbow, wrist, index)
 
+            // ── Baseline normalization: subtract calibration angle ──
+            const baselineAngle = store.masterPrint.calib2DAngle ?? 0
+            const baselineCorrected = Math.abs(angleDiff2D - baselineAngle)
+
             // ── Z-boost for neck-direction detection ──
             const t = now / 1000
             const zf = wristZFiltersRef.current
             const zWristF = zf.wristZ(wrist.z, t)
             const zIndexF = zf.indexZ(index.z, t)
-            const effectiveAngleDiff = computeZBoost(angleDiff2D, zIndexF, zWristF)
+            const effectiveAngleDiff = computeZBoost(baselineCorrected, zIndexF, zWristF)
+
+            // ── Sticky-blue rail color with grace buffer ──
+            const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
+            wristRailIsBlue = wristRailColorRef.current(effectiveAngleDiff, graceBuffer)
+            wristRailAngleDeg = effectiveAngleDiff
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
@@ -397,6 +411,9 @@ export function usePoseDetection(
               railTimerValue,
               railSuccessGlow,
               holdMilestoneLevel: railMilestoneLevel,
+              // Sticky-blue rail color
+              wristRailIsBlue,
+              wristRailAngleDeg,
             })
           }
         }

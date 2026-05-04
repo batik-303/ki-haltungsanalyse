@@ -27,6 +27,25 @@ export function createWristRepairStatus(deadzoneDeg = 10, hysteresisMs = 200) {
     return { repaired, inDeadzone, timeInZone }
   }
 }
+
+/**
+ * Sticky-Blue hysteresis for wrist rail color.
+ * Uses asymmetric thresholds to prevent flicker at the boundary zone.
+ * Same closure pattern as createWristRepairStatus — held via useRef in the hook.
+ */
+export function createWristRailColor(blueToYellowDeg = 8, yellowToBlueDeg = 5) {
+  let isBlue = true
+
+  return function update(angleDeg: number, graceBufferDeg = 0): boolean {
+    if (isBlue) {
+      if (angleDeg > blueToYellowDeg + graceBufferDeg) isBlue = false
+    } else {
+      if (angleDeg < yellowToBlueDeg) isBlue = true
+    }
+    return isBlue
+  }
+}
+
 import type { Landmark, WristMasterPrint, SensitivityPreset } from '../types'
 
 /**
@@ -305,7 +324,7 @@ export function computeZBoost(
   zMcp: number,
   zWrist: number,
   threshold = 0.02,
-  boostDeg = 8,
+  boostDeg = 4,
 ): number {
   if (angleDiff2D >= 3) return angleDiff2D
   const zDelta = Math.abs(zMcp - zWrist)

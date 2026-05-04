@@ -12,8 +12,8 @@ export function drawWristLines(
   railDir: { x: number; y: number } | null,  // smoothed forearm direction (normalized)
   railSuccessGlow: number,       // golden flash intensity (0..1)
   wristGlowLevel?: number,
+  isBlue?: boolean,
 ) {
-  const DEADZONE_DEG = 10
   const MIN_LINE_LEN = 60
 
   // ── Compute rail direction ──
@@ -61,7 +61,7 @@ export function drawWristLines(
   ctx.stroke()
   ctx.restore()
 
-  const inDeadzone = angleDiff <= DEADZONE_DEG
+  const inDeadzone = isBlue ?? (angleDiff <= 10)
 
   // ── 2. Hand segment ──
   if (inDeadzone) {
@@ -114,7 +114,7 @@ export function drawWristLines(
     ctx.restore()
 
     // Yellow break line from wrist to actual MCP position
-    const intensity = Math.min(1, (angleDiff - DEADZONE_DEG) / 20)
+    const intensity = Math.min(1, angleDiff / 20)
     const lineWidth = 4 + intensity * 6
     const alpha = 0.6 + intensity * 0.3
 

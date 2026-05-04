@@ -7,7 +7,12 @@ import type {
   ViolinMasterPrint,
 } from '../types'
 import { computeEarShoulderDistance } from '../analysis/shoulder-analyzer'
-import { computeFlexionExtensionAngle, computeFlexBendDirection, computeArmLength2D } from '../analysis/wrist-analyzer'
+import {
+  computeFlexionExtensionAngle,
+  computeFlexBendDirection,
+  computeArmLength2D,
+  computeCollinearityAngle2D,
+} from '../analysis/wrist-analyzer'
 
 /**
  * Create a Master Print from current pose landmarks for the given focus mode.
@@ -35,6 +40,7 @@ export function createMasterPrint(
         flexAngle: angle,
         flexBendDir: computeFlexBendDirection(elbow, wrist, index),
         calibArmLength2D: computeArmLength2D(elbow, wrist),
+        calib2DAngle: computeCollinearityAngle2D(elbow, wrist, index),
       } satisfies WristMasterPrint
     }
     case 'violin': {
