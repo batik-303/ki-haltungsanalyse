@@ -14,6 +14,9 @@ let wristGlowDecay = 0
 let lastWristRepaired = false
 let repairGoldenGlow = 0
 let repairGoldenDecay = 0
+// Debounce: minimum time between repair glow pulses (ms)
+let lastRepairPulseAt = 0
+const REPAIR_PULSE_DEBOUNCE_MS = 1500
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -119,22 +122,24 @@ export function renderFrame(
       const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
       const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
 
-      // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", Decay in 350ms
-      if (!lastWristRepaired && state.wristRepairStatus?.repaired) {
+      // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", with debounce
+      const nowPerf = performance.now()
+      if (!lastWristRepaired && state.wristRepairStatus?.repaired && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
         wristGlowLevel = 1.0
-        wristGlowDecay = performance.now()
+        wristGlowDecay = nowPerf
         // Golden flash on repair (immediate reward)
         repairGoldenGlow = 1.0
-        repairGoldenDecay = performance.now()
+        repairGoldenDecay = nowPerf
+        lastRepairPulseAt = nowPerf
       }
       // Decay
       if (wristGlowLevel > 0) {
-        const elapsed = performance.now() - wristGlowDecay
+        const elapsed = nowPerf - wristGlowDecay
         wristGlowLevel = Math.max(0, 1 - elapsed / 350)
       }
       // Repair golden glow decay (500ms)
       if (repairGoldenGlow > 0) {
-        const elapsed = performance.now() - repairGoldenDecay
+        const elapsed = nowPerf - repairGoldenDecay
         repairGoldenGlow = Math.max(0, 1 - elapsed / 500)
       }
       lastWristRepaired = state.wristRepairStatus?.repaired ?? false
