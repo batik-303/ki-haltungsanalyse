@@ -69,7 +69,7 @@ export function drawWristSideView(
   ctx.moveTo(wx, wy)
   ctx.lineTo(ax, ay)
   ctx.strokeStyle = armGrad
-  ctx.lineWidth = 7
+  ctx.lineWidth = 9
   ctx.globalAlpha = 0.7 + breath * 0.1
   ctx.lineCap = 'round'
   ctx.stroke()
@@ -79,21 +79,31 @@ export function drawWristSideView(
   // Direction: lastBendForward=true → bend to LEFT on canvas (= RIGHT on screen after CSS mirror)
   // This matches the user's visual: hand bending inward shows line going same direction
   const dirSign = lastBendForward ? -1 : 1
-  const angleRad = (visualAngle * Math.PI) / 180
+  const amplifiedAngle = Math.min(45, visualAngle * 2.5)
+  const angleRad = (amplifiedAngle * Math.PI) / 180
   const hx = wx + Math.sin(angleRad) * dirSign * handLen
   const hy = wy - Math.cos(angleRad) * handLen
 
+  // Color gradient: linear blend blue→yellow over angleDiff 3°–10°
+  const colorT = Math.min(1, Math.max(0, (angleDiff - 3) / 7))
+  const blueR = 91, blueG = 155, blueB = 213  // #5b9bd5
+  const yellR = 245, yellG = 200, yellB = 66   // #F5C842
+  const blendR = Math.round(blueR + (yellR - blueR) * colorT)
+  const blendG = Math.round(blueG + (yellG - blueG) * colorT)
+  const blendB = Math.round(blueB + (yellB - blueB) * colorT)
+  const handColor = `rgb(${blendR}, ${blendG}, ${blendB})`
+
   if (!inDeadzone && visualAngle > 0) {
-    // Yellow dashed line on deviation (matches main overlay)
+    // Deviation hand line with gradient color
     const intensity = Math.min(1, visualAngle / 20)
     ctx.save()
     ctx.setLineDash([8, 5])
     ctx.beginPath()
     ctx.moveTo(wx, wy)
     ctx.lineTo(hx, hy)
-    ctx.strokeStyle = '#F5C842'
-    ctx.lineWidth = 5 + intensity * 3
-    ctx.globalAlpha = 0.6 + intensity * 0.3
+    ctx.strokeStyle = handColor
+    ctx.lineWidth = 5
+    ctx.globalAlpha = 0.7 + intensity * 0.3
     ctx.lineCap = 'round'
     ctx.stroke()
     ctx.setLineDash([])
@@ -115,8 +125,8 @@ export function drawWristSideView(
 
     // Endpoint dot
     ctx.beginPath()
-    ctx.arc(hx, hy, 3 + intensity * 1.5, 0, Math.PI * 2)
-    ctx.fillStyle = '#F5C842'
+    ctx.arc(hx, hy, 4 + intensity * 2, 0, Math.PI * 2)
+    ctx.fillStyle = handColor
     ctx.globalAlpha = 0.7
     ctx.fill()
     ctx.globalAlpha = 1

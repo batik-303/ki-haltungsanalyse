@@ -2,7 +2,6 @@ import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristLines } from './wrist-lines'
 import { drawWristSideView } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
@@ -17,6 +16,10 @@ let repairGoldenDecay = 0
 // Debounce: minimum time between repair glow pulses (ms)
 let lastRepairPulseAt = 0
 const REPAIR_PULSE_DEBOUNCE_MS = 1500
+
+// Adaptive baseline: slow EMA absorbing gradual position changes
+let adaptiveBaseline = 0
+const ADAPTIVE_BASELINE_ALPHA = 0.02
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -145,21 +148,17 @@ export function renderFrame(
       lastWristRepaired = state.wristRepairStatus?.repaired ?? false
 
       if (!isFlow) {
-        drawWristLines(
-          ctx, fwx, fwy, fmx, fmy,
-          fex, fey,
-          wristRailAngleDeg ?? rawDeviation * 30,
-          smoothedRailDir ?? null,
-          railSuccessGlow ?? 0,
-          wristGlowLevel,
-          wristRailIsBlue,
-        )
+        // Adaptive baseline: slowly track the raw angle to absorb gradual position changes
+        const rawAngle = wristRailAngleDeg ?? rawDeviation * 30
+        adaptiveBaseline = adaptiveBaseline * (1 - ADAPTIVE_BASELINE_ALPHA) + rawAngle * ADAPTIVE_BASELINE_ALPHA
 
         // ── Side-View synchronisiert ──
+        // Side-View gets the raw angle (not baseline-corrected) so peripheral
+        // feedback stays visible even during sustained deviations.
         drawWristSideView(
           ctx, width, height,
           tensionScore,
-          wristRailAngleDeg ?? rawDeviation * 30,
+          rawAngle,
           lastBendForward,
           now,
           state.wristRepairStatus ?? undefined,
@@ -196,8 +195,13 @@ export function renderFrame(
           ctx.globalAlpha = 1
         }
       } else {
+        // Anchor color: blue (correct) / yellow (warning) / lilac (correction needed)
+        const anchorColor = wristRailIsBlue
+          ? undefined
+          : (wristRailAngleDeg ?? 0) >= 15 ? '#9B59B6' : '#F5C842'
+
         const coreR = 11 + Math.sin(now / 600) * 1
-        drawSapphireAnchor(ctx, fwx, fwy, coreR, now)
+        drawSapphireAnchor(ctx, fwx, fwy, coreR, now, 0, anchorColor)
         drawReturnGlow(ctx, fwx, fwy, coreR, returnGlowTimer, false)
         // Golden flash: combine milestone glow + repair glow
         const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)

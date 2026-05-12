@@ -33,14 +33,36 @@ export function createWristRepairStatus(deadzoneDeg = 10, hysteresisMs = 200) {
  * Uses asymmetric thresholds to prevent flicker at the boundary zone.
  * Same closure pattern as createWristRepairStatus — held via useRef in the hook.
  */
-export function createWristRailColor(blueToYellowDeg = 8, yellowToBlueDeg = 5) {
+export function createWristRailColor(
+  blueToYellowDeg = 8,
+  yellowToBlueDeg = 5,
+  blueToYellowFrames = 8,
+  yellowToBlueFrames = 4,
+) {
   let isBlue = true
+  let counter = 0
 
   return function update(angleDeg: number, graceBufferDeg = 0): boolean {
     if (isBlue) {
-      if (angleDeg > blueToYellowDeg + graceBufferDeg) isBlue = false
+      if (angleDeg > blueToYellowDeg + graceBufferDeg) {
+        counter++
+        if (counter >= blueToYellowFrames) {
+          isBlue = false
+          counter = 0
+        }
+      } else {
+        counter = 0
+      }
     } else {
-      if (angleDeg < yellowToBlueDeg) isBlue = true
+      if (angleDeg < yellowToBlueDeg) {
+        counter++
+        if (counter >= yellowToBlueFrames) {
+          isBlue = true
+          counter = 0
+        }
+      } else {
+        counter = 0
+      }
     }
     return isBlue
   }
