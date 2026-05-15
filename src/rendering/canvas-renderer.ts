@@ -122,7 +122,8 @@ export function renderFrame(
       // Use filtered coordinates for smooth rendering (fallback to raw)
       const fc = state.filteredWristCoords
       const fex = fc?.ex ?? (elbow.x * width), fey = fc?.ey ?? (elbow.y * height)
-      const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
+      // Korrigierte Ankerposition verwenden, falls vorhanden
+      const fwx = fc?.wxCorr ?? fc?.wx ?? wx, fwy = fc?.wyCorr ?? fc?.wy ?? wy
       const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
 
       // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", with debounce
