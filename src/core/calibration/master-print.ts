@@ -9,7 +9,7 @@ import type {
 import { computeEarShoulderDistance } from '../analysis/shoulder-analyzer'
 import {
   computeFlexionExtensionAngle,
-  computeFlexBendDirection,
+  computeBendDirection2D,
   computeArmLength2D,
   computeCollinearityAngle2D,
 } from '../analysis/wrist-analyzer'
@@ -38,7 +38,7 @@ export function createMasterPrint(
       return {
         mode: 'wrist',
         flexAngle: angle,
-        flexBendDir: computeFlexBendDirection(elbow, wrist, index),
+        flexBendDir: computeBendDirection2D(elbow, wrist, index),
         calibArmLength2D: computeArmLength2D(elbow, wrist),
         calib2DAngle: computeCollinearityAngle2D(elbow, wrist, index),
       } satisfies WristMasterPrint

@@ -76,9 +76,8 @@ export function drawWristSideView(
   ctx.globalAlpha = 1
 
   // ─── Hand line (angled by deviation) ───
-  // Direction: lastBendForward=true → bend to LEFT on canvas (= RIGHT on screen after CSS mirror)
-  // This matches the user's visual: hand bending inward shows line going same direction
-  const dirSign = lastBendForward ? -1 : 1
+  // Direction: lastBendForward=true → bend to RIGHT on canvas (= LEFT on screen after CSS mirror)
+  const dirSign = lastBendForward ? 1 : -1
   const amplifiedAngle = Math.min(45, visualAngle * 2.5)
   const angleRad = (amplifiedAngle * Math.PI) / 180
   const hx = wx + Math.sin(angleRad) * dirSign * handLen

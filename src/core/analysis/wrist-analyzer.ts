@@ -249,7 +249,9 @@ export function computeFlexBendDirection(
 }
 
 /**
- * Update the locked bend direction. Only changes when angle deviation > 5°.
+ * Update the locked bend direction with hysteresis.
+ * Only switch direction when angleDiff > 8° (avoids flicker near threshold).
+ * Keep current lock when angleDiff < 3° (deadzone).
  */
 export function updateBendLock(
   angleDiff: number,
@@ -257,7 +259,7 @@ export function updateBendLock(
   refBendDir: number,
   currentLock: boolean,
 ): boolean {
-  if (angleDiff > 5) {
+  if (angleDiff > 8) {
     return (bendDir - refBendDir) >= 0
   }
   return currentLock
