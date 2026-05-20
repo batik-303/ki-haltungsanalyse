@@ -125,6 +125,9 @@ export function renderFrame(
       // Korrigierte Ankerposition verwenden, falls vorhanden
       const fwx = fc?.wxCorr ?? fc?.wx ?? wx, fwy = fc?.wyCorr ?? fc?.wy ?? wy
       const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
+      // Anker = Handgelenk (wo die Hand knickt)
+      const anchorX = fwx
+      const anchorY = fwy
 
       // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", with debounce
       const nowPerf = performance.now()
@@ -196,20 +199,18 @@ export function renderFrame(
           ctx.globalAlpha = 1
         }
       } else {
-        // Anchor color: blue (correct) / yellow (warning) / lilac (correction needed)
-        const anchorColor = wristRailIsBlue
-          ? undefined
-          : (wristRailAngleDeg ?? 0) >= 15 ? '#9B59B6' : '#F5C842'
+        // Anchor color: blue (correct) / yellow (deviation)
+        const anchorColor = wristRailIsBlue ? undefined : '#F5C842'
 
         const coreR = 11 + Math.sin(now / 600) * 1
-        drawSapphireAnchor(ctx, fwx, fwy, coreR, now, 0, anchorColor)
-        drawReturnGlow(ctx, fwx, fwy, coreR, returnGlowTimer, false)
+        drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, anchorColor)
+        drawReturnGlow(ctx, anchorX, anchorY, coreR, returnGlowTimer, false)
         // Golden flash: combine milestone glow + repair glow
         const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)
         if (rsg > 0) {
           ctx.save()
           ctx.beginPath()
-          ctx.arc(fwx, fwy, coreR + 25 * rsg, 0, Math.PI * 2)
+          ctx.arc(anchorX, anchorY, coreR + 25 * rsg, 0, Math.PI * 2)
           ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
           ctx.shadowColor = '#FFD700'
           ctx.shadowBlur = 30 * rsg
@@ -217,7 +218,7 @@ export function renderFrame(
           ctx.restore()
           // Inner bright ring
           ctx.beginPath()
-          ctx.arc(fwx, fwy, coreR + 4, 0, Math.PI * 2)
+          ctx.arc(anchorX, anchorY, coreR + 4, 0, Math.PI * 2)
           ctx.strokeStyle = '#FFD700'
           ctx.lineWidth = 3 * rsg
           ctx.globalAlpha = 0.6 * rsg
