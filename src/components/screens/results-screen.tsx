@@ -153,21 +153,15 @@ export function ResultsScreen() {
           </CardHeader>
           <CardContent className="space-y-4">
             <StatRow label="Dauer" value={`${durationStr} Min`} />
-            <StatRow label="Ø Spannung" value={`${avgTension}%`} />
-            <StatRow label="Maximale Spannung" value={`${peakTension}%`} />
-            <StatRow label="Flow-Anteil" value={`${Math.round(zonePercentages.flow)}%`} highlight />
-            <StatRow label="Längster Flow-Streak" value={`${Math.floor(maxFlowStreak)}s`} highlight />
+            <StatRow label="Gute Haltung" value={`${Math.round(zonePercentages.flow)}%`} highlight />
+            <StatRow label="Längste Serie" value={`${Math.floor(maxFlowStreak)}s am Stück`} highlight />
             {typeof anchorPoints === 'number' && (
-              <StatRow label="Ankerpunkte (je 5s)" value={`${anchorPoints}`} highlight />
+              <StatRow label="Ankerpunkte" value={`${anchorPoints}`} highlight />
             )}
-            {typeof repairedTime === 'number' && (
-              <StatRow label="Zeit im Ankerpunkt" value={`${repairedTime}s`} />
-            )}
-            {typeof holdMilestones === 'number' && holdMilestones > 0 && (
-              <StatRow label="Haltungs-Meilensteine" value={`${holdMilestones} 🏅`} highlight />
-            )}
-            {totalMilestones > 0 && (
-              <StatRow label="Gesamt-Meilensteine" value={`${totalMilestones} 🏅`} />
+            {typeof anchorPoints === 'number' && (
+              <div className="text-xs text-muted-foreground -mt-2 pl-1">
+                Je 5 Sekunden blau = 1 Ankerpunkt
+              </div>
             )}
             {isNewRecord && (
               <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-center animate-pulse">
