@@ -2,7 +2,7 @@
  * Status-Tracker für Deadzone (±10°) und Hysterese (200ms) für "repariert"-Status.
  * Muss als Closure im Hook gehalten werden (z.B. useRef).
  */
-export function createWristRepairStatus(deadzoneDeg = 10, hysteresisMs = 200) {
+export function createWristRepairStatus(deadzoneDbeg = 10, hysteresisMs = 200) {
   let lastInZone = false
   let zoneEnteredAt = 0
 
@@ -12,7 +12,7 @@ export function createWristRepairStatus(deadzoneDeg = 10, hysteresisMs = 200) {
    * @returns { repaired: boolean, inDeadzone: boolean, timeInZone: number }
    */
   return function update(angleDiff: number, nowMs: number) {
-    const inDeadzone = angleDiff <= deadzoneDeg
+    const inDeadzone = angleDiff <= deadzoneDbeg
     if (inDeadzone) {
       if (!lastInZone) {
         zoneEnteredAt = nowMs
@@ -251,7 +251,7 @@ export function computeFlexBendDirection(
 /**
  * Update the locked bend direction with hysteresis.
  * Only switch direction when angleDiff > 8° (avoids flicker near threshold).
- * Keep current lock when angleDiff < 3° (deadzone).
+ * Margin prevents oscillation when bendDir is close to refBendDir.
  */
 export function updateBendLock(
   angleDiff: number,
@@ -260,7 +260,11 @@ export function updateBendLock(
   currentLock: boolean,
 ): boolean {
   if (angleDiff > 8) {
-    return (bendDir - refBendDir) >= 0
+    const diff = bendDir - refBendDir
+    const margin = Math.abs(refBendDir) * 0.6 + 0.002
+    if (currentLock && diff < -margin) return false
+    if (!currentLock && diff > margin) return true
+    return currentLock
   }
   return currentLock
 }

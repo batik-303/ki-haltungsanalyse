@@ -142,21 +142,6 @@ export function drawWristSideView(
     ctx.globalAlpha = 1
   }
 
-  // ─── Synchronized glow on return ───
-  if (glow > 0 && inDeadzone) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.moveTo(wx, wy)
-    ctx.lineTo(wx, wy - handLen)
-    ctx.strokeStyle = '#5b9bd5'
-    ctx.shadowColor = '#5b9bd5'
-    ctx.shadowBlur = 16 + 20 * glow
-    ctx.lineWidth = 5 + 8 * glow
-    ctx.globalAlpha = 0.2 + 0.3 * glow
-    ctx.stroke()
-    ctx.restore()
-  }
-
   // ─── Sapphire anchor (wrist joint) ───
   const pulseR = 10 + Math.sin(now / 800) * 1.2
   // Outer ambient glow
@@ -184,29 +169,23 @@ export function drawWristSideView(
   // Enhanced anchor glow when returning
   if (glow > 0) {
     ctx.beginPath()
-    ctx.arc(wx, wy, pulseR + 4 * glow, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(33, 150, 243, ${0.2 * glow})`
+    ctx.arc(wx, wy, pulseR + 8 * glow, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(91, 155, 213, ${0.35 * glow})`
     ctx.fill()
   }
 
-  // Golden flash on milestone/repair success
-  const goldGlow = railSuccessGlow ?? 0
-  if (goldGlow > 0) {
+  // Blue flash on correction (matches main anchor)
+  const blueGlow = railSuccessGlow ?? 0
+  const flashGlow = Math.max(blueGlow, glow)
+  if (flashGlow > 0 && inDeadzone) {
     ctx.save()
     ctx.beginPath()
-    ctx.arc(wx, wy, pulseR + 20 * goldGlow, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * goldGlow})`
-    ctx.shadowColor = '#FFD700'
-    ctx.shadowBlur = 25 * goldGlow
+    ctx.arc(wx, wy, pulseR + 15 * flashGlow, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(91, 155, 213, ${0.45 * flashGlow})`
+    ctx.shadowColor = '#7ec8f0'
+    ctx.shadowBlur = 35 * flashGlow
     ctx.fill()
     ctx.restore()
-    ctx.beginPath()
-    ctx.arc(wx, wy, pulseR + 3, 0, Math.PI * 2)
-    ctx.strokeStyle = '#FFD700'
-    ctx.lineWidth = 2 * goldGlow
-    ctx.globalAlpha = 0.5 * goldGlow
-    ctx.stroke()
-    ctx.globalAlpha = 1
   }
 
   // ─── Arm endpoint dot ───

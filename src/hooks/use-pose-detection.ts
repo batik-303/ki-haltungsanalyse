@@ -261,7 +261,18 @@ export function usePoseDetection(
             const rawZBoosted = computeZBoost(baselineCorrected, zIndexF, zWristF)
 
             // ── EMA post-smoothing (alpha=0.25, ~100ms time constant at 30fps) ──
-            angleDiffEmaRef.current = angleDiffEmaRef.current * 0.75 + rawZBoosted * 0.25
+            // When foreshortening confidence is low, hold the angle (don't let it drop)
+            // so the peripheral doesn't falsely show "correct" when the camera can't see the bend.
+            const rawSmoothed = angleDiffEmaRef.current * 0.75 + rawZBoosted * 0.25
+            if (foreConf >= 0.7) {
+              // High confidence: track freely
+              angleDiffEmaRef.current = rawSmoothed
+            } else {
+              // Low confidence: only allow angle to increase, not decrease
+              // Slow decay (0.995 per frame ≈ 3° drop over 1 second at 30fps)
+              const held = angleDiffEmaRef.current * 0.995
+              angleDiffEmaRef.current = Math.max(rawSmoothed, held)
+            }
             const effectiveAngleDiff = angleDiffEmaRef.current
 
             // ── Sticky-blue rail color with grace buffer ──

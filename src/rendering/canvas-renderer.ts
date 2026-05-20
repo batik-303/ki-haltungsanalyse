@@ -15,7 +15,7 @@ let repairGoldenGlow = 0
 let repairGoldenDecay = 0
 // Debounce: minimum time between repair glow pulses (ms)
 let lastRepairPulseAt = 0
-const REPAIR_PULSE_DEBOUNCE_MS = 1500
+const REPAIR_PULSE_DEBOUNCE_MS = 800
 
 // Adaptive baseline: slow EMA absorbing gradual position changes
 let adaptiveBaseline = 0
@@ -129,27 +129,27 @@ export function renderFrame(
       const anchorX = fwx
       const anchorY = fwy
 
-      // Reparatur-Glow-Flash-Logik: Flash-Boost bei Statuswechsel auf "repariert", with debounce
+      // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
       const nowPerf = performance.now()
-      if (!lastWristRepaired && state.wristRepairStatus?.repaired && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
+      const isBlueNow = wristRailIsBlue ?? false
+      if (!lastWristRepaired && isBlueNow && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
         wristGlowLevel = 1.0
         wristGlowDecay = nowPerf
-        // Golden flash on repair (immediate reward)
         repairGoldenGlow = 1.0
         repairGoldenDecay = nowPerf
         lastRepairPulseAt = nowPerf
       }
-      // Decay
+      // Decay (800ms — matches main anchor glow)
       if (wristGlowLevel > 0) {
         const elapsed = nowPerf - wristGlowDecay
-        wristGlowLevel = Math.max(0, 1 - elapsed / 350)
+        wristGlowLevel = Math.max(0, 1 - elapsed / 800)
       }
-      // Repair golden glow decay (500ms)
+      // Repair blue glow decay (800ms — visible longer)
       if (repairGoldenGlow > 0) {
         const elapsed = nowPerf - repairGoldenDecay
-        repairGoldenGlow = Math.max(0, 1 - elapsed / 500)
+        repairGoldenGlow = Math.max(0, 1 - elapsed / 800)
       }
-      lastWristRepaired = state.wristRepairStatus?.repaired ?? false
+      lastWristRepaired = isBlueNow
 
       if (!isFlow) {
         // Adaptive baseline: slowly track the raw angle to absorb gradual position changes
@@ -167,7 +167,7 @@ export function renderFrame(
           now,
           state.wristRepairStatus ?? undefined,
           wristGlowLevel,
-          railSuccessGlow ?? 0,
+          0,
           wristRailIsBlue,
         )
       }
@@ -178,23 +178,23 @@ export function renderFrame(
         const coreR = 13 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak)
         drawReturnGlow(ctx, flowX, height / 2, coreR, returnGlowTimer, false)
-        // Golden flash: combine milestone glow + repair glow
-        const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)
+        // Blue flash: correction reward glow
+        const rsg = repairGoldenGlow
         if (rsg > 0) {
           ctx.save()
           ctx.beginPath()
-          ctx.arc(flowX, height / 2, coreR + 25 * rsg, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
-          ctx.shadowColor = '#FFD700'
-          ctx.shadowBlur = 30 * rsg
+          ctx.arc(flowX, height / 2, coreR + 35 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(91, 155, 213, ${0.55 * rsg})`
+          ctx.shadowColor = '#7ec8f0'
+          ctx.shadowBlur = 45 * rsg
           ctx.fill()
           ctx.restore()
           // Inner bright ring
           ctx.beginPath()
-          ctx.arc(flowX, height / 2, coreR + 4, 0, Math.PI * 2)
-          ctx.strokeStyle = '#FFD700'
-          ctx.lineWidth = 3 * rsg
-          ctx.globalAlpha = 0.6 * rsg
+          ctx.arc(flowX, height / 2, coreR + 5, 0, Math.PI * 2)
+          ctx.strokeStyle = '#7ec8f0'
+          ctx.lineWidth = 4 * rsg
+          ctx.globalAlpha = 0.8 * rsg
           ctx.stroke()
           ctx.globalAlpha = 1
         }
@@ -205,23 +205,23 @@ export function renderFrame(
         const coreR = 11 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, anchorColor)
         drawReturnGlow(ctx, anchorX, anchorY, coreR, returnGlowTimer, false)
-        // Golden flash: combine milestone glow + repair glow
-        const rsg = Math.max(railSuccessGlow ?? 0, repairGoldenGlow * 0.7)
+        // Blue flash: correction reward glow
+        const rsg = repairGoldenGlow
         if (rsg > 0) {
           ctx.save()
           ctx.beginPath()
-          ctx.arc(anchorX, anchorY, coreR + 25 * rsg, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255, 215, 0, ${0.35 * rsg})`
-          ctx.shadowColor = '#FFD700'
-          ctx.shadowBlur = 30 * rsg
+          ctx.arc(anchorX, anchorY, coreR + 35 * rsg, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(91, 155, 213, ${0.55 * rsg})`
+          ctx.shadowColor = '#7ec8f0'
+          ctx.shadowBlur = 45 * rsg
           ctx.fill()
           ctx.restore()
           // Inner bright ring
           ctx.beginPath()
-          ctx.arc(anchorX, anchorY, coreR + 4, 0, Math.PI * 2)
-          ctx.strokeStyle = '#FFD700'
-          ctx.lineWidth = 3 * rsg
-          ctx.globalAlpha = 0.6 * rsg
+          ctx.arc(anchorX, anchorY, coreR + 5, 0, Math.PI * 2)
+          ctx.strokeStyle = '#7ec8f0'
+          ctx.lineWidth = 4 * rsg
+          ctx.globalAlpha = 0.8 * rsg
           ctx.stroke()
           ctx.globalAlpha = 1
         }
