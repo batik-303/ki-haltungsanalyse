@@ -35,8 +35,8 @@ export function drawWristSideView(
   const handLen = totalLen * 0.25
 
   // Right canvas edge → left screen edge after CSS mirror
-  // Proportional offset: narrower screens push it further from edge for peripheral visibility
-  const cx = width - Math.max(50, width * 0.18)
+  // Responsive offset: small screens need more room for both deflection directions
+  const cx = width < 768 ? width - width * 0.25 : width - 50
   const cy = height / 2
   const wx = cx
   const wy = cy
