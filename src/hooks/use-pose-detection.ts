@@ -276,8 +276,10 @@ export function usePoseDetection(
             const effectiveAngleDiff = angleDiffEmaRef.current
 
             // ── Sticky-blue rail color with grace buffer ──
+            // Apply slide shield to color decision: during fast movement (vibrato/shift), don't turn yellow
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            wristRailIsBlue = wristRailColorRef.current(effectiveAngleDiff, graceBuffer)
+            const colorAngle = slideShieldFactor < 1 ? effectiveAngleDiff * slideShieldFactor : effectiveAngleDiff
+            wristRailIsBlue = wristRailColorRef.current(colorAngle, graceBuffer)
             wristRailAngleDeg = effectiveAngleDiff
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
