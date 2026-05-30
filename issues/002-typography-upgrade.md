@@ -13,9 +13,9 @@ Betroffene Elemente: Alle Texte, Headings, Badges, Buttons. Der Timer (`tabular-
 
 ## Acceptance criteria
 
-- [ ] Outfit ist als globale Schrift sichtbar (alle Texte, Headings, Buttons)
-- [ ] Timer und Prozentwerte rendern in Geist Mono mit `tabular-nums`
-- [ ] Kein System-Font-Stack mehr sichtbar (kein San Francisco, Segoe UI, etc.)
+- [x] Outfit ist als globale Schrift sichtbar (alle Texte, Headings, Buttons)
+- [x] Timer und Prozentwerte rendern in Geist Mono mit `tabular-nums`
+- [x] Kein System-Font-Stack mehr sichtbar (kein San Francisco, Segoe UI, etc.)
 - [ ] Kein FOUT (Flash of Unstyled Text) — Font-Loading-Strategie robust
 - [ ] **Manueller Test**: Schrift wirkt elegant und präzise. Mono-Ziffern im Timer flackern nicht (gleiche Breite pro Ziffer)
 

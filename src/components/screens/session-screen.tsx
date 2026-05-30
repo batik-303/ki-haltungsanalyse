@@ -167,7 +167,7 @@ export function SessionScreen() {
       {/* HUD: Session timer — top right */}
       {phase === 'tracking' && (
         <div className={cn("absolute top-4 right-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
-          <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur tabular-nums">
+          <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur font-mono tabular-nums">
             {duration}
           </Badge>
         </div>
@@ -179,7 +179,7 @@ export function SessionScreen() {
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>Spannung</span>
-              <span>{Math.round(tensionScore)}%</span>
+              <span className="font-mono tabular-nums">{Math.round(tensionScore)}%</span>
             </div>
             <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
               <div

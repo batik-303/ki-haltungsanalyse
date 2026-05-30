@@ -137,7 +137,7 @@ export function ResultsScreen() {
                     style={{ backgroundColor: LAYER_COLORS[layer] }}
                   />
                   <span className="text-muted-foreground">{LAYER_LABELS[layer]}</span>
-                  <span className="ml-auto text-foreground font-medium tabular-nums">
+                  <span className="ml-auto text-foreground font-mono font-medium tabular-nums">
                     {Math.round(zonePercentages[layer])}%
                   </span>
                 </div>
@@ -238,7 +238,7 @@ function StatRow({ label, value, highlight }: { label: string; value: string; hi
   return (
     <div className="flex justify-between items-center">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-sm font-semibold tabular-nums ${highlight ? 'text-sapphire-light' : 'text-foreground'}`}>
+      <span className={`text-sm font-mono font-semibold tabular-nums ${highlight ? 'text-sapphire-light' : 'text-foreground'}`}>
         {value}
       </span>
     </div>
