@@ -12,11 +12,11 @@ Setup-Screen responsive machen: Modus-Karten (Violine, Handgelenk, Schulter) sta
 
 ## Acceptance criteria
 
-- [ ] Auf Phone (<480px): Drei Mode-Karten untereinander, volle Container-Breite, Text+Icons lesbar
-- [ ] Auf Tablet (≥480px): Drei Karten nebeneinander (bestehendes Layout)
-- [ ] Ausgewählte Karte visuell hervorgehoben (ring + background) auf allen Größen
-- [ ] Empfindlichkeits-Radio-Buttons unverändert auf allen Größen
-- [ ] **Manueller Test**: Auf Phone Setup-Screen öffnen — alle drei Modi sichtbar ohne horizontal zu scrollen.
+- [x] Auf Phone (<480px): Drei Mode-Karten untereinander, volle Container-Breite, Text+Icons lesbar
+- [x] Auf Tablet (≥480px): Drei Karten nebeneinander (bestehendes Layout)
+- [x] Ausgewählte Karte visuell hervorgehoben (ring + background) auf allen Größen
+- [x] Empfindlichkeits-Radio-Buttons unverändert auf allen Größen
+- [x] **Manueller Test**: Auf Phone Setup-Screen öffnen — alle drei Modi sichtbar ohne horizontal zu scrollen.
 
 ## Blocked by
 
