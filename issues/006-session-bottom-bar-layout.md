@@ -30,13 +30,13 @@ Der Session-Screen bekommt auf schmalen Geräten (<480px) ein Bottom-Bar-Layout 
 
 ## Acceptance criteria
 
-- [ ] Auf Phone: HUD-Elemente in Bottom-Bar am unteren Rand, Canvas füllt restlichen Raum
-- [ ] Bottom-Bar respektiert `safe-area-inset-bottom` (kein Überlapp mit Home Indicator)
-- [ ] Mode-Badge und Timer sind oben, aber mit `top-safe` (respektieren Notch/Dynamic Island)
-- [ ] Fallback-Buttons auf Phone mindestens 44px hoch, angenehm mit Finger tippbar
-- [ ] Auf Desktop/Tablet: Bestehendes Layout unverändert (absolute Positionen an Rändern)
-- [ ] Tension-Bar auf Desktop nutzt `clamp()` und skaliert mit Viewport
-- [ ] **Manueller Test**: Session auf Phone und Desktop starten. Bottom-Bar auf Phone kompakt und funktional. Desktop-Layout unverändert.
+- [x] Auf Phone: HUD-Elemente in Bottom-Bar am unteren Rand, Canvas füllt restlichen Raum
+- [x] Bottom-Bar respektiert `safe-area-inset-bottom` (kein Überlapp mit Home Indicator)
+- [x] Mode-Badge und Timer sind oben, aber mit `top-safe` (respektieren Notch/Dynamic Island)
+- [x] Fallback-Buttons auf Phone mindestens 44px hoch, angenehm mit Finger tippbar
+- [x] Auf Desktop/Tablet: Bestehendes Layout unverändert (absolute Positionen an Rändern)
+- [x] Tension-Bar auf Desktop nutzt `clamp()` und skaliert mit Viewport
+- [x] **Manueller Test**: Session auf Phone und Desktop starten. Bottom-Bar auf Phone kompakt und funktional. Desktop-Layout unverändert.
 
 ## Blocked by
 

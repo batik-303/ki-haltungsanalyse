@@ -227,16 +227,18 @@ export function renderFrame(
         }
       }
 
-      // Foreshortening confidence warning (below side-view — right of canvas = left of screen)
+      // Foreshortening confidence warning (below side-view — left of canvas = right of screen)
       const foreConf = state.wristForeshorteningConfidence
       if (foreConf < 0.9) {
+        const isMobile = width < 480
+        const warnX = isMobile ? Math.max(28, width * 0.08) : 50
         const warnY = height / 2 + height * 0.18
         ctx.font = '11px sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
         ctx.fillStyle = foreConf < 0.5 ? '#FF9800' : '#ffffff'
         ctx.globalAlpha = 0.4 + (1 - foreConf) * 0.4
-        ctx.fillText(foreConf < 0.5 ? '⚠ Kamera seitlich' : '◉', width - 50, warnY)
+        ctx.fillText(foreConf < 0.5 ? '⚠ Kamera seitlich' : '◉', warnX, warnY)
         ctx.globalAlpha = 1
       }
     } else if (!isCalibrating && !isFlow) {

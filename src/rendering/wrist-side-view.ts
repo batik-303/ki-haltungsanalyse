@@ -1,12 +1,11 @@
-// Smooth visual angle for side-view (asymmetric IIR: slow rise, fast fall)
-let visualAngle = 0
-
 /**
  * Render simplified peripheral side-view of wrist.
  * Layout: Hand line (top) → Sapphire Anchor (center) → Arm line (bottom).
- * Drawn on RIGHT side of canvas → appears on LEFT of screen (CSS mirror).
+ * Drawn on LEFT side of canvas → appears on RIGHT of screen (CSS mirror).
+ * Placed opposite to the hand silhouette — no occlusion.
  *
- * Shows same elements as main overlay: anchor, hand line, yellow on deviation.
+ * Uses the same isBlue deadzone as the main overlay (sticky-blue hysteresis).
+ * No module-level smoothing — angle is already EMA-smoothed in the hook.
  */
 export function drawWristSideView(
   ctx: CanvasRenderingContext2D,
@@ -21,22 +20,21 @@ export function drawWristSideView(
   railSuccessGlow?: number,
   isBlue?: boolean,
 ) {
+  // Use the same deadzone as main overlay (sticky-blue hysteresis) — no fallback
   const inDeadzone = isBlue ?? (angleDiff <= 10)
+  // Use angleDiff directly — already EMA-smoothed by the analysis hook
+  const effectiveAngle = angleDiff > 5 ? angleDiff : 0
 
-  // Asymmetric smoothing: slow rise (dampens jitter), fast fall (rewards return)
-  const targetAngle = angleDiff > 5 ? angleDiff : 0
-  const lerpRate = targetAngle > visualAngle ? 0.12 : 0.35
-  visualAngle += (targetAngle - visualAngle) * lerpRate
-  if (visualAngle < 0.3) visualAngle = 0
+  // Scale to screen height — figure uses ~22% on desktop, ~28% on mobile
+  const isMobile = width < 480
+  const totalLenRatio = isMobile ? 0.22 : 0.28
+  const totalLen = height * totalLenRatio
+  const armLen = totalLen * 0.7
+  const handLen = totalLen * 0.3
 
-  // Scale to screen height — total figure ~30% of canvas
-  const totalLen = height * 0.3
-  const armLen = totalLen * 0.75
-  const handLen = totalLen * 0.25
-
-  // Right canvas edge → left screen edge after CSS mirror
-  // Responsive offset: small screens need more room for both deflection directions
-  const cx = width < 768 ? width - width * 0.25 : width - 50
+  // LEFT canvas edge → RIGHT screen edge after CSS mirror (away from hand)
+  const marginX = isMobile ? Math.max(28, width * 0.08) : 50
+  const cx = marginX
   const cy = height / 2
   const wx = cx
   const wy = cy
@@ -45,11 +43,11 @@ export function drawWristSideView(
 
   const glow = wristGlowLevel ?? 0
 
-  // Breathing cycle
+  // Breathing cycle (slower, subtler)
   const breath = Math.sin(now / 1200) * 0.5 + 0.5
 
   // ─── Background pill ───
-  const pillW = 58
+  const pillW = isMobile ? 48 : 58
   const pillTop = wy - handLen - 24
   const pillBottom = ay + 24
   const pillH = pillBottom - pillTop
@@ -79,7 +77,7 @@ export function drawWristSideView(
   // ─── Hand line (angled by deviation) ───
   // Direction: lastBendForward=true → bend to RIGHT on canvas (= LEFT on screen after CSS mirror)
   const dirSign = lastBendForward ? 1 : -1
-  const amplifiedAngle = Math.min(45, visualAngle * 2.5)
+  const amplifiedAngle = Math.min(45, effectiveAngle * 2.5)
   const angleRad = (amplifiedAngle * Math.PI) / 180
   const hx = wx + Math.sin(angleRad) * dirSign * handLen
   const hy = wy - Math.cos(angleRad) * handLen
@@ -93,9 +91,9 @@ export function drawWristSideView(
   const blendB = Math.round(blueB + (yellB - blueB) * colorT)
   const handColor = `rgb(${blendR}, ${blendG}, ${blendB})`
 
-  if (!inDeadzone && visualAngle > 0) {
+  if (!inDeadzone && effectiveAngle > 0) {
     // Deviation hand line with gradient color
-    const intensity = Math.min(1, visualAngle / 20)
+    const intensity = Math.min(1, effectiveAngle / 20)
     ctx.save()
     ctx.setLineDash([8, 5])
     ctx.beginPath()

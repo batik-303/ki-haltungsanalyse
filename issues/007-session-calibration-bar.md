@@ -13,13 +13,13 @@ Auf Phone (<480px) wird die Kalibrierung (3-Sekunden-Countdown) in die Bottom-Ba
 
 ## Acceptance criteria
 
-- [ ] Auf Phone: Bottom-Bar expandiert smooth (300ms) auf ~120px bei Kalibrierungsstart
-- [ ] Countdown-Zahl (3→2→1) ist in der expandierten Bar gut lesbar
-- [ ] Hilfetext ist sichtbar
-- [ ] Fortschrittsbalken zeigt verbleibende Zeit an
-- [ ] Nach Abschluss kollabiert die Bar zurück auf normale Höhe
-- [ ] Auf Desktop/Tablet: Kalibrierung erscheint wie bisher als zentrierter Overlay
-- [ ] **Manueller Test**: Kalibrierung auf Phone durchführen. Bar expandiert, Countdown sichtbar, Video bleibt frei. Kein ruckartiges Springen.
+- [x] Auf Phone: Bottom-Bar expandiert smooth (300ms) auf ~120px bei Kalibrierungsstart
+- [x] Countdown-Zahl (3→2→1) ist in der expandierten Bar gut lesbar
+- [x] Hilfetext ist sichtbar
+- [x] Fortschrittsbalken zeigt verbleibende Zeit an
+- [x] Nach Abschluss kollabiert die Bar zurück auf normale Höhe
+- [x] Auf Desktop/Tablet: Kalibrierung erscheint wie bisher als zentrierter Overlay
+- [x] **Manueller Test**: Kalibrierung auf Phone durchführen. Bar expandiert, Countdown sichtbar, Video bleibt frei. Kein ruckartiges Springen.
 
 ## Blocked by
 

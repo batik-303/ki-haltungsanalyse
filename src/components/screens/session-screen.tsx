@@ -26,6 +26,7 @@ export function SessionScreen() {
   const hint = usePoseStore(selectPhaseHint)
   const duration = usePoseStore(selectSessionDuration)
   const tensionScore = usePoseStore((s) => s.tensionScore)
+  const isCalibrating = usePoseStore((s) => s.isCalibrating)
   const statusColor = usePoseStore(selectStatusColor)
   const goToResults = usePoseStore((s) => s.goToResults)
   const startSession = usePoseStore((s) => s.startSession)
@@ -43,13 +44,25 @@ export function SessionScreen() {
     const landmarker = landmarkerRef.current
     if (!landmarker) return
 
+    setCalColor(undefined)
+
     startCountdown(
       3,
       landmarker,
-      (remaining) => updateCalibrationUI(remaining, 'Halte deine optimale Spielhaltung...'),
+      (remaining) => {
+        updateCalibrationUI(remaining, 'Halte deine optimale Spielhaltung...')
+        setCalCountdown(remaining)
+        setCalText('Halte deine optimale Spielhaltung...')
+      },
       (success) => {
         if (!success) {
           updateCalibrationUI(0, 'Kalibrierung fehlgeschlagen — erneut versuchen', '#e74c3c')
+          setCalCountdown(0)
+          setCalText('Kalibrierung fehlgeschlagen — erneut versuchen')
+          setCalColor('#e74c3c')
+        } else {
+          setCalCountdown(0)
+          setCalText('')
         }
       },
     )
@@ -126,6 +139,9 @@ export function SessionScreen() {
 
   const { startListening } = useVoiceCommands(voiceCommands, true)
   const [micActive, setMicActive] = useState(false)
+  const [calCountdown, setCalCountdown] = useState(0)
+  const [calText, setCalText] = useState('')
+  const [calColor, setCalColor] = useState<string | undefined>(undefined)
 
   const handleActivateMic = useCallback(() => {
     startListening()
@@ -151,14 +167,23 @@ export function SessionScreen() {
         className="absolute inset-0 w-full h-full object-cover scale-x-[-1] z-[2]"
       />
 
-      {/* Calibration overlay */}
-      <CalibrationOverlay />
+      {/* Calibration overlay (desktop/tablet only) */}
+      <div className="hidden sm:block">
+        <CalibrationOverlay />
+      </div>
 
       {/* Distance indicator (pre-calibration) */}
       <DistanceIndicator />
 
+      {/* ═══════════════════════════════════════════
+          DESKTOP / TABLET HUD (≥480px)
+          ═══════════════════════════════════════════ */}
+
       {/* HUD: Mode badge — top left */}
-      <div className={cn("absolute top-4 left-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
+      <div className={cn(
+        "hidden sm:block absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
+        hudFaded && "opacity-20"
+      )}>
         <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
           {MODE_LABELS[focusMode] ?? focusMode}
         </Badge>
@@ -166,7 +191,10 @@ export function SessionScreen() {
 
       {/* HUD: Session timer — top right */}
       {phase === 'tracking' && (
-        <div className={cn("absolute top-4 right-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
+        <div className={cn(
+          "hidden sm:block absolute top-[clamp(8px,2vh,16px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
+          hudFaded && "opacity-20"
+        )}>
           <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur font-mono tabular-nums">
             {duration}
           </Badge>
@@ -175,7 +203,10 @@ export function SessionScreen() {
 
       {/* HUD: Tension bar — bottom left */}
       {(phase === 'ready-to-start' || phase === 'tracking') && (
-        <div className={cn("absolute bottom-20 left-4 z-10 w-48 transition-opacity duration-700", hudFaded && "opacity-20")}>
+        <div className={cn(
+          "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] left-[clamp(8px,2vh,16px)] z-10 w-[clamp(160px,20vw,192px)] transition-opacity duration-700",
+          hudFaded && "opacity-20"
+        )}>
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>Spannung</span>
@@ -195,7 +226,10 @@ export function SessionScreen() {
       )}
 
       {/* HUD: Voice hint / mic activation — bottom right */}
-      <div className={cn("absolute bottom-20 right-4 z-10 transition-opacity duration-700", hudFaded && "opacity-20")}>
+      <div className={cn(
+        "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
+        hudFaded && "opacity-20"
+      )}>
         {micActive ? (
           <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2 text-xs text-muted-foreground">
             🎤 {hint}
@@ -215,8 +249,11 @@ export function SessionScreen() {
         )}
       </div>
 
-      {/* Fallback buttons — bottom center */}
-      <div className={cn("absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-3 transition-opacity duration-300", hudFaded && "opacity-20")}>
+      {/* HUD: Fallback buttons — bottom center */}
+      <div className={cn(
+        "hidden sm:flex absolute bottom-[clamp(8px,2vh,16px)] left-1/2 -translate-x-1/2 z-10 gap-3 transition-opacity duration-300",
+        hudFaded && "opacity-20"
+      )}>
         {phase === 'ready-to-calibrate' && (
           <FallbackButton onClick={handleCalibrate}>Kalibrieren</FallbackButton>
         )}
@@ -233,7 +270,126 @@ export function SessionScreen() {
           </>
         )}
       </div>
+
+      {/* ═══════════════════════════════════════════
+          PHONE HUD (<480px)
+          ═══════════════════════════════════════════ */}
+
+      {/* Top bar: Mode badge + Timer */}
+      <div className={cn(
+        "sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2",
+        hudFaded && "opacity-20"
+      )}>
+        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
+          {MODE_LABELS[focusMode] ?? focusMode}
+        </Badge>
+        {phase === 'tracking' && (
+          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur font-mono tabular-nums">
+            {duration}
+          </Badge>
+        )}
+      </div>
+
+      {/* Bottom bar: Tension + Controls (+ Calibration expand on phone) */}
+      {(phase === 'ready-to-calibrate' || phase === 'ready-to-start' || phase === 'tracking' || isCalibrating) && (
+        <div className={cn(
+          "sm:hidden absolute bottom-0 left-0 right-0 z-10 bg-surface/80 backdrop-blur transition-all duration-300",
+          isCalibrating ? "flex-col gap-1 p-3 pb-safe h-[120px]" : "flex-row items-center gap-2 p-2 pb-safe",
+          hudFaded && "opacity-15"
+        )}>
+          {/* Calibration view (expanded) */}
+          {isCalibrating && (
+            <>
+              <div
+                className="text-3xl font-bold drop-shadow-md transition-colors duration-300"
+                style={{ color: calColor ?? '#2ecc71' }}
+              >
+                {calCountdown > 0 ? calCountdown : '✕'}
+              </div>
+              <div className="text-xs text-muted-foreground text-center">{calText}</div>
+              <div className="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-1000 ease-linear"
+                  style={{
+                    width: `${(calCountdown / 3) * 100}%`,
+                    backgroundColor: calColor ?? '#2ecc71',
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Normal view (compact) */}
+          {!isCalibrating && (
+            <>
+              {/* Compact tension bar */}
+              {(phase === 'ready-to-start' || phase === 'tracking') && (
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
+                    <span className="shrink-0">Spannung</span>
+                    <span className="font-mono tabular-nums">{Math.round(tensionScore)}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(tensionScore, 100)}%`,
+                        backgroundColor: statusColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Controls */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {micActive ? (
+                  <span className="text-xs text-muted-foreground max-w-[80px] truncate">🎤 {hint}</span>
+                ) : (
+                  <button
+                    onClick={handleActivateMic}
+                    className="px-2 py-2 rounded-lg text-xs font-medium bg-sapphire/80 backdrop-blur text-white hover:bg-sapphire active:scale-95 animate-pulse"
+                  >
+                    🎤
+                  </button>
+                )}
+
+                {phase === 'ready-to-calibrate' && (
+                  <PhoneButton onClick={handleCalibrate}>Kalibrieren</PhoneButton>
+                )}
+                {phase === 'ready-to-start' && (
+                  <>
+                    <PhoneButton onClick={handleStart}>Start</PhoneButton>
+                    <PhoneButton onClick={handleRecalibrate}>↻</PhoneButton>
+                  </>
+                )}
+                {phase === 'tracking' && (
+                  <>
+                    <PhoneButton onClick={handleStop}>Stop</PhoneButton>
+                    <PhoneButton onClick={handleRecalibrate}>↻</PhoneButton>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function PhoneButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-3 py-3 min-h-[44px] rounded-lg text-xs font-medium transition-all',
+        'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
+        'hover:bg-background/60 hover:text-foreground active:scale-95',
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
