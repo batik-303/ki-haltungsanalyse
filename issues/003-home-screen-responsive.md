@@ -12,12 +12,12 @@ Home-Screen responsive machen und mit Staggered-Card-Entrance-Animation versehen
 
 ## Acceptance criteria
 
-- [ ] Auf Phone (<480px): Karten untereinander, eine pro Zeile, zentriert, gut lesbar
-- [ ] Auf Tablet (480-1023px): Zwei Karten pro Zeile
-- [ ] Auf Desktop (≥1024px): Drei Karten pro Zeile (wie vorher)
-- [ ] Karten erscheinen mit zeitversetzter Animation (ca. 80ms Abstand) beim ersten Laden
-- [ ] Animation läuft nur beim initialen Mount — nicht bei Navigation zurück zum Home
-- [ ] **Manueller Test**: Auf Phone, Tablet, Desktop testen. Animation fühlt sich smooth und willkommen-heißend an.
+- [x] Auf Phone (<480px): Karten untereinander, eine pro Zeile, zentriert, gut lesbar
+- [x] Auf Tablet (480-1023px): Zwei Karten pro Zeile
+- [x] Auf Desktop (≥1024px): Drei Karten pro Zeile (wie vorher)
+- [x] Karten erscheinen mit zeitversetzter Animation (ca. 80ms Abstand) beim ersten Laden
+- [x] Animation läuft nur beim initialen Mount — nicht bei Navigation zurück zum Home
+- [x] **Manueller Test**: Auf Phone, Tablet, Desktop testen. Animation fühlt sich smooth und willkommen-heißend an.
 
 ## Blocked by
 

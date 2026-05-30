@@ -26,11 +26,12 @@ export function HomeScreen() {
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-3xl w-full">
-        {INSTRUMENTS.map((instrument) => (
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 max-w-3xl w-full">
+        {INSTRUMENTS.map((instrument, index) => (
           <InstrumentCard
             key={instrument.id}
             instrument={instrument}
+            index={index}
             onClick={() => goToSetup(instrument.id)}
           />
         ))}
@@ -41,14 +42,17 @@ export function HomeScreen() {
 
 function InstrumentCard({
   instrument,
+  index,
   onClick,
 }: {
   instrument: InstrumentMeta
+  index: number
   onClick: () => void
 }) {
   return (
     <Card
-      className="cursor-pointer transition-all hover:ring-sapphire/50 hover:bg-card/80 hover:shadow-[0_0_30px_rgba(33,150,243,0.15)]"
+      className="cursor-pointer transition-all hover:ring-sapphire/50 hover:bg-card/80 hover:shadow-[0_0_30px_rgba(33,150,243,0.15)] animate-[card-enter_0.5s_ease-out_both]"
+      style={{ animationDelay: `${index * 80}ms` }}
       onClick={onClick}
     >
       <CardHeader>
