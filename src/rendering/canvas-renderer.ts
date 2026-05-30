@@ -2,7 +2,7 @@ import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristSideView } from './wrist-side-view'
+import { drawWristSideView, drawWristMobileBar } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
@@ -156,20 +156,32 @@ export function renderFrame(
         const rawAngle = wristRailAngleDeg ?? rawDeviation * 30
         adaptiveBaseline = adaptiveBaseline * (1 - ADAPTIVE_BASELINE_ALPHA) + rawAngle * ADAPTIVE_BASELINE_ALPHA
 
-        // ── Side-View synchronisiert ──
-        // Side-View gets the raw angle (not baseline-corrected) so peripheral
-        // feedback stays visible even during sustained deviations.
-        drawWristSideView(
-          ctx, width, height,
-          tensionScore,
-          rawAngle,
-          lastBendForward,
-          now,
-          state.wristRepairStatus ?? undefined,
-          wristGlowLevel,
-          0,
-          wristRailIsBlue,
-        )
+        const isMobileCanvas = width < 480
+        if (isMobileCanvas) {
+          // Mobile: horizontal bar above bottom HUD (72px = phone HUD height)
+          drawWristMobileBar(
+            ctx, width, height,
+            rawAngle,
+            lastBendForward,
+            now,
+            wristRailIsBlue,
+            wristGlowLevel,
+            72,
+          )
+        } else {
+          // Desktop/Tablet: vertical side-view on left edge
+          drawWristSideView(
+            ctx, width, height,
+            tensionScore,
+            rawAngle,
+            lastBendForward,
+            now,
+            state.wristRepairStatus ?? undefined,
+            wristGlowLevel,
+            0,
+            wristRailIsBlue,
+          )
+        }
       }
 
       // Anchor + glow in both modes (positioned at wrist in analyse, centered in flow)

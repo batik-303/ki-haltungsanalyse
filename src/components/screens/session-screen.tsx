@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { usePoseStore } from '@/store/pose-store'
 import { usePoseDetection } from '@/hooks/use-pose-detection'
 import { useCalibration } from '@/hooks/use-calibration'
@@ -137,16 +137,27 @@ export function SessionScreen() {
     analyse: () => usePoseStore.getState().setViewMode('analyse'),
   }), [handleCalibrate, handleStart, handleStop, handleRecalibrate])
 
-  const { startListening } = useVoiceCommands(voiceCommands, true)
+  const { startListening, stopListening } = useVoiceCommands(voiceCommands, true)
   const [micActive, setMicActive] = useState(false)
   const [calCountdown, setCalCountdown] = useState(0)
   const [calText, setCalText] = useState('')
   const [calColor, setCalColor] = useState<string | undefined>(undefined)
 
-  const handleActivateMic = useCallback(() => {
+  // Auto-start mic on mount — runs after first user interaction (camera permission)
+  useEffect(() => {
     startListening()
     setMicActive(true)
   }, [startListening])
+
+  const handleToggleMic = useCallback(() => {
+    if (micActive) {
+      stopListening()
+      setMicActive(false)
+    } else {
+      startListening()
+      setMicActive(true)
+    }
+  }, [micActive, startListening, stopListening])
 
   return (
     <div className="fixed inset-0 bg-black">
@@ -156,7 +167,7 @@ export function SessionScreen() {
         autoPlay
         playsInline
         className={cn(
-          "absolute inset-0 w-full h-full object-cover scale-x-[-1] saturate-[0.4] brightness-[0.85]",
+          "absolute inset-0 w-full h-full object-contain scale-x-[-1] saturate-[0.4] brightness-[0.85]",
           viewMode === 'flow' && "opacity-0"
         )}
       />
@@ -164,7 +175,7 @@ export function SessionScreen() {
       {/* Canvas overlay */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-cover scale-x-[-1] z-[2]"
+        className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-[2]"
       />
 
       {/* Calibration overlay (desktop/tablet only) */}
@@ -230,23 +241,18 @@ export function SessionScreen() {
         "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
         hudFaded && "opacity-20"
       )}>
-        {micActive ? (
-          <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2 text-xs text-muted-foreground">
-            🎤 {hint}
-          </div>
-        ) : (
-          <button
-            onClick={handleActivateMic}
-            className={cn(
-              'px-4 py-2 rounded-lg text-xs font-medium transition-all',
-              'bg-sapphire/80 backdrop-blur text-white',
-              'hover:bg-sapphire active:scale-95',
-              'animate-pulse',
-            )}
-          >
-            🎤 Mikrofon aktivieren
-          </button>
-        )}
+        <button
+          onClick={handleToggleMic}
+          className={cn(
+            'px-4 py-2 rounded-lg text-xs font-medium transition-all',
+            'backdrop-blur text-white active:scale-95',
+            micActive
+              ? 'bg-background/40 border border-border/50 text-muted-foreground hover:bg-background/60'
+              : 'bg-sapphire/80 hover:bg-sapphire',
+          )}
+        >
+          {micActive ? `🎤 ${hint}` : '🎤 Aus'}
+        </button>
       </div>
 
       {/* HUD: Fallback buttons — bottom center */}
@@ -343,16 +349,17 @@ export function SessionScreen() {
 
               {/* Controls */}
               <div className="flex items-center gap-1.5 shrink-0">
-                {micActive ? (
-                  <span className="text-xs text-muted-foreground max-w-[80px] truncate">🎤 {hint}</span>
-                ) : (
-                  <button
-                    onClick={handleActivateMic}
-                    className="px-2 py-2 rounded-lg text-xs font-medium bg-sapphire/80 backdrop-blur text-white hover:bg-sapphire active:scale-95 animate-pulse"
-                  >
-                    🎤
-                  </button>
-                )}
+                <button
+                  onClick={handleToggleMic}
+                  className={cn(
+                    'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
+                    micActive
+                      ? 'bg-background/40 border border-border/50 text-muted-foreground'
+                      : 'bg-sapphire/80 text-white hover:bg-sapphire',
+                  )}
+                >
+                  {micActive ? '🎤' : '🔇'}
+                </button>
 
                 {phase === 'ready-to-calibrate' && (
                   <PhoneButton onClick={handleCalibrate}>Kalibrieren</PhoneButton>
