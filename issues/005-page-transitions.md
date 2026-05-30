@@ -12,13 +12,13 @@ Sanfte Screen-Übergänge (Fade + Slide) bei Navigation zwischen Home, Setup, Se
 
 ## Acceptance criteria
 
-- [ ] Home→Setup: Smooth Fade+Slide (200ms)
-- [ ] Setup→Session: Smooth Fade+Slide (200ms)
-- [ ] Session→Results: Smooth Fade+Slide (200ms)
-- [ ] Zurück-Navigation (Results→Home, Setup→Home) ebenso smooth
-- [ ] Initiales App-Laden hat KEINE Transition (kein leerer Flash)
-- [ ] Transition blockiert nicht — Buttons sind sofort nach Transition klickbar
-- [ ] **Manueller Test**: Durch alle Screens navigieren. Kein Ruckeln, kein Flash, fühlt sich poliert an.
+- [x] Home→Setup: Smooth Fade+Slide (200ms)
+- [x] Setup→Session: Smooth Fade+Slide (200ms)
+- [x] Session→Results: Smooth Fade+Slide (200ms)
+- [x] Zurück-Navigation (Results→Home, Setup→Home) ebenso smooth
+- [x] Initiales App-Laden hat KEINE Transition (kein leerer Flash)
+- [x] Transition blockiert nicht — Buttons sind sofort nach Transition klickbar
+- [x] **Manueller Test**: Durch alle Screens navigieren. Kein Ruckeln, kein Flash, fühlt sich poliert an.
 
 ## Blocked by
 
