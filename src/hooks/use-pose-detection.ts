@@ -4,7 +4,7 @@ import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { analyzeWrist, updateBendLock, computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
+import { updateBendLock, computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
@@ -16,9 +16,11 @@ import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
-const WRIST_FILTER_MIN_CUTOFF = 1.2   // niedriger = ruhiger, höher = reaktiver
-const WRIST_FILTER_BETA = 0.006       // niedriger = ruhiger, höher = reaktiver
-const WRIST_FILTER_D_CUTOFF = 1.0     // Standardwert
+// Conservative values: smooth visual output without perceptible lag.
+// minCutoff=0.6 → strong smoothing when still; beta=0.003 → gentle response on movement.
+const WRIST_FILTER_MIN_CUTOFF = 0.6
+const WRIST_FILTER_BETA = 0.003
+const WRIST_FILTER_D_CUTOFF = 1.0
 
 /**
  * Erstellt One Euro Filter für alle relevanten Landmarken (Elbow, Wrist, Index)
@@ -314,7 +316,7 @@ export function usePoseDetection(
               if (railDirRef.current) {
                 railDirRef.current = smoothDirection2D(
                   railDirRef.current.x, railDirRef.current.y,
-                  currentDirX, currentDirY, 0.15,
+                  currentDirX, currentDirY, 0.08,
                 )
               } else {
                 railDirRef.current = { x: currentDirX, y: currentDirY }

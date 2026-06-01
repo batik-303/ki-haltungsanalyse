@@ -58,14 +58,14 @@ export function ResultsScreen() {
     )
   }
 
-  const { durationMinutes, durationSeconds, zonePercentages, tensionTimeline, maxFlowStreak, anchorPoints, repairedTime, holdMilestones } = lastStats
+  const { durationMinutes, durationSeconds, zonePercentages, tensionTimeline, maxFlowStreak, anchorPoints } = lastStats
 
   const durationStr = `${durationMinutes}:${String(durationSeconds).padStart(2, '0')}`
 
   // Personal best comparison
   const [isNewRecord, setIsNewRecord] = useState(false)
-  const [personalBest, setPersonalBest] = useState(0)
-  const [totalMilestones, setTotalMilestones] = useState(0)
+  const [, setPersonalBest] = useState(0)
+  const [, setTotalMilestones] = useState(0)
 
   useEffect(() => {
     getPersonalBestStreak().then((best) => {
@@ -83,14 +83,6 @@ export function ResultsScreen() {
     { name: 'achtung', value: Math.round(zonePercentages.achtung), fill: LAYER_COLORS.achtung },
     { name: 'limit', value: Math.round(zonePercentages.limit), fill: LAYER_COLORS.limit },
   ].filter((d) => d.value > 0)
-
-  const avgTension = tensionTimeline.length > 0
-    ? Math.round(tensionTimeline.reduce((s, e) => s + e.tension, 0) / tensionTimeline.length)
-    : 0
-
-  const peakTension = tensionTimeline.length > 0
-    ? Math.round(Math.max(...tensionTimeline.map((e) => e.tension)))
-    : 0
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 py-8 gap-8">

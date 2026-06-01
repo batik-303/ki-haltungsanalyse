@@ -2,7 +2,7 @@ import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristSideView, drawWristMobileBar } from './wrist-side-view'
+import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
@@ -21,6 +21,13 @@ const REPAIR_PULSE_DEBOUNCE_MS = 800
 let adaptiveBaseline = 0
 const ADAPTIVE_BASELINE_ALPHA = 0.02
 
+// Module-level position smoother for wrist overlay anchor.
+// The One Euro filters in the hook smooth coordinates; this adds a final
+// lightweight EMA to eliminate residual pixel-level jitter in the overlay.
+let anchorPosSmoothed: { x: number; y: number } | null = null
+let lastMasterPrintId: string | null = null
+const ANCHOR_POS_ALPHA = 0.15
+
 /**
  * Main render dispatch. Called every frame from the detection loop.
  * Reads store via getState() — no React subscription, no re-renders.
@@ -37,8 +44,16 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, smoothedRailDir, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg } = state
   const isFlow = viewMode === 'flow'
+
+  // Reset smoothed positions when calibration changes
+  const masterPrintId = masterPrint ? `${masterPrint.mode}-${state.lastCalibrationAt ?? 0}` : null
+  if (masterPrintId !== lastMasterPrintId) {
+    anchorPosSmoothed = null
+    lastMasterPrintId = masterPrintId
+    resetWristSideViewSmoothing()
+  }
 
   // ── Flow mode: black background ──
   if (isFlow) {
@@ -121,13 +136,19 @@ export function renderFrame(
     if (masterPrint && !isCalibrating) {
       // Use filtered coordinates for smooth rendering (fallback to raw)
       const fc = state.filteredWristCoords
-      const fex = fc?.ex ?? (elbow.x * width), fey = fc?.ey ?? (elbow.y * height)
-      // Korrigierte Ankerposition verwenden, falls vorhanden
-      const fwx = fc?.wxCorr ?? fc?.wx ?? wx, fwy = fc?.wyCorr ?? fc?.wy ?? wy
-      const fmx = fc?.mx ?? ix, fmy = fc?.my ?? iy
+      const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
       // Anker = Handgelenk (wo die Hand knickt)
-      const anchorX = fwx
-      const anchorY = fwy
+      // Apply additional position smoothing for overlay stability.
+      if (!anchorPosSmoothed) {
+        anchorPosSmoothed = { x: fwx, y: fwy }
+      } else {
+        anchorPosSmoothed = {
+          x: anchorPosSmoothed.x * (1 - ANCHOR_POS_ALPHA) + fwx * ANCHOR_POS_ALPHA,
+          y: anchorPosSmoothed.y * (1 - ANCHOR_POS_ALPHA) + fwy * ANCHOR_POS_ALPHA,
+        }
+      }
+      const anchorX = anchorPosSmoothed.x
+      const anchorY = anchorPosSmoothed.y
 
       // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
       const nowPerf = performance.now()
@@ -239,11 +260,11 @@ export function renderFrame(
         }
       }
 
-      // Foreshortening confidence warning (below side-view — left of canvas = right of screen)
+      // Foreshortening confidence warning (below side-view — right of canvas = left of screen)
       const foreConf = state.wristForeshorteningConfidence
       if (foreConf < 0.9) {
         const isMobile = width < 480
-        const warnX = isMobile ? Math.max(28, width * 0.08) : 50
+        const warnX = isMobile ? width - Math.max(28, width * 0.08) : width - 50
         const warnY = height / 2 + height * 0.18
         ctx.font = '11px sans-serif'
         ctx.textAlign = 'center'

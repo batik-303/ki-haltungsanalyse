@@ -1,11 +1,22 @@
+// Module-level angle smoothers for rendering (reset on calibration change).
+let sideViewAngleSmoothed = 0
+let mobileBarAngleSmoothed = 0
+
+/** Reset module-level smoothing state — call when calibration changes. */
+export function resetWristSideViewSmoothing() {
+  sideViewAngleSmoothed = 0
+  mobileBarAngleSmoothed = 0
+}
+
 /**
  * Render simplified peripheral side-view of wrist.
  * Layout: Hand line (top) → Sapphire Anchor (center) → Arm line (bottom).
- * Drawn on LEFT side of canvas → appears on RIGHT of screen (CSS mirror).
+ * Drawn on RIGHT side of canvas → appears on LEFT of screen (CSS mirror).
  * Placed opposite to the hand silhouette — no occlusion.
  *
  * Uses the same isBlue deadzone as the main overlay (sticky-blue hysteresis).
- * No module-level smoothing — angle is already EMA-smoothed in the hook.
+ * Angle is EMA-smoothed by the analysis hook; additional module-level
+ * smoothing applied here for visual stability of the peripheral.
  */
 export function drawWristSideView(
   ctx: CanvasRenderingContext2D,
@@ -15,15 +26,23 @@ export function drawWristSideView(
   angleDiff: number,
   lastBendForward: boolean,
   now: number,
-  wristRepairStatus?: { repaired: boolean },
+  _wristRepairStatus?: { repaired: boolean },
   wristGlowLevel?: number,
   railSuccessGlow?: number,
   isBlue?: boolean,
 ) {
   // Use the same deadzone as main overlay (sticky-blue hysteresis) — no fallback
   const inDeadzone = isBlue ?? (angleDiff <= 10)
-  // Use angleDiff directly — already EMA-smoothed by the analysis hook
-  const effectiveAngle = angleDiff > 5 ? angleDiff : 0
+
+  // Additional smoothing layer for visual stability (analysis accuracy preserved).
+  // Asymmetric: respond faster to rising angle, decay gently on return.
+  const SIDEVIEW_ANGLE_ALPHA = 0.12
+  if (angleDiff > sideViewAngleSmoothed) {
+    sideViewAngleSmoothed = sideViewAngleSmoothed * (1 - SIDEVIEW_ANGLE_ALPHA * 2) + angleDiff * (SIDEVIEW_ANGLE_ALPHA * 2)
+  } else {
+    sideViewAngleSmoothed = sideViewAngleSmoothed * (1 - SIDEVIEW_ANGLE_ALPHA) + angleDiff * SIDEVIEW_ANGLE_ALPHA
+  }
+  const effectiveAngle = sideViewAngleSmoothed > 5 ? sideViewAngleSmoothed : 0
 
   // Scale to screen height — figure uses ~22% on desktop, ~28% on mobile
   const isMobile = width < 480
@@ -32,9 +51,9 @@ export function drawWristSideView(
   const armLen = totalLen * 0.7
   const handLen = totalLen * 0.3
 
-  // LEFT canvas edge → RIGHT screen edge after CSS mirror (away from hand)
+  // RIGHT canvas edge → LEFT screen edge after CSS mirror (away from hand)
   const marginX = isMobile ? Math.max(28, width * 0.08) : 50
-  const cx = marginX
+  const cx = width - marginX
   const cy = height / 2
   const wx = cx
   const wy = cy
@@ -75,9 +94,9 @@ export function drawWristSideView(
   ctx.globalAlpha = 1
 
   // ─── Hand line (angled by deviation) ───
-  // Direction: lastBendForward=true → bend to RIGHT on canvas (= LEFT on screen after CSS mirror)
+  // Direction: lastBendForward=true → bend to LEFT on canvas (= LEFT on screen, side-view is on right canvas edge)
   const dirSign = lastBendForward ? 1 : -1
-  const amplifiedAngle = Math.min(45, effectiveAngle * 2.5)
+  const amplifiedAngle = Math.min(45, effectiveAngle * 1.8)
   const angleRad = (amplifiedAngle * Math.PI) / 180
   const hx = wx + Math.sin(angleRad) * dirSign * handLen
   const hy = wy - Math.cos(angleRad) * handLen
@@ -198,7 +217,7 @@ export function drawWristSideView(
 // MOBILE WRIST BAR
 // Horizontal indicator drawn above the bottom HUD on portrait phones.
 // Arm segment (left) + Wrist anchor (center) + Hand segment (right, angled on deviation).
-// No separate smoothing — uses the already-EMA-smoothed angleDiff from the hook.
+// Additional module-level smoothing on top of the analysis EMA.
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -218,7 +237,15 @@ export function drawWristMobileBar(
   bottomOffset = 72,  // px from bottom — matches React phone HUD height
 ) {
   const inDeadzone = isBlue ?? (angleDiff <= 10)
-  const effectiveAngle = angleDiff > 5 ? angleDiff : 0
+
+  // Additional smoothing layer for visual stability (same as side-view).
+  const MOBILE_ANGLE_ALPHA = 0.12
+  if (angleDiff > mobileBarAngleSmoothed) {
+    mobileBarAngleSmoothed = mobileBarAngleSmoothed * (1 - MOBILE_ANGLE_ALPHA * 2) + angleDiff * (MOBILE_ANGLE_ALPHA * 2)
+  } else {
+    mobileBarAngleSmoothed = mobileBarAngleSmoothed * (1 - MOBILE_ANGLE_ALPHA) + angleDiff * MOBILE_ANGLE_ALPHA
+  }
+  const effectiveAngle = mobileBarAngleSmoothed > 5 ? mobileBarAngleSmoothed : 0
 
   // Position: centered horizontally, above bottom HUD
   const cx = width / 2
@@ -259,7 +286,7 @@ export function drawWristMobileBar(
   // Deviates upward/downward from horizontal based on angleDiff.
   // lastBendForward=true → hand tilts DOWN on canvas (= natural wrist drop direction)
   const dirSign = lastBendForward ? 1 : -1
-  const amplifiedAngle = Math.min(50, effectiveAngle * 2.5)
+  const amplifiedAngle = Math.min(50, effectiveAngle * 1.8)
   const angleRad = (amplifiedAngle * Math.PI) / 180
   const handEndX = cx + Math.cos(angleRad) * handLen
   const handEndY = cy + Math.sin(angleRad) * dirSign * handLen

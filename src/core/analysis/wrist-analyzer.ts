@@ -399,9 +399,9 @@ export function createWristRailTimer(ladder: number[] = [3, 5, 10, 15]) {
   let lastSuccessTime = 0
   let milestoneLevel = 0 // index into ladder (0-based during current milestone)
 
-  function currentTarget() {
-    if (milestoneLevel < ladder.length) return ladder[milestoneLevel]
-    return ladder[ladder.length - 1] // steady state: repeat last
+  function currentTarget(): number {
+    if (milestoneLevel < ladder.length) return ladder[milestoneLevel]!
+    return ladder[ladder.length - 1]! // steady state: repeat last
   }
 
   return function update(isStraight: boolean, dt: number, nowMs: number) {

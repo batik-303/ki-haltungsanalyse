@@ -39,7 +39,6 @@ export function createSessionTracker(focusMode: FocusMode) {
   let maxStreak = 0
   // Ankerpunkt-Logik
   let repairedTime = 0 // aufsummierte Zeit im reparierten Zustand (Sekunden)
-  let wasRepaired = false
   // Hold-Meilensteine
   let holdMilestones = 0
   let bestMilestoneLevel = 0
@@ -96,9 +95,6 @@ export function createSessionTracker(focusMode: FocusMode) {
       // Ankerpunkt-Zeit aufsummieren
       if (repaired) {
         repairedTime += dt
-        wasRepaired = true
-      } else {
-        wasRepaired = false
       }
 
       // Return-to-anchor detection (always active for immediate feedback)

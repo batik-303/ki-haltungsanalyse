@@ -10,7 +10,7 @@ export function drawWristLines(
   ex: number, ey: number,       // elbow (filtered pixels)
   angleDiff: number,             // degrees deviation (2D collinearity)
   railDir: { x: number; y: number } | null,  // smoothed forearm direction (normalized)
-  railSuccessGlow: number,       // golden flash intensity (0..1)
+  _railSuccessGlow: number,      // golden flash intensity (0..1) — reserved
   wristGlowLevel?: number,
   isBlue?: boolean,
 ) {
