@@ -29,7 +29,7 @@ const ADAPTIVE_BASELINE_ALPHA = 0.02
 // lightweight EMA to eliminate residual pixel-level jitter in the overlay.
 let anchorPosSmoothed: { x: number; y: number } | null = null
 let lastMasterPrintId: string | null = null
-const ANCHOR_POS_ALPHA = 0.15
+const ANCHOR_POS_ALPHA = 0.25
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -160,18 +160,27 @@ export function renderFrame(
     }
 
     if (masterPrint && !isCalibrating) {
-      // Use filtered coordinates for smooth rendering (fallback to raw)
-      const fc = state.filteredWristCoords
-      const fwx = fc?.wx ?? wx, fwy = fc?.wy ?? wy
-      // Anker = Handgelenk (wo die Hand knickt)
-      // Apply additional position smoothing for overlay stability.
-      if (!anchorPosSmoothed) {
-        anchorPosSmoothed = { x: fwx, y: fwy }
-      } else {
-        anchorPosSmoothed = {
-          x: anchorPosSmoothed.x * (1 - ANCHOR_POS_ALPHA) + fwx * ANCHOR_POS_ALPHA,
-          y: anchorPosSmoothed.y * (1 - ANCHOR_POS_ALPHA) + fwy * ANCHOR_POS_ALPHA,
+      // Anchor target = HandLandmark 0 only (precise wrist joint). When the
+      // hand briefly disappears, the anchor freezes at its last hand-derived
+      // position instead of popping to pose-15 (~60px below the real joint).
+      const handAnchor = handLandmarks?.[0]
+      if (handAnchor) {
+        const fwx = handAnchor.x * width
+        const fwy = handAnchor.y * height
+        if (!anchorPosSmoothed) {
+          anchorPosSmoothed = { x: fwx, y: fwy }
+        } else {
+          anchorPosSmoothed = {
+            x: anchorPosSmoothed.x * (1 - ANCHOR_POS_ALPHA) + fwx * ANCHOR_POS_ALPHA,
+            y: anchorPosSmoothed.y * (1 - ANCHOR_POS_ALPHA) + fwy * ANCHOR_POS_ALPHA,
+          }
         }
+      }
+      // If hand missing AND we never had one (first frames after calibration),
+      // seed from the filtered pose wrist so the anchor still appears.
+      if (!anchorPosSmoothed) {
+        const fc = state.filteredWristCoords
+        anchorPosSmoothed = { x: fc?.wx ?? wx, y: fc?.wy ?? wy }
       }
       const anchorX = anchorPosSmoothed.x
       const anchorY = anchorPosSmoothed.y

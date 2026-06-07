@@ -13,10 +13,25 @@ const POSE_CONNECTIONS: [number, number][] = [
   [24, 26], [26, 28], [28, 30], [28, 32], [30, 32],
 ]
 
+// Cyan halo circles on the indices the active analyzer actually reads.
+// Pose 17/19/21 are no longer highlighted in wrist mode — HandLandmarker
+// now provides 21 precise hand dots covering that anatomy. They stay in the
+// data flow (pose-fallback path) but don't need visual emphasis.
 const HIGHLIGHT_BY_MODE: Record<string, Set<number>> = {
-  wrist: new Set([13, 15, 17, 19, 21]),
+  wrist: new Set([13, 15]),
   shoulder: new Set([7, 11]),
   violin: new Set([15]),
+}
+
+// Landmarks to skip entirely (no dot, no label, no connection through them).
+// Trims debug clutter to the body parts the active mode actually analyzes.
+const HIDDEN_BY_MODE: Record<string, Set<number>> = {
+  // Wrist: hide head + both shoulders. Focus = forearm + hand.
+  wrist: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+  // Shoulder: hide face except left ear (7) — analyzer reads ear↔shoulder.
+  shoulder: new Set([0, 1, 2, 3, 4, 5, 6, 8, 9, 10]),
+  // Violin: hide head + shoulders. Analyzer tracks left-wrist Y-drift only.
+  violin: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
 }
 
 // Canvas is CSS-mirrored (scaleX(-1)). Text drawn directly is mirrored too.
@@ -43,13 +58,15 @@ export function drawDebugLandmarks(
 ) {
   const focusMode = usePoseStore.getState().focusMode
   const highlight = HIGHLIGHT_BY_MODE[focusMode] ?? new Set<number>()
+  const hidden = HIDDEN_BY_MODE[focusMode] ?? new Set<number>()
 
   ctx.save()
 
-  // 1) Full skeleton wireframe
+  // 1) Skeleton wireframe — skip any segment touching a hidden landmark.
   ctx.strokeStyle = '#5b9bd5'
   ctx.lineWidth = 1
   for (const [a, b] of POSE_CONNECTIONS) {
+    if (hidden.has(a) || hidden.has(b)) continue
     const la = landmarks[a]
     const lb = landmarks[b]
     if (!la || !lb) continue
@@ -63,12 +80,13 @@ export function drawDebugLandmarks(
     ctx.stroke()
   }
 
-  // 2) Landmark dots + index labels
+  // 2) Landmark dots + index labels — skip hidden indices entirely.
   ctx.font = '10px ui-monospace, "SF Mono", Menlo, monospace'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
 
   for (let i = 0; i < landmarks.length; i++) {
+    if (hidden.has(i)) continue
     const l = landmarks[i]!
     const x = l.x * width
     const y = l.y * height
