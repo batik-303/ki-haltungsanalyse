@@ -85,3 +85,68 @@ export function drawDebugHandLandmarks(
 
   ctx.restore()
 }
+
+/**
+ * Render the actual analysis vectors used by the wrist analyzer:
+ *   - Cyan line: forearm  (pose-elbow → hand-wrist)
+ *   - Lime line: hand vec (hand-wrist → hand-middle-MCP)
+ *   - Arc between them with numeric degree value
+ * Caller passes the same effective angle the analyzer is using so the displayed
+ * value matches what drives the rail color and HUD.
+ */
+export function drawDebugWristVectors(
+  ctx: CanvasRenderingContext2D,
+  poseElbow: Landmark,
+  handWrist: Landmark,
+  handMiddleMCP: Landmark,
+  width: number,
+  height: number,
+  angleDeg: number,
+) {
+  const elbowX = poseElbow.x * width
+  const elbowY = poseElbow.y * height
+  const wristX = handWrist.x * width
+  const wristY = handWrist.y * height
+  const mcpX = handMiddleMCP.x * width
+  const mcpY = handMiddleMCP.y * height
+
+  ctx.save()
+
+  // Forearm vector (cyan)
+  ctx.strokeStyle = '#00e5ff'
+  ctx.lineWidth = 2
+  ctx.globalAlpha = 0.85
+  ctx.beginPath()
+  ctx.moveTo(elbowX, elbowY)
+  ctx.lineTo(wristX, wristY)
+  ctx.stroke()
+
+  // Hand vector (lime)
+  ctx.strokeStyle = '#a3ff5b'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(wristX, wristY)
+  ctx.lineTo(mcpX, mcpY)
+  ctx.stroke()
+
+  // Angle arc at the wrist: from forearm-out direction to hand-out direction.
+  const aF = Math.atan2(wristY - elbowY, wristX - elbowX)
+  const aH = Math.atan2(mcpY - wristY, mcpX - wristX)
+  const radius = Math.min(28, Math.hypot(mcpX - wristX, mcpY - wristY) * 0.9)
+  ctx.strokeStyle = '#ffffff'
+  ctx.lineWidth = 1.5
+  ctx.globalAlpha = 0.6
+  ctx.beginPath()
+  ctx.arc(wristX, wristY, radius, aF, aH)
+  ctx.stroke()
+
+  // Degree value (mirror-compensated text)
+  ctx.font = 'bold 12px ui-monospace, "SF Mono", Menlo, monospace'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#ffffff'
+  ctx.globalAlpha = 0.95
+  drawMirroredText(ctx, `${angleDeg.toFixed(1)}°`, wristX - (radius + 6), wristY - radius - 6)
+
+  ctx.restore()
+}

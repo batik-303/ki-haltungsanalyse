@@ -165,59 +165,25 @@ export function computeFlexionExtensionAngle(
   elbow: Landmark,
   wrist: Landmark,
   mcp: Landmark,
+  aspect: number = 1,
 ): { angle: number; usedFallback: boolean } {
-  // Forearm vector (elbow → wrist direction, used as reference for "straight")
-  const fax = wrist.x - elbow.x
-  const fay = wrist.y - elbow.y
-  const faz = wrist.z - elbow.z
+  // 2D image-space angle between forearm (elbow→wrist) and hand (wrist→MCP).
+  // Aspect-correct so the same physical bend yields the same angle regardless
+  // of arm orientation in non-square canvases. Returns 0° when aligned
+  // (straight wrist), 180° when folded back. No more 3D plane projection —
+  // the runtime uses HandLandmarker's precise MCP rather than the noisy
+  // pose-derived MCP, so simple 2D is more robust than the previous z-mixing.
+  const ax = (wrist.x - elbow.x) * aspect
+  const ay = wrist.y - elbow.y
+  const bx = (mcp.x - wrist.x) * aspect
+  const by = mcp.y - wrist.y
 
-  // Gravity reference (y-down in MediaPipe normalized coords)
-  const upX = 0, upY = -1, upZ = 0
+  const magA = Math.sqrt(ax * ax + ay * ay)
+  const magB = Math.sqrt(bx * bx + by * by)
+  if (magA === 0 || magB === 0) return { angle: 0, usedFallback: false }
 
-  // Plane normal = forearm × up
-  let nx = fay * upZ - faz * upY
-  let ny = faz * upX - fax * upZ
-  let nz = fax * upY - fay * upX
-  const nMag = Math.sqrt(nx * nx + ny * ny + nz * nz)
-
-  // Fallback: forearm nearly vertical → cross product too small
-  if (nMag < 0.1) {
-    // 2D angle fallback (ignoring z)
-    const fa2x = wrist.x - elbow.x
-    const fa2y = wrist.y - elbow.y
-    const h2x = mcp.x - wrist.x
-    const h2y = mcp.y - wrist.y
-    const dot2 = fa2x * h2x + fa2y * h2y
-    const mag1 = Math.sqrt(fa2x * fa2x + fa2y * fa2y)
-    const mag2 = Math.sqrt(h2x * h2x + h2y * h2y)
-    if (mag1 === 0 || mag2 === 0) return { angle: 180, usedFallback: true }
-    const cos = Math.min(1, Math.max(-1, dot2 / (mag1 * mag2)))
-    return { angle: Math.acos(cos) * (180 / Math.PI), usedFallback: true }
-  }
-
-  // Normalize the plane normal
-  nx /= nMag
-  ny /= nMag
-  nz /= nMag
-
-  // Hand vector (wrist → MCP)
-  const hx = mcp.x - wrist.x
-  const hy = mcp.y - wrist.y
-  const hz = mcp.z - wrist.z
-
-  // Project hand vector onto the flexion plane: h_proj = h - (h·n)*n
-  const hDotN = hx * nx + hy * ny + hz * nz
-  const px = hx - hDotN * nx
-  const py = hy - hDotN * ny
-  const pz = hz - hDotN * nz
-
-  // Angle between forearm and projected hand vector
-  const dot = fax * px + fay * py + faz * pz
-  const faMag = Math.sqrt(fax * fax + fay * fay + faz * faz)
-  const pMag = Math.sqrt(px * px + py * py + pz * pz)
-
-  if (faMag === 0 || pMag === 0) return { angle: 180, usedFallback: false }
-  const cos = Math.min(1, Math.max(-1, dot / (faMag * pMag)))
+  const dot = ax * bx + ay * by
+  const cos = Math.min(1, Math.max(-1, dot / (magA * magB)))
   return { angle: Math.acos(cos) * (180 / Math.PI), usedFallback: false }
 }
 
@@ -307,12 +273,14 @@ export function computeCollinearityAngle2D(
   elbow: Landmark,
   wrist: Landmark,
   mcp: Landmark,
+  aspect: number = 1,
 ): number {
-  // Forearm vector (elbow → wrist)
-  const ax = wrist.x - elbow.x
+  // Aspect-correct vectors: scale x by aspect (W/H) so x and y are isotropic
+  // in pixel-equivalent space. Same physical bend yields the same angle
+  // regardless of forearm orientation in non-square canvases.
+  const ax = (wrist.x - elbow.x) * aspect
   const ay = wrist.y - elbow.y
-  // Hand vector (wrist → mcp)
-  const bx = mcp.x - wrist.x
+  const bx = (mcp.x - wrist.x) * aspect
   const by = mcp.y - wrist.y
 
   const magA = Math.sqrt(ax * ax + ay * ay)
@@ -333,10 +301,11 @@ export function computeBendDirection2D(
   elbow: Landmark,
   wrist: Landmark,
   mcp: Landmark,
+  aspect: number = 1,
 ): number {
-  const ax = wrist.x - elbow.x
+  const ax = (wrist.x - elbow.x) * aspect
   const ay = wrist.y - elbow.y
-  const bx = mcp.x - wrist.x
+  const bx = (mcp.x - wrist.x) * aspect
   const by = mcp.y - wrist.y
   // 2D cross product (z-component of 3D cross)
   return ax * by - ay * bx

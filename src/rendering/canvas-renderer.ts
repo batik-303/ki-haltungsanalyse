@@ -2,7 +2,7 @@ import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawDebugLandmarks } from './debug-landmarks'
-import { drawDebugHandLandmarks } from './debug-hand-landmarks'
+import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-landmarks'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -146,6 +146,14 @@ export function renderFrame(
     if (!elbow || !wrist || !index) return
     const wx = wrist.x * width, wy = wrist.y * height
     const ix = index.x * width, iy = index.y * height
+
+    // Debug: forearm + hand vec + arc + angle text (D-toggle gated).
+    if (state.debugLandmarks && handLandmarks && handLandmarks.length >= 10) {
+      drawDebugWristVectors(
+        ctx, elbow, handLandmarks[0]!, handLandmarks[9]!,
+        width, height, wristRailAngleDeg ?? 0,
+      )
+    }
 
     if (masterPrint && !isCalibrating) {
       // Use filtered coordinates for smooth rendering (fallback to raw)

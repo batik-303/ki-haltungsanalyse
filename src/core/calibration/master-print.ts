@@ -12,7 +12,6 @@ import {
   computeBendDirection2D,
   computeArmLength2D,
   computeCollinearityAngle2D,
-  computeMCP,
 } from '../analysis/wrist-analyzer'
 
 /**
@@ -21,8 +20,13 @@ import {
 export function createMasterPrint(
   mode: FocusMode,
   landmarks: Landmark[],
-  worldLandmarks?: Landmark[],
-): MasterPrint {
+  options: {
+    handLandmarks?: Landmark[] | null
+    aspect?: number
+    worldLandmarks?: Landmark[]
+  } = {},
+): MasterPrint | null {
+  const { handLandmarks, aspect = 1 } = options
   switch (mode) {
     case 'shoulder': {
       const leftEar = landmarks[7]!
@@ -33,26 +37,25 @@ export function createMasterPrint(
       } satisfies ShoulderMasterPrint
     }
     case 'wrist': {
-      // Image-space (normalized 0..1, distorted by aspect) — kept for foreshortening,
-      // which relies on the arm visually shrinking when pointed at the camera.
-      const elbow = landmarks[13]!
-      const wrist = landmarks[15]!
+      // Wrist calibration requires a HandLandmarker result for the calibration
+      // frame — pose-derived MCP is too coarse, and seeding a baseline from
+      // one path that runtime won't use creates a calibration/runtime drift.
+      // Caller must abort and surface UI feedback when this returns null.
+      if (!handLandmarks || handLandmarks.length === 0) return null
 
-      // World-space (meters, hip-origin, gravity-aligned) — correct units for
-      // anatomical joint angles. Fall back to image-space if MediaPipe didn't
-      // emit world landmarks for this frame.
-      const world = worldLandmarks ?? landmarks
-      const elbowW = world[13]!
-      const wristW = world[15]!
-      const mcpW = computeMCP(world[17]!, world[19]!)
+      const poseElbow = landmarks[13]!
+      const handWrist = handLandmarks[0]!
+      const handMiddleMCP = handLandmarks[9]!
 
-      const { angle } = computeFlexionExtensionAngle(elbowW, wristW, mcpW)
+      const { angle } = computeFlexionExtensionAngle(poseElbow, handWrist, handMiddleMCP, aspect)
       return {
         mode: 'wrist',
         flexAngle: angle,
-        flexBendDir: computeBendDirection2D(elbowW, wristW, mcpW),
-        calibArmLength2D: computeArmLength2D(elbow, wrist),
-        calib2DAngle: computeCollinearityAngle2D(elbowW, wristW, mcpW),
+        flexBendDir: computeBendDirection2D(poseElbow, handWrist, handMiddleMCP, aspect),
+        // Foreshortening confidence keeps using pose-only arm length —
+        // HandLandmarker doesn't help with arm-pointing-at-camera detection.
+        calibArmLength2D: computeArmLength2D(poseElbow, landmarks[15]!),
+        calib2DAngle: computeCollinearityAngle2D(poseElbow, handWrist, handMiddleMCP, aspect),
       } satisfies WristMasterPrint
     }
     case 'violin': {

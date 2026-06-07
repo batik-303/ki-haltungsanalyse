@@ -33,10 +33,12 @@ export function SessionScreen() {
   const viewMode = usePoseStore((s) => s.viewMode)
   const hudFaded = usePoseStore(selectHudFaded)
 
-  const { resetAnalysisState, landmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
+  const { resetAnalysisState, landmarkerRef, handLandmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
   const { startCountdown } = useCalibration({
     videoRef,
+    canvasRef,
+    handLandmarkerRef,
     onCalibrated: resetAnalysisState,
   })
 
@@ -54,11 +56,14 @@ export function SessionScreen() {
         setCalCountdown(remaining)
         setCalText('Halte deine optimale Spielhaltung...')
       },
-      (success) => {
+      (success, reason) => {
         if (!success) {
-          updateCalibrationUI(0, 'Kalibrierung fehlgeschlagen — erneut versuchen', '#e74c3c')
+          const msg = reason === 'no_hand'
+            ? 'Hand nicht erkannt — Hand sichtbar ins Bild halten und erneut versuchen'
+            : 'Kalibrierung fehlgeschlagen — erneut versuchen'
+          updateCalibrationUI(0, msg, '#e74c3c')
           setCalCountdown(0)
-          setCalText('Kalibrierung fehlgeschlagen — erneut versuchen')
+          setCalText(msg)
           setCalColor('#e74c3c')
         } else {
           setCalCountdown(0)
@@ -66,7 +71,7 @@ export function SessionScreen() {
         }
       },
     )
-  }, [landmarkerRef, startCountdown])
+  }, [landmarkerRef, handLandmarkerRef, startCountdown])
 
   const handleStart = useCallback(() => {
     const store = usePoseStore.getState()
