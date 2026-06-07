@@ -22,6 +22,18 @@ export default function App() {
   const prevScreenRef = useRef<ScreenKey>(appScreen)
   const isInitialMount = useRef(true)
 
+  // Global keyboard: 'd' toggles the debug landmark overlay.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'd' && e.key !== 'D') return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+      usePoseStore.getState().toggleDebugLandmarks()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false

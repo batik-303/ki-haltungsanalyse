@@ -1,4 +1,4 @@
-import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer, computeMCP } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
@@ -187,6 +187,7 @@ export function usePoseDetection(
 
       const store = usePoseStore.getState()
       const landmarks = results.landmarks?.[0] as Landmark[] | undefined
+      const worldLandmarks = results.worldLandmarks?.[0] as Landmark[] | undefined
 
       if (landmarks && landmarks.length > 0) {
         // Distance check
@@ -224,9 +225,18 @@ export function usePoseDetection(
             smoothedDev = smootherRef.current.push(rawDev)
             tensionTarget = computeShoulderTensionTarget(smoothedDev, sensitivity)
           } else if (store.focusMode === 'wrist' && store.masterPrint.mode === 'wrist') {
+            // Image-space (normalized 0..1) — for foreshortening, slide shield, rendering.
             const elbow = landmarks[13]!
             const wrist = landmarks[15]!
+            const pinky = landmarks[17]!
             const index = landmarks[19]!
+
+            // World-space (meters, hip-origin, gravity-aligned) — anatomical angles.
+            const world = worldLandmarks ?? landmarks
+            const elbowW = world[13]!
+            const wristW = world[15]!
+            const mcpW = computeMCP(world[17]!, world[19]!)
+
 
             // Symmetric position-shift shield: damp sensitivity briefly during fast slides.
             const prevWrist = wristPrevPosRef.current
@@ -248,8 +258,8 @@ export function usePoseDetection(
             const armLen2D = computeArmLength2D(elbow, wrist)
             const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
 
-            // ── 2D Collinearity measurement (primary) ──
-            const angleDiff2D = computeCollinearityAngle2D(elbow, wrist, index)
+            // ── Frontal-plane collinearity (primary) — world-space, consistent meter units ──
+            const angleDiff2D = computeCollinearityAngle2D(elbowW, wristW, mcpW)
 
             // ── Baseline normalization: subtract calibration angle ──
             const baselineAngle = store.masterPrint.calib2DAngle ?? 0
@@ -258,8 +268,8 @@ export function usePoseDetection(
             // ── Z-boost for neck-direction detection ──
             const t = now / 1000
             const zf = wristZFiltersRef.current
-            const zWristF = zf.wristZ(wrist.z, t)
-            const zIndexF = zf.indexZ(index.z, t)
+            const zWristF = zf.wristZ(wristW.z, t)
+            const zIndexF = zf.indexZ(mcpW.z, t)
             const rawZBoosted = computeZBoost(baselineCorrected, zIndexF, zWristF)
 
             // ── EMA post-smoothing (alpha=0.25, ~100ms time constant at 30fps) ──
@@ -290,8 +300,8 @@ export function usePoseDetection(
             // Cap tension by foreshortening confidence — avoid false alarms
             tensionTarget = computeWristTensionTarget(effectiveAngleDiff, sensitivity) * foreConf * slideShieldFactor
 
-            // Bend direction (2D cross product)
-            const bendDir2D = computeBendDirection2D(elbow, wrist, index)
+            // Bend direction (frontal-plane cross, world-space)
+            const bendDir2D = computeBendDirection2D(elbowW, wristW, mcpW)
             bendFwd = updateBendLock(
               effectiveAngleDiff,
               bendDir2D,
@@ -337,8 +347,8 @@ export function usePoseDetection(
               wy: f.wy(wrist.y * canvas.height, t),
               ix: f.ix(index.x * canvas.width, t),
               iy: f.iy(index.y * canvas.height, t),
-              mx: f.mx(index.x * canvas.width, t),
-              my: f.my(index.y * canvas.height, t),
+              mx: f.mx(((pinky.x + index.x) / 2) * canvas.width, t),
+              my: f.my(((pinky.y + index.y) / 2) * canvas.height, t),
             }
 
             // Store confidence for renderer warning

@@ -1,6 +1,7 @@
 import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
+import { drawDebugLandmarks } from './debug-landmarks'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -64,6 +65,11 @@ export function renderFrame(
   // Silhouette only in analyse mode
   if (!isFlow && landmarks) {
     drawSilhouette(ctx, landmarks, width, height)
+  }
+
+  // Debug overlay: full 33-landmark MediaPipe skeleton with indices.
+  if (state.debugLandmarks && landmarks) {
+    drawDebugLandmarks(ctx, landmarks, width, height)
   }
 
   // ── Pre-calibration: target zone + preview anchor (analyse only) ──

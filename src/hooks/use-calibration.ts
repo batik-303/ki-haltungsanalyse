@@ -24,11 +24,12 @@ export function useCalibration({ videoRef, onCalibrated }: UseCalibrationOptions
 
     const results = landmarker.detectForVideo(video, performance.now())
     const landmarks = results.landmarks?.[0] as Landmark[] | undefined
+    const worldLandmarks = results.worldLandmarks?.[0] as Landmark[] | undefined
 
     if (!landmarks || landmarks.length === 0) return false
 
     const store = usePoseStore.getState()
-    const masterPrint = createMasterPrint(store.focusMode, landmarks)
+    const masterPrint = createMasterPrint(store.focusMode, landmarks, worldLandmarks)
     const shoulderWidth = computeShoulderWidth(landmarks[11]!.x, landmarks[12]!.x)
 
     store.calibrate(masterPrint, shoulderWidth)

@@ -12,6 +12,7 @@ import {
   computeBendDirection2D,
   computeArmLength2D,
   computeCollinearityAngle2D,
+  computeMCP,
 } from '../analysis/wrist-analyzer'
 
 /**
@@ -20,6 +21,7 @@ import {
 export function createMasterPrint(
   mode: FocusMode,
   landmarks: Landmark[],
+  worldLandmarks?: Landmark[],
 ): MasterPrint {
   switch (mode) {
     case 'shoulder': {
@@ -31,16 +33,26 @@ export function createMasterPrint(
       } satisfies ShoulderMasterPrint
     }
     case 'wrist': {
+      // Image-space (normalized 0..1, distorted by aspect) — kept for foreshortening,
+      // which relies on the arm visually shrinking when pointed at the camera.
       const elbow = landmarks[13]!
       const wrist = landmarks[15]!
-      const index = landmarks[19]!
-      const { angle } = computeFlexionExtensionAngle(elbow, wrist, index)
+
+      // World-space (meters, hip-origin, gravity-aligned) — correct units for
+      // anatomical joint angles. Fall back to image-space if MediaPipe didn't
+      // emit world landmarks for this frame.
+      const world = worldLandmarks ?? landmarks
+      const elbowW = world[13]!
+      const wristW = world[15]!
+      const mcpW = computeMCP(world[17]!, world[19]!)
+
+      const { angle } = computeFlexionExtensionAngle(elbowW, wristW, mcpW)
       return {
         mode: 'wrist',
         flexAngle: angle,
-        flexBendDir: computeBendDirection2D(elbow, wrist, index),
+        flexBendDir: computeBendDirection2D(elbowW, wristW, mcpW),
         calibArmLength2D: computeArmLength2D(elbow, wrist),
-        calib2DAngle: computeCollinearityAngle2D(elbow, wrist, index),
+        calib2DAngle: computeCollinearityAngle2D(elbowW, wristW, mcpW),
       } satisfies WristMasterPrint
     }
     case 'violin': {

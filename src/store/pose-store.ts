@@ -76,6 +76,9 @@ export interface PoseState {
   flowStreak: number
   maxFlowStreak: number
 
+  // Debug overlay (renders all 33 MediaPipe landmarks with indices)
+  debugLandmarks: boolean
+
   // Navigation actions
   goToSetup: (instrument: Instrument) => void
   goToSession: () => void
@@ -88,6 +91,7 @@ export interface PoseState {
   setViewMode: (mode: ViewMode) => void
   setDistanceOk: (ok: boolean) => void
   setCalibrating: (calibrating: boolean) => void
+  toggleDebugLandmarks: () => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
   startSession: () => void
   updateFrame: (data: FrameUpdate) => void
@@ -188,6 +192,9 @@ export const usePoseStore = create<PoseState>((set) => ({
   flowStreak: 0,
   maxFlowStreak: 0,
 
+  // Debug overlay — default ON while we investigate the wrist analyzer.
+  debugLandmarks: true,
+
   // Navigation actions
   goToSetup: (instrument) => set({
     appScreen: 'setup',
@@ -276,6 +283,8 @@ export const usePoseStore = create<PoseState>((set) => ({
   setDistanceOk: (ok) => set({ distanceOk: ok }),
 
   setCalibrating: (calibrating) => set({ isCalibrating: calibrating }),
+
+  toggleDebugLandmarks: () => set((s) => ({ debugLandmarks: !s.debugLandmarks })),
 
   calibrate: (masterPrint, shoulderWidth) => set({
     masterPrint,
