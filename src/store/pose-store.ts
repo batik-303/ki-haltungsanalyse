@@ -59,6 +59,8 @@ export interface PoseState {
   holdMilestoneLevel: number
   wristRailAngleDeg: number
   wristRailIsBlue: boolean
+  // Analysis path used by the wrist analyzer this frame
+  wristAnalysisPath: 'hand' | 'pose-fallback' | null
 
   // Violin-specific
   violinDeadzone?: boolean
@@ -121,6 +123,7 @@ export interface FrameUpdate {
   holdMilestoneLevel?: number
   wristRailAngleDeg?: number
   wristRailIsBlue?: boolean
+  wristAnalysisPath?: 'hand' | 'pose-fallback' | null
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
   // Streak
@@ -178,6 +181,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   holdMilestoneLevel: 0,
   wristRailAngleDeg: 0,
   wristRailIsBlue: true,
+  wristAnalysisPath: null,
 
   // Filtered wrist render coords
   filteredWristCoords: null,
@@ -219,6 +223,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -250,6 +255,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -273,6 +279,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 
@@ -301,6 +308,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 
@@ -332,6 +340,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.holdMilestoneLevel !== undefined && { holdMilestoneLevel: data.holdMilestoneLevel }),
     ...(data.wristRailAngleDeg !== undefined && { wristRailAngleDeg: data.wristRailAngleDeg }),
     ...(data.wristRailIsBlue !== undefined && { wristRailIsBlue: data.wristRailIsBlue }),
+    ...(data.wristAnalysisPath !== undefined && { wristAnalysisPath: data.wristAnalysisPath }),
   }),
 
   endSession: (stats) => set({
@@ -363,6 +372,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 }))

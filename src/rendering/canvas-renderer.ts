@@ -3,6 +3,7 @@ import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawDebugLandmarks } from './debug-landmarks'
 import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-landmarks'
+import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -147,11 +148,14 @@ export function renderFrame(
     const wx = wrist.x * width, wy = wrist.y * height
     const ix = index.x * width, iy = index.y * height
 
-    // Debug: forearm + hand vec + arc + angle text (D-toggle gated).
-    if (state.debugLandmarks && handLandmarks && handLandmarks.length >= 10) {
+    // Debug: forearm + hand vec + arc + angle text + palm-normal + ±sign.
+    if (state.debugLandmarks && handLandmarks && handLandmarks.length >= 18) {
+      const palmN = computePalmNormal(handLandmarks)
+      const bendSign = computePalmBendSign(elbow, handLandmarks)
       drawDebugWristVectors(
         ctx, elbow, handLandmarks[0]!, handLandmarks[9]!,
         width, height, wristRailAngleDeg ?? 0,
+        palmN, bendSign,
       )
     }
 

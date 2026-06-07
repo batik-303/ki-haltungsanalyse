@@ -107,5 +107,17 @@ export function drawDebugLandmarks(
   ctx.textBaseline = 'top'
   drawMirroredText(ctx, 'DEBUG · press D to toggle', width - 10, 12)
 
+  // Wrist analysis path indicator (only meaningful in wrist mode).
+  if (focusMode === 'wrist') {
+    const path = usePoseStore.getState().wristAnalysisPath
+    if (path) {
+      const label = path === 'hand' ? 'HAND' : 'POSE-FB'
+      const color = path === 'hand' ? '#00e5ff' : '#ff9b3a'
+      ctx.fillStyle = color
+      ctx.globalAlpha = 0.95
+      drawMirroredText(ctx, label, width - 10, 28)
+    }
+  }
+
   ctx.restore()
 }

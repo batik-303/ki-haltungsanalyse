@@ -224,16 +224,27 @@ export function updateBendLock(
   bendDir: number,
   refBendDir: number,
   currentLock: boolean,
+  forearmLength: number = 0,
 ): boolean {
   if (angleDiff > 8) {
     const diff = bendDir - refBendDir
-    const margin = Math.abs(refBendDir) * 0.6 + 0.002
+    // Margin scales with forearm length so the relative threshold is symmetric
+    // across arm sizes. The old `|refBendDir| * 0.6 + 0.002` had a constant
+    // floor that dominated for short arms, making one bend direction harder to
+    // lock than the other. Constant `BEND_LOCK_MARGIN_K` is tuned for hand-
+    // landmark units; if forearmLength is 0 (legacy callers) we fall back to
+    // a tiny constant to preserve hysteresis.
+    const margin = forearmLength > 0 ? BEND_LOCK_MARGIN_K * forearmLength : 1e-4
     if (currentLock && diff < -margin) return false
     if (!currentLock && diff > margin) return true
     return currentLock
   }
   return currentLock
 }
+
+// Empirical constant for arm-proportional margin in updateBendLock.
+// Tuned for typical hand-landmark bend-sign magnitudes (~1e-4 at threshold).
+const BEND_LOCK_MARGIN_K = 0.00025
 
 /**
  * Map wrist angle deviation to a tension target (0-100).
@@ -427,4 +438,64 @@ export function analyzeWrist(
     usedFallback,
     tensionTarget: computeWristTensionTarget(angleDiff, sensitivity),
   }
+}
+
+
+// ── Palm-Normal Bend Sign (3D, orientation-invariant) ──────────────
+
+/**
+ * Compute the unnormalized palm normal from HandLandmarker landmarks via
+ *   (wrist → indexMCP) × (wrist → pinkyMCP)
+ * The vector is perpendicular to the palm plane. Direction (which side of
+ * the palm it points to) depends on hand chirality and is consistent for
+ * the violinist's left hand (anatomical 'Left' from HandLandmarker).
+ */
+export function computePalmNormal(handLandmarks: Landmark[]): { x: number; y: number; z: number } {
+  const wrist = handLandmarks[0]!
+  const indexMCP = handLandmarks[5]!
+  const pinkyMCP = handLandmarks[17]!
+  const ax = indexMCP.x - wrist.x
+  const ay = indexMCP.y - wrist.y
+  const az = indexMCP.z - wrist.z
+  const bx = pinkyMCP.x - wrist.x
+  const by = pinkyMCP.y - wrist.y
+  const bz = pinkyMCP.z - wrist.z
+  return {
+    x: ay * bz - az * by,
+    y: az * bx - ax * bz,
+    z: ax * by - ay * bx,
+  }
+}
+
+/**
+ * Compute the bend-direction sign indicator via dot(forearm, palmNormal).
+ * Orientation-invariant: rotating the whole pose+hand rotates both vectors
+ * together, preserving the dot product sign. Sign flips between palmar
+ * flexion and dorsal extension — the absolute mapping is fixed at
+ * calibration via `flexBendDir` and compared at runtime.
+ *
+ * Single shared code path for calibration (createMasterPrint) and runtime
+ * (rAF wrist branch) — same elbow source (Pose), same hand source, same
+ * cross + dot, identical sign convention.
+ */
+export function computePalmBendSign(elbow: Landmark, handLandmarks: Landmark[]): number {
+  const palmN = computePalmNormal(handLandmarks)
+  const handWrist = handLandmarks[0]!
+  // Forearm vector: elbow → wrist (out-direction along the forearm).
+  const fx = handWrist.x - elbow.x
+  const fy = handWrist.y - elbow.y
+  const fz = handWrist.z - elbow.z
+  return fx * palmN.x + fy * palmN.y + fz * palmN.z
+}
+
+/**
+ * 3D Euclidean length of the forearm (pose elbow → hand wrist). Used by
+ * updateBendLock so the lock margin scales with arm length, eliminating the
+ * old constant-floor asymmetry.
+ */
+export function computeForearmLength3D(elbow: Landmark, handWrist: Landmark): number {
+  const fx = handWrist.x - elbow.x
+  const fy = handWrist.y - elbow.y
+  const fz = handWrist.z - elbow.z
+  return Math.sqrt(fx * fx + fy * fy + fz * fz)
 }

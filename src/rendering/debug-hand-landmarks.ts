@@ -88,11 +88,14 @@ export function drawDebugHandLandmarks(
 
 /**
  * Render the actual analysis vectors used by the wrist analyzer:
- *   - Cyan line: forearm  (pose-elbow → hand-wrist)
- *   - Lime line: hand vec (hand-wrist → hand-middle-MCP)
- *   - Arc between them with numeric degree value
+ *   - Cyan line: forearm    (pose-elbow → hand-wrist)
+ *   - Lime line: hand vec   (hand-wrist → hand-middle-MCP)
+ *   - White arrow: palm-normal projection (hand-wrist outward)
+ *   - Arc between forearm and hand with numeric degree value
+ *   - ±sign symbol marking current bend-sign sense
  * Caller passes the same effective angle the analyzer is using so the displayed
- * value matches what drives the rail color and HUD.
+ * value matches what drives the rail color and HUD. `palmNormal` and
+ * `bendSign` are optional; pass them to enable the palm/sign overlays.
  */
 export function drawDebugWristVectors(
   ctx: CanvasRenderingContext2D,
@@ -102,6 +105,8 @@ export function drawDebugWristVectors(
   width: number,
   height: number,
   angleDeg: number,
+  palmNormal?: { x: number; y: number; z: number } | null,
+  bendSign?: number,
 ) {
   const elbowX = poseElbow.x * width
   const elbowY = poseElbow.y * height
@@ -147,6 +152,45 @@ export function drawDebugWristVectors(
   ctx.fillStyle = '#ffffff'
   ctx.globalAlpha = 0.95
   drawMirroredText(ctx, `${angleDeg.toFixed(1)}°`, wristX - (radius + 6), wristY - radius - 6)
+
+  // Palm-normal arrow (white) — projects 3D normal to 2D screen space.
+  if (palmNormal) {
+    const nMag = Math.hypot(palmNormal.x, palmNormal.y)
+    if (nMag > 1e-6) {
+      // Normalize and scale to ~25px on screen. Map normalized-space x,y to
+      // canvas pixels via width/height multiplication.
+      const PALM_ARROW_PX = 25
+      const sx = (palmNormal.x / nMag) * PALM_ARROW_PX
+      const sy = (palmNormal.y / nMag) * PALM_ARROW_PX
+      const tipX = wristX + sx
+      const tipY = wristY + sy
+      ctx.strokeStyle = '#ffffff'
+      ctx.fillStyle = '#ffffff'
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.9
+      ctx.beginPath()
+      ctx.moveTo(wristX, wristY)
+      ctx.lineTo(tipX, tipY)
+      ctx.stroke()
+      // Arrowhead
+      const headAngle = Math.atan2(sy, sx)
+      const headLen = 5
+      ctx.beginPath()
+      ctx.moveTo(tipX, tipY)
+      ctx.lineTo(tipX - headLen * Math.cos(headAngle - 0.4), tipY - headLen * Math.sin(headAngle - 0.4))
+      ctx.lineTo(tipX - headLen * Math.cos(headAngle + 0.4), tipY - headLen * Math.sin(headAngle + 0.4))
+      ctx.closePath()
+      ctx.fill()
+    }
+  }
+
+  // ±sign symbol next to angle text — encodes the current bend-sign sense.
+  if (bendSign !== undefined && Number.isFinite(bendSign)) {
+    ctx.font = 'bold 14px ui-monospace, "SF Mono", Menlo, monospace'
+    ctx.fillStyle = bendSign >= 0 ? '#a3ff5b' : '#ff9b6b'
+    ctx.globalAlpha = 1
+    drawMirroredText(ctx, bendSign >= 0 ? '+' : '−', wristX - (radius + 32), wristY - radius - 6)
+  }
 
   ctx.restore()
 }
