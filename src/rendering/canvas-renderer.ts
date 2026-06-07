@@ -2,6 +2,7 @@ import type { Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawDebugLandmarks } from './debug-landmarks'
+import { drawDebugHandLandmarks } from './debug-hand-landmarks'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -40,6 +41,7 @@ export function renderFrame(
   now: number,
   landmarks: Landmark[] | null,
   _dt: number,
+  handLandmarks?: Landmark[] | null,
 ) {
   const state = usePoseStore.getState()
 
@@ -70,6 +72,12 @@ export function renderFrame(
   // Debug overlay: full 33-landmark MediaPipe skeleton with indices.
   if (state.debugLandmarks && landmarks) {
     drawDebugLandmarks(ctx, landmarks, width, height)
+  }
+
+  // Debug overlay: HandLandmarker (wrist mode only — hook only feeds hand
+  // landmarks in wrist mode). Magenta dots + index labels + hand skeleton.
+  if (state.debugLandmarks && handLandmarks && handLandmarks.length > 0) {
+    drawDebugHandLandmarks(ctx, handLandmarks, width, height)
   }
 
   // ── Pre-calibration: target zone + preview anchor (analyse only) ──

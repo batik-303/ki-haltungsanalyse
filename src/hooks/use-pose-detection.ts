@@ -1,6 +1,7 @@
 import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer, computeMCP } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
-import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'
 import type { Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
@@ -53,11 +54,36 @@ const WRIST_SLIDE_SPEED_THRESHOLD = 0.45
 const WRIST_SLIDE_SHIELD_SECONDS = 0.22
 const WRIST_SLIDE_DAMPING = 0.35
 
+/**
+ * Pick the Left-handedness hand from a HandLandmarker result, or null if no
+ * hand or no Left-categorized hand is present. The violinist's grip hand
+ * (Subject anatomy = left) is the one we analyze; selfie-camera mirroring is
+ * handled in MediaPipe's handedness output so 'Left' maps to the user's
+ * actual left hand.
+ */
+function pickLeftHand(result: HandLandmarkerResult): Landmark[] | null {
+  if (!result || !result.landmarks || result.landmarks.length === 0) return null
+  const handedness = result.handedness ?? result.handednesses ?? []
+  for (let i = 0; i < result.landmarks.length; i++) {
+    const cats = handedness[i]
+    if (!cats || cats.length === 0) continue
+    if (cats[0]?.categoryName === 'Left') {
+      return result.landmarks[i] as unknown as Landmark[]
+    }
+  }
+  return null
+}
+
 export function usePoseDetection(
   videoRef: React.RefObject<HTMLVideoElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
 ) {
   const landmarkerRef = useRef<PoseLandmarker | null>(null)
+  const handLandmarkerRef = useRef<HandLandmarker | null>(null)
+  const handLandmarkerLoadingRef = useRef(false)
+  // Latest filtered hand landmarks (Left handedness only). Null when wrist
+  // mode is inactive, no hand detected, or no Left-categorized hand present.
+  const handLandmarksRef = useRef<Landmark[] | null>(null)
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(performance.now())
   const loadingRef = useRef(false)
@@ -158,8 +184,68 @@ export function usePoseDetection(
     return () => {
       cancelAnimationFrame(animFrameRef.current)
       landmarkerRef.current?.close()
+      handLandmarkerRef.current?.close()
+      handLandmarkerRef.current = null
+      handLandmarksRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // HandLandmarker lifecycle: loaded only while focusMode === 'wrist'.
+  // Subscribes to store; allocates on entry, releases on exit. PoseLandmarker
+  // and other modes incur zero HandLandmarker overhead.
+  useEffect(() => {
+    async function loadHandLandmarker() {
+      if (handLandmarkerRef.current || handLandmarkerLoadingRef.current) return
+      handLandmarkerLoadingRef.current = true
+      try {
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+        )
+        const hand = await HandLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+            delegate: 'GPU',
+          },
+          runningMode: 'VIDEO',
+          numHands: 2,
+        })
+        // Guard: focus may have left wrist mode while loading.
+        if (usePoseStore.getState().focusMode === 'wrist') {
+          handLandmarkerRef.current = hand
+        } else {
+          hand.close()
+        }
+      } catch (e) {
+        console.error('Failed to initialize hand landmarker:', e)
+      } finally {
+        handLandmarkerLoadingRef.current = false
+      }
+    }
+
+    function releaseHandLandmarker() {
+      handLandmarkerRef.current?.close()
+      handLandmarkerRef.current = null
+      handLandmarksRef.current = null
+    }
+
+    if (usePoseStore.getState().focusMode === 'wrist') {
+      loadHandLandmarker()
+    }
+
+    const unsubscribe = usePoseStore.subscribe((state, prev) => {
+      if (state.focusMode === prev.focusMode) return
+      if (state.focusMode === 'wrist') {
+        loadHandLandmarker()
+      } else {
+        releaseHandLandmarker()
+      }
+    })
+
+    return () => {
+      unsubscribe()
+      releaseHandLandmarker()
+    }
   }, [])
 
   function startDetectionLoop() {
@@ -188,6 +274,21 @@ export function usePoseDetection(
       const store = usePoseStore.getState()
       const landmarks = results.landmarks?.[0] as Landmark[] | undefined
       const worldLandmarks = results.worldLandmarks?.[0] as Landmark[] | undefined
+
+      // Hand detection (wrist mode only — landmarker loaded on demand).
+      // Run with the same video frame + timestamp as pose for temporal coherence.
+      const handLandmarker = handLandmarkerRef.current
+      if (store.focusMode === 'wrist' && handLandmarker) {
+        try {
+          const handResults = handLandmarker.detectForVideo(video, now)
+          handLandmarksRef.current = pickLeftHand(handResults)
+        } catch (e) {
+          console.warn('[HandLandmarker] detect failed', e)
+          handLandmarksRef.current = null
+        }
+      } else if (handLandmarksRef.current) {
+        handLandmarksRef.current = null
+      }
 
       if (landmarks && landmarks.length > 0) {
         // Distance check
@@ -451,7 +552,7 @@ export function usePoseDetection(
         }
 
         // Render (reads store via getState, plus direct landmarks)
-        renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt)
+        renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt, handLandmarksRef.current)
       } else {
         // No body detected
         wristPrevPosRef.current = null
@@ -459,7 +560,7 @@ export function usePoseDetection(
         if (store.distanceOk) {
           usePoseStore.setState({ distanceOk: false })
         }
-        renderFrame(ctx, canvas.width, canvas.height, now, null, dt)
+        renderFrame(ctx, canvas.width, canvas.height, now, null, dt, handLandmarksRef.current)
       }
 
       animFrameRef.current = requestAnimationFrame(detect)
