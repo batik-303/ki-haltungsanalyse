@@ -1,0 +1,36 @@
+# CI-Pipeline: läuft bei jedem Pull Request nach main.
+# Build und Tests müssen grün sein, bevor gemergt werden darf
+# (erzwungen über das Ruleset "Protect main" → required status check).
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# Ältere Läufe desselben PR abbrechen, wenn neu gepusht wird.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Build (Type-Check + Vite)
+        run: npm run build
+
+      - name: Tests
+        run: npx vitest run --passWithNoTests

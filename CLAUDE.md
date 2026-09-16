@@ -85,12 +85,29 @@ All store-derived values are pure functions in `src/store/selectors.ts` (`select
 - **Naming**: `createXxxAnalyzer` factories, `computeXxx` pure functions, `drawXxx` renderers, `selectXxx` selectors, `useXxx` hooks, `SCREAMING_SNAKE_CASE` for thresholds.
 - **Path alias**: `@/` → `./src/`.
 
+## TDD — verbindlich
+
+Dieses Projekt wendet **strikt Test-Driven Development** an — ausnahmslos:
+
+1. **Rot**: Zuerst einen fehlschlagenden Test schreiben, der das gewünschte Verhalten beschreibt.
+2. **Grün**: Minimalen Produktionscode schreiben, bis der Test besteht.
+3. **Refactor**: Aufräumen, während die Tests grün bleiben.
+
+- **Kein Produktionscode ohne vorher geschriebenen, fehlschlagenden Test.**
+- Tests liegen in `tests/` (außerhalb `src/`), importieren direkt aus `../src/core/...` und prüfen **reine Funktionen** — kein React-/DOM-Mocking.
+- Ausführen: `npx vitest run` (einmalig) bzw. `npx vitest` (Watch). Für den Ablauf den `/tdd`-Skill nutzen.
+
 ## Git-Workflow
 
 - **Branch-Basis**: Neue Features/Fixes **immer aus aktuellem `main`** abzweigen — zuerst `git checkout main && git pull --ff-only`, dann `git checkout -b <typ>/<kurzbeschreibung>` (z. B. `docs/…`, `feat/…`, `fix/…`, `chore/…`).
 - **Kein direkter Push auf `main`**: `main` ist per Ruleset „Protect main" geschützt (kein Bypass, keine Force-Pushes, kein Löschen). Änderungen kommen **ausschließlich über einen Pull Request** rein.
 - **Review**: Jeder PR braucht **1 Approval** vom Code-Owner **@baxt5878** (`.github/CODEOWNERS`) vor dem Merge.
 - **Merge**: nur **Squash-Merge**; der Feature-Branch wird nach dem Merge **automatisch gelöscht**.
+
+## CI-Pipeline
+
+- `.github/workflows/ci.yml` läuft bei **jedem PR nach `main`**: `npm ci` → `npm run build` (Type-Check + Vite) → `npx vitest run`.
+- Der Status-Check **`build-and-test`** ist im Ruleset „Protect main" als **required** hinterlegt: ein PR ist erst mergebar, wenn **Build und Tests grün** sind.
 
 ## TypeScript — Extremely Strict
 
