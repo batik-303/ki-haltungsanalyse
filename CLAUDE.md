@@ -85,6 +85,13 @@ All store-derived values are pure functions in `src/store/selectors.ts` (`select
 - **Naming**: `createXxxAnalyzer` factories, `computeXxx` pure functions, `drawXxx` renderers, `selectXxx` selectors, `useXxx` hooks, `SCREAMING_SNAKE_CASE` for thresholds.
 - **Path alias**: `@/` → `./src/`.
 
+## Git-Workflow
+
+- **Branch-Basis**: Neue Features/Fixes **immer aus aktuellem `main`** abzweigen — zuerst `git checkout main && git pull --ff-only`, dann `git checkout -b <typ>/<kurzbeschreibung>` (z. B. `docs/…`, `feat/…`, `fix/…`, `chore/…`).
+- **Kein direkter Push auf `main`**: `main` ist per Ruleset „Protect main" geschützt (kein Bypass, keine Force-Pushes, kein Löschen). Änderungen kommen **ausschließlich über einen Pull Request** rein.
+- **Review**: Jeder PR braucht **1 Approval** vom Code-Owner **@baxt5878** (`.github/CODEOWNERS`) vor dem Merge.
+- **Merge**: nur **Squash-Merge**; der Feature-Branch wird nach dem Merge **automatisch gelöscht**.
+
 ## TypeScript — Extremely Strict
 
 `tsconfig.app.json` enables `strict`, `noUncheckedIndexedAccess` (array indexing returns `T | undefined` — always guard), `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedSideEffectImports`. Zero dead code tolerance — remove unused identifiers immediately, don't comment them out. Prefer `import type { ... }` for type-only imports.
