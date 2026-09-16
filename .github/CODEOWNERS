@@ -1,0 +1,4 @@
+# Default-Reviewer für alle Änderungen.
+# Code-Owner werden bei jedem PR automatisch als Reviewer angefragt;
+# das Ruleset "Protect main" verlangt ihre Freigabe vor dem Merge.
+* @baxt5878
