@@ -78,7 +78,7 @@ All store-derived values are pure functions in `src/store/selectors.ts` (`select
 
 ## Conventions
 
-- **UI language: German** — all user-visible strings. **Code language: English** — identifiers, comments, types.
+- **Sprache — Deutsch überall**: Alle sichtbaren UI-Texte, die gesamte Dokumentation (CLAUDE.md, ADRs, `CONTEXT.md`, `docs/`), **Code-Kommentare** und Commit-/PR-Texte auf **Deutsch**. Nur **Code-Bezeichner und Typnamen bleiben Englisch** (Framework-/Tooling-Kompatibilität). Der Assistent **antwortet dem Nutzer auf Deutsch**; komplexe Themen in **einfachem Deutsch** erklären; dafür den `/wait-what`-Skill nutzen.
 - **Feedback philosophy**: positive language only (no "wrong"/"bad"/"error"). Asymmetric tension — slow rise (penalty), fast decay (reward); the user should feel return-to-good-posture immediately. Layer names `flow → bewusst → achtung → limit` guide attention, they don't punish. See `src/core/analysis/layer-classifier.ts`.
 - **UI principle**: canvas overlay is the primary feedback channel. UI chrome stays minimal and at screen edges. **No modals, popups, or central overlays during active sessions** — they block the view of the instrument.
 - **Styling**: TailwindCSS v4, `cn()` from `@/lib/utils`, `sapphire` as brand color token, shadcn primitives in `@/components/ui/*`.
@@ -114,16 +114,16 @@ Detailed per-layer rules live in `.github/instructions/*.instructions.md` (auto-
 
 This project uses spec-driven changes under `openspec/` (proposals in `openspec/changes/`, accepted specs in `openspec/specs/`, archives in `openspec/changes/archive/`). When asked to propose, apply, or archive a change, use the `.github/skills/openspec-*` skills.
 
-## Agent skills
+## Agent-Skills
 
-### Issue tracker
+### Issue-Tracker
 
-Issues live in the repo's GitHub Issues, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues liegen in den GitHub Issues des Repos, verwaltet über die `gh`-CLI. Siehe `docs/agents/issue-tracker.md`.
 
-### Triage labels
+### Triage-Labels
 
-Five canonical triage roles, each label equal to its name. See `docs/agents/triage-labels.md`.
+Fünf kanonische Triage-Rollen, jedes Label gleich seinem Namen. Siehe `docs/agents/triage-labels.md`.
 
-### Domain docs
+### Domain-Docs
 
-Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-Context: eine `CONTEXT.md` + `docs/adr/` im Repo-Wurzelverzeichnis. Siehe `docs/agents/domain.md`.

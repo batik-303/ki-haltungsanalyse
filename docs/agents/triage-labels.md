@@ -1,15 +1,15 @@
-# Triage Labels
+# Triage-Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+Die Skills sprechen in fünf kanonischen Triage-Rollen. Diese Datei bildet diese Rollen auf die tatsächlichen Label-Strings ab, die im Issue-Tracker dieses Repos verwendet werden.
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| Label in mattpocock/skills | Label in unserem Tracker | Bedeutung                                       |
+| -------------------------- | ------------------------ | ----------------------------------------------- |
+| `needs-triage`             | `needs-triage`           | Maintainer muss dieses Issue bewerten           |
+| `needs-info`               | `needs-info`             | Wartet auf weitere Infos vom Melder             |
+| `ready-for-agent`          | `ready-for-agent`        | Vollständig spezifiziert, bereit für AFK-Agent  |
+| `ready-for-human`          | `ready-for-human`        | Erfordert menschliche Umsetzung                 |
+| `wontfix`                  | `wontfix`                | Wird nicht bearbeitet                           |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+Wenn ein Skill eine Rolle nennt (z. B. „das AFK-bereit-Triage-Label setzen"), den entsprechenden Label-String aus dieser Tabelle verwenden.
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+Passe die rechte Spalte an das Vokabular an, das du tatsächlich verwendest.
