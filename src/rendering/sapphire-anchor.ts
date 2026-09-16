@@ -27,7 +27,6 @@ export function drawSapphireAnchor(
   // Streak-based glow scaling (0..1, capped at 60s)
   const streakFactor = Math.min(1, streakSeconds / 60)
   const glowR = r * (3.5 + streakFactor * 2.5) // grows from 3.5x to 6x
-  const glowAlpha = 0.25 + streakFactor * 0.25 // glow intensifies
 
   // Outer glow (pulsing, grows with streak)
   const grad3 = ctx.createRadialGradient(x, y, r, x, y, glowR)
@@ -49,11 +48,12 @@ export function drawSapphireAnchor(
   ctx.stroke()
 
   // Main body (gradient)
+  const b = colors.body
   const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r)
-  grad.addColorStop(0, colors.body[0])
-  grad.addColorStop(0.4, colors.body[1])
-  grad.addColorStop(0.8, colors.body[2])
-  grad.addColorStop(1, colors.body[3])
+  grad.addColorStop(0, b[0]!)
+  grad.addColorStop(0.4, b[1]!)
+  grad.addColorStop(0.8, b[2]!)
+  grad.addColorStop(1, b[3]!)
   ctx.beginPath()
   ctx.arc(x, y, r, 0, Math.PI * 2)
   ctx.fillStyle = grad

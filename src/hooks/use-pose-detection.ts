@@ -1,10 +1,12 @@
-import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computeBendDirection2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
-import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import { pickLeftHand } from '../core/analysis/hand-landmarker'
+import { selectAnalysisPath } from '../core/analysis/analysis-path'
 import type { Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { analyzeWrist, updateBendLock, computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
+import { updateBendLock, computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
@@ -16,9 +18,11 @@ import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
-const WRIST_FILTER_MIN_CUTOFF = 1.2   // niedriger = ruhiger, höher = reaktiver
-const WRIST_FILTER_BETA = 0.006       // niedriger = ruhiger, höher = reaktiver
-const WRIST_FILTER_D_CUTOFF = 1.0     // Standardwert
+// Conservative values: smooth visual output without perceptible lag.
+// minCutoff=0.6 → strong smoothing when still; beta=0.003 → gentle response on movement.
+const WRIST_FILTER_MIN_CUTOFF = 0.6
+const WRIST_FILTER_BETA = 0.003
+const WRIST_FILTER_D_CUTOFF = 1.0
 
 /**
  * Erstellt One Euro Filter für alle relevanten Landmarken (Elbow, Wrist, Index)
@@ -56,6 +60,11 @@ export function usePoseDetection(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
 ) {
   const landmarkerRef = useRef<PoseLandmarker | null>(null)
+  const handLandmarkerRef = useRef<HandLandmarker | null>(null)
+  const handLandmarkerLoadingRef = useRef(false)
+  // Latest filtered hand landmarks (Left handedness only). Null when wrist
+  // mode is inactive, no hand detected, or no Left-categorized hand present.
+  const handLandmarksRef = useRef<Landmark[] | null>(null)
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(performance.now())
   const loadingRef = useRef(false)
@@ -87,6 +96,8 @@ export function usePoseDetection(
   const wristRailColorRef = useRef(createWristRailColor())
   // EMA post-smoothing for effectiveAngleDiff (eliminates Z-axis micro-jitter)
   const angleDiffEmaRef = useRef(0)
+  // Last analysis path used in the wrist branch (for transition smoothing).
+  const lastAnalysisPathRef = useRef<'hand' | 'pose-fallback' | null>(null)
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
@@ -101,6 +112,7 @@ export function usePoseDetection(
     railTimerRef.current = createWristRailTimer()
     wristRailColorRef.current = createWristRailColor()
     angleDiffEmaRef.current = 0
+    lastAnalysisPathRef.current = null
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -156,8 +168,68 @@ export function usePoseDetection(
     return () => {
       cancelAnimationFrame(animFrameRef.current)
       landmarkerRef.current?.close()
+      handLandmarkerRef.current?.close()
+      handLandmarkerRef.current = null
+      handLandmarksRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // HandLandmarker lifecycle: loaded only while focusMode === 'wrist'.
+  // Subscribes to store; allocates on entry, releases on exit. PoseLandmarker
+  // and other modes incur zero HandLandmarker overhead.
+  useEffect(() => {
+    async function loadHandLandmarker() {
+      if (handLandmarkerRef.current || handLandmarkerLoadingRef.current) return
+      handLandmarkerLoadingRef.current = true
+      try {
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+        )
+        const hand = await HandLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+            delegate: 'GPU',
+          },
+          runningMode: 'VIDEO',
+          numHands: 2,
+        })
+        // Guard: focus may have left wrist mode while loading.
+        if (usePoseStore.getState().focusMode === 'wrist') {
+          handLandmarkerRef.current = hand
+        } else {
+          hand.close()
+        }
+      } catch (e) {
+        console.error('Failed to initialize hand landmarker:', e)
+      } finally {
+        handLandmarkerLoadingRef.current = false
+      }
+    }
+
+    function releaseHandLandmarker() {
+      handLandmarkerRef.current?.close()
+      handLandmarkerRef.current = null
+      handLandmarksRef.current = null
+    }
+
+    if (usePoseStore.getState().focusMode === 'wrist') {
+      loadHandLandmarker()
+    }
+
+    const unsubscribe = usePoseStore.subscribe((state, prev) => {
+      if (state.focusMode === prev.focusMode) return
+      if (state.focusMode === 'wrist') {
+        loadHandLandmarker()
+      } else {
+        releaseHandLandmarker()
+      }
+    })
+
+    return () => {
+      unsubscribe()
+      releaseHandLandmarker()
+    }
   }, [])
 
   function startDetectionLoop() {
@@ -185,6 +257,25 @@ export function usePoseDetection(
 
       const store = usePoseStore.getState()
       const landmarks = results.landmarks?.[0] as Landmark[] | undefined
+
+      // Hand detection (wrist mode only — landmarker loaded on demand).
+      // Run with the same video frame + timestamp as pose for temporal coherence.
+      const handLandmarker = handLandmarkerRef.current
+      if (store.focusMode === 'wrist' && handLandmarker) {
+        try {
+          const handResults = handLandmarker.detectForVideo(video, now)
+          handLandmarksRef.current = pickLeftHand(handResults)
+        } catch (e) {
+          console.warn('[HandLandmarker] detect failed', e)
+          handLandmarksRef.current = null
+        }
+      } else if (handLandmarksRef.current) {
+        handLandmarksRef.current = null
+      }
+
+      // Aspect for image-space angle math. Identical for canvas and video
+      // since canvas is sized to videoWidth × videoHeight in the init step.
+      const aspect = canvas.height > 0 ? canvas.width / canvas.height : 1
 
       if (landmarks && landmarks.length > 0) {
         // Distance check
@@ -222,9 +313,21 @@ export function usePoseDetection(
             smoothedDev = smootherRef.current.push(rawDev)
             tensionTarget = computeShoulderTensionTarget(smoothedDev, sensitivity)
           } else if (store.focusMode === 'wrist' && store.masterPrint.mode === 'wrist') {
+            // Pose-derived skeletal landmarks (image-space normalized 0..1).
             const elbow = landmarks[13]!
             const wrist = landmarks[15]!
+            const pinky = landmarks[17]!
             const index = landmarks[19]!
+
+            // Per-frame path selection. Hand path uses HandLandmarker for
+            // precise MCP + palm-normal sign; pose-fallback uses pose-derived
+            // MCP and old 2D-cross sign, with their own calibration baselines
+            // (also seeded at calibration time when the hand was visible).
+            const hand = handLandmarksRef.current
+            const path = selectAnalysisPath(hand)
+            const prevPath = lastAnalysisPathRef.current
+            const justSwitchedPath = prevPath !== null && prevPath !== path
+            const worldLandmarks = results.worldLandmarks?.[0] as Landmark[] | undefined
 
             // Symmetric position-shift shield: damp sensitivity briefly during fast slides.
             const prevWrist = wristPrevPosRef.current
@@ -246,19 +349,56 @@ export function usePoseDetection(
             const armLen2D = computeArmLength2D(elbow, wrist)
             const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
 
-            // ── 2D Collinearity measurement (primary) ──
-            const angleDiff2D = computeCollinearityAngle2D(elbow, wrist, index)
+            // ── Path-dispatched raw angle + bend sign ──
+            let angleDiff2D: number
+            let baselineAngle: number
+            let bendSign: number
+            let refBendSign: number
+            let forearmLen: number
 
-            // ── Baseline normalization: subtract calibration angle ──
-            const baselineAngle = store.masterPrint.calib2DAngle ?? 0
+            if (path === 'hand' && hand) {
+              const handWrist = hand[0]!
+              const handMiddleMCP = hand[9]!
+              angleDiff2D = computeCollinearityAngle2D(elbow, handWrist, handMiddleMCP, aspect)
+              baselineAngle = store.masterPrint.calib2DAngle ?? 0
+              bendSign = computePalmBendSign(elbow, hand)
+              refBendSign = store.masterPrint.flexBendDir
+              forearmLen = computeForearmLength3D(elbow, handWrist)
+            } else {
+              // Pose-only fallback: world landmarks when available (isotropic
+              // meter units, no aspect correction needed), else image-space.
+              const elbowFB = worldLandmarks?.[13] ?? elbow
+              const wristFB = worldLandmarks?.[15] ?? wrist
+              const mcpFB = worldLandmarks
+                ? computeMCP(worldLandmarks[17]!, worldLandmarks[19]!)
+                : computeMCP(pinky, index)
+              angleDiff2D = computeCollinearityAngle2D(elbowFB, wristFB, mcpFB)
+              baselineAngle = store.masterPrint.calib2DAngleFallback ?? store.masterPrint.calib2DAngle ?? 0
+              bendSign = computeBendDirection2D(elbowFB, wristFB, mcpFB)
+              refBendSign = store.masterPrint.flexBendDirFallback ?? store.masterPrint.flexBendDir
+              forearmLen = computeForearmLength3D(elbowFB, wristFB)
+            }
+
             const baselineCorrected = Math.abs(angleDiff2D - baselineAngle)
 
-            // ── Z-boost for neck-direction detection ──
+            // ── Z-boost: depth-direction nudge using world-space pose Z. ──
+            const wristW = worldLandmarks?.[15] ?? wrist
+            const indexW = worldLandmarks?.[19] ?? index
             const t = now / 1000
             const zf = wristZFiltersRef.current
-            const zWristF = zf.wristZ(wrist.z, t)
-            const zIndexF = zf.indexZ(index.z, t)
-            const rawZBoosted = computeZBoost(baselineCorrected, zIndexF, zWristF)
+            const zWristF = zf.wristZ(wristW.z, t)
+            const zIndexF = zf.indexZ(indexW.z, t)
+            const rawZBoostedUnclamped = computeZBoost(baselineCorrected, zIndexF, zWristF)
+
+            // Path-transition clamp: cap per-frame change to ≤ 3° on the
+            // first frame after a path switch. Keeps the EMA continuous
+            // across the switch — Hand→Pose or Pose→Hand looks smooth
+            // instead of jumping when the two paths disagree.
+            const PATH_SWITCH_MAX_DELTA_DEG = 3
+            const prevEffective = angleDiffEmaRef.current
+            const rawZBoosted = justSwitchedPath
+              ? Math.max(prevEffective - PATH_SWITCH_MAX_DELTA_DEG, Math.min(prevEffective + PATH_SWITCH_MAX_DELTA_DEG, rawZBoostedUnclamped))
+              : rawZBoostedUnclamped
 
             // ── EMA post-smoothing (alpha=0.25, ~100ms time constant at 30fps) ──
             // When foreshortening confidence is low, hold the angle (don't let it drop)
@@ -288,15 +428,21 @@ export function usePoseDetection(
             // Cap tension by foreshortening confidence — avoid false alarms
             tensionTarget = computeWristTensionTarget(effectiveAngleDiff, sensitivity) * foreConf * slideShieldFactor
 
-            // Bend direction (2D cross product)
-            const bendDir2D = computeBendDirection2D(elbow, wrist, index)
+            // Bend lock: bendSign + refBendSign + forearmLen were resolved
+            // above per analysis path so this stays unaware of which path is
+            // active. Margin scales with forearm length (Issue 012).
             bendFwd = updateBendLock(
               effectiveAngleDiff,
-              bendDir2D,
-              store.masterPrint.flexBendDir,
+              bendSign,
+              refBendSign,
               bendForwardRef.current,
+              forearmLen,
             )
             bendForwardRef.current = bendFwd
+
+            // Track path for next frame's transition-clamp detection and for
+            // the debug indicator (read via store by canvas-renderer).
+            lastAnalysisPathRef.current = path
 
             // Wrist repair status update
             wristRepairStatus = wristRepairStatusRef.current(
@@ -314,7 +460,7 @@ export function usePoseDetection(
               if (railDirRef.current) {
                 railDirRef.current = smoothDirection2D(
                   railDirRef.current.x, railDirRef.current.y,
-                  currentDirX, currentDirY, 0.15,
+                  currentDirX, currentDirY, 0.08,
                 )
               } else {
                 railDirRef.current = { x: currentDirX, y: currentDirY }
@@ -335,8 +481,8 @@ export function usePoseDetection(
               wy: f.wy(wrist.y * canvas.height, t),
               ix: f.ix(index.x * canvas.width, t),
               iy: f.iy(index.y * canvas.height, t),
-              mx: f.mx(index.x * canvas.width, t),
-              my: f.my(index.y * canvas.height, t),
+              mx: f.mx(((pinky.x + index.x) / 2) * canvas.width, t),
+              my: f.my(((pinky.y + index.y) / 2) * canvas.height, t),
             }
 
             // Store confidence for renderer warning
@@ -434,12 +580,14 @@ export function usePoseDetection(
               // Sticky-blue rail color
               wristRailIsBlue,
               wristRailAngleDeg,
+              // Analysis path (for debug indicator + future fallback UX)
+              wristAnalysisPath: lastAnalysisPathRef.current,
             })
           }
         }
 
         // Render (reads store via getState, plus direct landmarks)
-        renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt)
+        renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt, handLandmarksRef.current)
       } else {
         // No body detected
         wristPrevPosRef.current = null
@@ -447,7 +595,7 @@ export function usePoseDetection(
         if (store.distanceOk) {
           usePoseStore.setState({ distanceOk: false })
         }
-        renderFrame(ctx, canvas.width, canvas.height, now, null, dt)
+        renderFrame(ctx, canvas.width, canvas.height, now, null, dt, handLandmarksRef.current)
       }
 
       animFrameRef.current = requestAnimationFrame(detect)
@@ -464,5 +612,5 @@ export function usePoseDetection(
     return sessionRef.current.stop()
   }, [])
 
-  return { resetAnalysisState, landmarkerRef, startTracking, stopTracking }
+  return { resetAnalysisState, landmarkerRef, handLandmarkerRef, startTracking, stopTracking }
 }

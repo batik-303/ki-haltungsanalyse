@@ -59,6 +59,8 @@ export interface PoseState {
   holdMilestoneLevel: number
   wristRailAngleDeg: number
   wristRailIsBlue: boolean
+  // Analysis path used by the wrist analyzer this frame
+  wristAnalysisPath: 'hand' | 'pose-fallback' | null
 
   // Violin-specific
   violinDeadzone?: boolean
@@ -76,6 +78,9 @@ export interface PoseState {
   flowStreak: number
   maxFlowStreak: number
 
+  // Debug overlay (renders all 33 MediaPipe landmarks with indices)
+  debugLandmarks: boolean
+
   // Navigation actions
   goToSetup: (instrument: Instrument) => void
   goToSession: () => void
@@ -88,6 +93,7 @@ export interface PoseState {
   setViewMode: (mode: ViewMode) => void
   setDistanceOk: (ok: boolean) => void
   setCalibrating: (calibrating: boolean) => void
+  toggleDebugLandmarks: () => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
   startSession: () => void
   updateFrame: (data: FrameUpdate) => void
@@ -117,6 +123,7 @@ export interface FrameUpdate {
   holdMilestoneLevel?: number
   wristRailAngleDeg?: number
   wristRailIsBlue?: boolean
+  wristAnalysisPath?: 'hand' | 'pose-fallback' | null
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
   // Streak
@@ -174,6 +181,7 @@ export const usePoseStore = create<PoseState>((set) => ({
   holdMilestoneLevel: 0,
   wristRailAngleDeg: 0,
   wristRailIsBlue: true,
+  wristAnalysisPath: null,
 
   // Filtered wrist render coords
   filteredWristCoords: null,
@@ -187,6 +195,9 @@ export const usePoseStore = create<PoseState>((set) => ({
   // Streak
   flowStreak: 0,
   maxFlowStreak: 0,
+
+  // Debug overlay — default ON while we investigate the wrist analyzer.
+  debugLandmarks: true,
 
   // Navigation actions
   goToSetup: (instrument) => set({
@@ -212,6 +223,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -243,6 +255,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
     lastSessionStats: null,
     flowStreak: 0,
@@ -266,6 +279,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 
@@ -276,6 +290,8 @@ export const usePoseStore = create<PoseState>((set) => ({
   setDistanceOk: (ok) => set({ distanceOk: ok }),
 
   setCalibrating: (calibrating) => set({ isCalibrating: calibrating }),
+
+  toggleDebugLandmarks: () => set((s) => ({ debugLandmarks: !s.debugLandmarks })),
 
   calibrate: (masterPrint, shoulderWidth) => set({
     masterPrint,
@@ -292,6 +308,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 
@@ -323,6 +340,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     ...(data.holdMilestoneLevel !== undefined && { holdMilestoneLevel: data.holdMilestoneLevel }),
     ...(data.wristRailAngleDeg !== undefined && { wristRailAngleDeg: data.wristRailAngleDeg }),
     ...(data.wristRailIsBlue !== undefined && { wristRailIsBlue: data.wristRailIsBlue }),
+    ...(data.wristAnalysisPath !== undefined && { wristAnalysisPath: data.wristAnalysisPath }),
   }),
 
   endSession: (stats) => set({
@@ -354,6 +372,7 @@ export const usePoseStore = create<PoseState>((set) => ({
     lastBendForward: true,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
+    wristAnalysisPath: null,
     driftDirection: 1,
   }),
 }))

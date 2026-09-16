@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "serena",
+      "args": [
+        "start-mcp-server",
+        "--context=claude-code",
+        "--project",
+        "/Users/sultanov/dev/PRIVATE/ANSO/ki-haltungsanalyse"
+      ]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-51998c39-c614-410c-bd60-5546e4165934"
+      }
+    }
+  },
+  "inputs": []
+}

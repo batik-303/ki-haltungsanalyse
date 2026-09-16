@@ -59,6 +59,31 @@ export const LANDMARKS = {
   LEFT_INDEX: 19,
 } as const
 
+// MediaPipe HandLandmarker hand-landmark indices (21 per hand).
+export const HAND_LANDMARKS = {
+  WRIST: 0,
+  THUMB_CMC: 1,
+  THUMB_MCP: 2,
+  THUMB_IP: 3,
+  THUMB_TIP: 4,
+  INDEX_MCP: 5,
+  INDEX_PIP: 6,
+  INDEX_DIP: 7,
+  INDEX_TIP: 8,
+  MIDDLE_MCP: 9,
+  MIDDLE_PIP: 10,
+  MIDDLE_DIP: 11,
+  MIDDLE_TIP: 12,
+  RING_MCP: 13,
+  RING_PIP: 14,
+  RING_DIP: 15,
+  RING_TIP: 16,
+  PINKY_MCP: 17,
+  PINKY_PIP: 18,
+  PINKY_DIP: 19,
+  PINKY_TIP: 20,
+} as const
+
 // ── Master Print (discriminated union) ──
 export interface ShoulderMasterPrint {
   mode: 'shoulder'
@@ -68,9 +93,14 @@ export interface ShoulderMasterPrint {
 export interface WristMasterPrint {
   mode: 'wrist'
   flexAngle: number           // Projected flexion/extension angle at calibration
-  flexBendDir: number         // Bend direction sign at calibration
+  flexBendDir: number         // Hand-path bend sign (palm-normal · forearm) at calibration
   calibArmLength2D: number    // 2D elbow-wrist distance at calibration (normalized)
-  calib2DAngle?: number       // 2D collinearity angle at calibration baseline (backward-compatible)
+  calib2DAngle?: number       // Hand-path 2D collinearity angle baseline
+  // Pose-only fallback baselines — computed at calibration so runtime can
+  // switch to the fallback path without a baseline mismatch when the hand
+  // briefly disappears.
+  flexBendDirFallback?: number
+  calib2DAngleFallback?: number
 }
 
 export interface ViolinMasterPrint {

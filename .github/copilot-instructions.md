@@ -18,6 +18,18 @@ Fünf Schichten mit strikter Trennung:
 
 Analyzer sind Factory-Funktionen mit Closure-State (z.B. `createViolinAnalyzer()`), genutzt via `useRef` in Hooks.
 
+### ⚠️ Triple-State System
+
+Drei parallele State-Layer — korrekt wählen:
+
+| Layer | Wo | Wofür |
+|-------|----|-------|
+| **Zustand Store** | `src/store/pose-store.ts` | React-sichtbare UI-State (Session-Phase, Kalibrierung, Navigation) |
+| **useRef mutable** | Innerhalb von Hooks | rAF-Loop Analyse-State (Filter, Smoother, Timer) — NIEMALS in React-State |
+| **Module-level vars** | Innerhalb von Renderern | Canvas Glow-Decay-Timer, adaptive Baselines |
+
+Analysis-State gehört **NIEMALS** in Zustand. Er gehört in `useRef` innerhalb von Hooks.
+
 ## Feedback-Philosophie
 
 - **Positiv formulieren** — ermutigende Sprache, keine Wörter wie "falsch", "schlecht", "Fehler"
@@ -53,6 +65,36 @@ Bestehende Violin-Implementierung als Referenz nutzen.
 - **Styling**: TailwindCSS v4, `cn()` Utility aus `src/lib/utils.ts`, `sapphire` als Brand-Farbtoken
 - **State**: Zustand Flat-Store, abgeleitete Werte als reine Selector-Funktionen in `src/store/selectors.ts`
 - **Typen**: Zentral in `src/core/types.ts`, Discriminated Unions für mode-spezifische Daten
+
+## Build & Test
+
+| Command | What |
+|---------|------|
+| `npm run dev` | Dev server with HMR (`vite --host`, binds all interfaces for mobile testing) |
+| `npm run build` | Type-check + production build (`tsc -b && vite build`) |
+| `npm run lint` | ESLint across all files |
+| `npx vitest` | Run tests (no npm script — must call directly) |
+| `npm run preview` | Preview production build |
+
+**Test location**: `tests/` (outside `src/`), `*.test.ts` pattern. Tests import directly from `src/core/...` — pure functions only, no React/DOM mocking.
+
+## TypeScript
+
+Extremely strict config (`tsconfig.app.json`):
+- `strict: true`, `noUncheckedIndexedAccess: true` — array indexing returns `T | undefined`
+- `noUnusedLocals`, `noUnusedParameters` — zero dead code tolerance
+- `noFallthroughCasesInSwitch` — exhaustive switches
+- `noUncheckedSideEffectImports` — TS 5.6 flag
+- Path alias: `@/` → `./src/`
+
+## File-Specific Instructions
+
+Layer-specific rules auto-attach via `applyTo` globs (see `.github/instructions/`):
+- **Core** — pure functions, factory patterns, no React imports
+- **Hooks** — rAF loop, triple-state system, `getState()` not selectors
+- **Rendering** — canvas drawing, CSS mirror awareness, `getState()` not subscriptions
+- **Components** — selector subscriptions, German strings, minimal chrome
+- **Store** — flat store, pure selectors, `updateFrame` conditional spread
 
 ## Skills
 
