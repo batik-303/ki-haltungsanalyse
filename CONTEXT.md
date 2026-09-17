@@ -16,10 +16,11 @@ Kanonisches Vokabular des Projekts. Nur Begriffsklärung, keine Implementierungs
 
 ## Navigations- & Modus-Vokabular
 
-- **Trichtermodell** — die App ist ein **linearer Ablauf** einer einzelnen Übungssitzung (`home` → `setup` → `session` → `results` → `home`), **keine gleichrangigen Tabs**. Es gibt bewusst **keine funktionale Bottom-Navigation**: die Screens sind Phasen eines Sitzungs-Lebenszyklus, keine frei anspringbaren Ziele.
+- **Trichtermodell** — die App ist ein **linearer Ablauf** einer einzelnen Übungssitzung, **keine gleichrangigen Tabs**. Es gibt bewusst **keine funktionale Bottom-Navigation**: die Screens sind Phasen eines Sitzungs-Lebenszyklus, keine frei anspringbaren Ziele. **V1-Flow**: `home` → `session` → `results` → `home`. Der frühere `setup`-Screen ist **zurückgestellt** (Datei bleibt, aber aus dem Flow genommen), weil er nur Konfiguration ohne eigene Substanz war; die Kalibrierung läuft ohnehin im `session`-Screen.
+- **Auswahlbühne** — der `home`-Screen ist die **vollständige Auswahlbühne**: Instrument und Fokus werden hier markiert, der CTA **„Übung starten"** (`enterSession`) geht **direkt in die Session** (überspringt `setup`).
 - **Modus** — im Projekt **zwei getrennte Begriffe**, nie synonym:
   - **viewMode** (`flow` / `analyse`) — der **Ansichtsmodus** *innerhalb* der laufenden Session (Flow = reduziert, Analyse = mit Overlay). Ein Wechsel **bewahrt die Kalibrierung**.
-  - **focusMode** (`violin` / `shoulder` / `wrist`) — der **Analysemodus / das Körperziel**, in `setup` gewählt. Ein Wechsel **verwirft die Kalibrierung bewusst**, weil ein anderes Körperziel eine neue Referenz braucht.
+  - **focusMode** (`violin` / `shoulder` / `wrist`) — der **Analysemodus / das Körperziel**, auf `home` (Auswahlbühne) gewählt. Ein Wechsel **verwirft die Kalibrierung bewusst**, weil ein anderes Körperziel eine neue Referenz braucht.
 - **Zurück** — die **Anpassungs-Affordanz**: ein Schritt zurück *ohne* die Sitzung zu beenden. Bedeutung ist screen-abhängig: auf `session` = **neu kalibrieren an Ort und Stelle** (Sitzung läuft weiter); auf `results` = **neue Sitzung mit gleicher Konfiguration** starten; auf `setup` = zurück ins Hauptmenü (dort fällt „Zurück" mit „Home" zusammen, da noch keine Sitzung läuft).
 - **Home / Hauptmenü** — die **Ausstiegs-Affordanz** zurück nach `home`. Auf `session` bedeutet Home **Abbruch ohne Auswertung** (Sitzung wird verworfen, kein `results`).
 - **Beenden** — der **reguläre Abschluss** einer Sitzung *mit* Auswertung: `session` → `results`. Abzugrenzen von *Home* (Abbruch ohne Bilanz).
