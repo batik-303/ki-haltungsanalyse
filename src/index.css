@@ -26,8 +26,10 @@
   --ui-primary-foreground: #ffffff;
   --ui-secondary: #dceaf4;
   --ui-secondary-foreground: #274969;
-  --ui-accent: #ffb800;
-  --ui-accent-foreground: #6b4b00;
+  /* Geigenholz-Gold: wärmer/dunkler als das grelle Amber #ffb800 (#29).
+     Dunkle Textfarbe erfüllt WCAG AA (4.5:1) auf dem Button. */
+  --ui-accent: #B07A24;
+  --ui-accent-foreground: #2b1a00;
   --ui-destructive: #4a575f;
   --ui-destructive-foreground: #ffffff;
   --ui-card: #ffffff;
