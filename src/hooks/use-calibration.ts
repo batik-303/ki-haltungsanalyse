@@ -5,8 +5,9 @@ import { computeShoulderWidth } from '../core/calibration/distance-check'
 import type { Landmark } from '../core/types'
 import { PoseLandmarker, HandLandmarker } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
+import type { CalibrationFailureReason } from '../core/calibration/overlay-view'
 
-export type CalibrationFailureReason = 'no_pose' | 'no_hand'
+export type { CalibrationFailureReason }
 
 export interface CalibrationResult {
   success: boolean
