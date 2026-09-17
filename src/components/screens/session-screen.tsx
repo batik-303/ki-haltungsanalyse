@@ -165,7 +165,7 @@ export function SessionScreen() {
   }, [micActive, startListening, stopListening])
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div data-theme="dark" className="fixed inset-0 bg-black">
       {/* Video feed — fills viewport, hidden in flow mode */}
       <video
         ref={videoRef}

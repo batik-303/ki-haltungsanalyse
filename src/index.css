@@ -5,22 +5,67 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dunkel-Variante an den abgegrenzten `session`-Teilbaum (data-theme) binden,
+   nicht mehr an eine globale `.dark`-Klasse (Recherche #16). */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ── Umschaltbare semantische Token (Rohvariablen) ──
+   :root = helles „Marine Serenity"-Chrome (Entscheidung #17),
+   [data-theme="dark"] = heutige Dunkelwerte, nur im `session`-Teilbaum aktiv.
+   Anbindung an Tailwind weiter unten via `@theme inline` (nutzt den Wert,
+   damit der Teilbaum korrekt auf Dunkel kippt). */
+:root {
+  --ui-background: #f5faff;
+  --ui-foreground: #101d24;
+  --ui-surface: #ffffff;
+  --ui-muted: #e2f0fa;
+  --ui-muted-foreground: #42474d;
+  --ui-border: #c3c7ce;
+  --ui-input: #c3c7ce;
+  --ui-primary: #002b49;
+  --ui-primary-foreground: #ffffff;
+  --ui-secondary: #dceaf4;
+  --ui-secondary-foreground: #274969;
+  --ui-accent: #ffb800;
+  --ui-accent-foreground: #6b4b00;
+  --ui-destructive: #4a575f;
+  --ui-destructive-foreground: #ffffff;
+  --ui-card: #ffffff;
+  --ui-card-foreground: #101d24;
+  --ui-popover: #ffffff;
+  --ui-popover-foreground: #101d24;
+  --ui-ring: #2196F3;
+}
+
+[data-theme="dark"] {
+  --ui-background: #0a1628;
+  --ui-foreground: #ffffff;
+  --ui-surface: #112240;
+  --ui-muted: #1e3a5f;
+  --ui-muted-foreground: #5a6a7a;
+  --ui-border: #2a3a5c;
+  --ui-input: #2a3a5c;
+  --ui-primary: #2196F3;
+  --ui-primary-foreground: #ffffff;
+  --ui-secondary: #1e3a5f;
+  --ui-secondary-foreground: #ccdde8;
+  --ui-accent: #DAA520;
+  --ui-accent-foreground: #ffffff;
+  --ui-destructive: #4a575f;
+  --ui-destructive-foreground: #ffffff;
+  --ui-card: #0d1b2a;
+  --ui-card-foreground: #ccdde8;
+  --ui-popover: #0d1b2a;
+  --ui-popover-foreground: #ccdde8;
+  --ui-ring: #2196F3;
+}
 
 @theme {
   /* ── Responsive Breakpoints (Tailwind v4) ── */
   --breakpoint-sm: 480px;
   --breakpoint-md: 1024px;
 
-  /* Blue Anchor Brand Colors */
-  --color-background: #0a1628;
-  --color-foreground: #ffffff;
-  --color-muted: #1e3a5f;
-  --color-muted-foreground: #5a6a7a;
-  --color-border: #2a3a5c;
-
-  /* Surface token — elevated panels within the dark background */
-  --color-surface: #112240;
+  /* ── Fixe Marken-Token (hell wie dunkel identisch) ── */
 
   /* Sapphire Blue Palette */
   --color-sapphire: #2196F3;
@@ -28,39 +73,23 @@
   --color-sapphire-deep: #1565C0;
   --color-sapphire-darkest: #0D47A1;
 
-  /* Gold Palette */
-  --color-gold: #DAA520;
+  /* Gold-/Amber-Palette — „gold" behält den Namen, Wert = Stitch-Amber (#17) */
+  --color-gold: #ffb800;
   --color-gold-bright: #FFD700;
   --color-gold-dark: #B8860B;
 
-  /* Status Colors */
+  /* Status Colors — kein Rot: „error" wird zu Amber (#17) */
   --color-success: #2ecc71;
   --color-warning: #f1c40f;
   --color-alert: #9b59b6;
-  --color-error: #e74c3c;
+  --color-error: #ffb800;
   --color-info: #5b9bd5;
 
-  /* Layer Colors */
+  /* Layer Colors — fix; Kontrast im hellen Chrome fallweise (#19/#21) */
   --color-layer-flow: #2196F3;
   --color-layer-bewusst: #F1C40F;
   --color-layer-achtung: #FF9800;
   --color-layer-limit: #9B59B6;
-
-  /* shadcn-compatible tokens */
-  --color-primary: #2196F3;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #1e3a5f;
-  --color-secondary-foreground: #ccdde8;
-  --color-accent: #DAA520;
-  --color-accent-foreground: #ffffff;
-  --color-destructive: #e74c3c;
-  --color-destructive-foreground: #ffffff;
-  --color-card: #0d1b2a;
-  --color-card-foreground: #ccdde8;
-  --color-popover: #0d1b2a;
-  --color-popover-foreground: #ccdde8;
-  --color-input: #2a3a5c;
-  --color-ring: #2196F3;
 
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -76,6 +105,30 @@
 }
 
 @theme inline {
+  /* ── Umschaltbare semantische Farben → Tailwind-Utilities ──
+     `inline` nutzt den *Wert* der Rohvariable, damit `bg-*`/`text-*` im
+     `[data-theme="dark"]`-Teilbaum auf die Dunkelwerte umschalten (#16). */
+  --color-background: var(--ui-background);
+  --color-foreground: var(--ui-foreground);
+  --color-surface: var(--ui-surface);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-muted-foreground);
+  --color-border: var(--ui-border);
+  --color-input: var(--ui-input);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-foreground);
+  --color-secondary: var(--ui-secondary);
+  --color-secondary-foreground: var(--ui-secondary-foreground);
+  --color-accent: var(--ui-accent);
+  --color-accent-foreground: var(--ui-accent-foreground);
+  --color-destructive: var(--ui-destructive);
+  --color-destructive-foreground: var(--ui-destructive-foreground);
+  --color-card: var(--ui-card);
+  --color-card-foreground: var(--ui-card-foreground);
+  --color-popover: var(--ui-popover);
+  --color-popover-foreground: var(--ui-popover-foreground);
+  --color-ring: var(--ui-ring);
+
   --color-sidebar-ring: var(--color-ring);
   --color-sidebar-border: var(--color-border);
   --color-sidebar-accent-foreground: var(--color-accent-foreground);
