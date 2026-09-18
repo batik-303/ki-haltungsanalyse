@@ -46,7 +46,7 @@ const timelineConfig: ChartConfig = {
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
   const focusMode = usePoseStore((s) => s.focusMode)
-  const goToSession = usePoseStore((s) => s.goToSession)
+  const practiceAgain = usePoseStore((s) => s.practiceAgain)
   const goHome = usePoseStore((s) => s.goHome)
 
   if (!lastStats) {
@@ -208,10 +208,10 @@ export function ResultsScreen() {
           variant="outline"
           size="lg"
           className="gap-2"
-          onClick={goToSession}
+          onClick={practiceAgain}
         >
           <RotateCcw className="size-4" />
-          Wiederholen
+          Nochmal üben
         </Button>
         <Button
           size="lg"

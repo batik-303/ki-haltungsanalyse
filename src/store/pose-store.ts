@@ -86,6 +86,7 @@ export interface PoseState {
   goToSession: () => void
   goToResults: (stats: SessionStats) => void
   goHome: () => void
+  practiceAgain: () => void
 
   // Actions
   setFocusMode: (mode: FocusMode) => void
@@ -239,6 +240,35 @@ export const usePoseStore = create<PoseState>((set) => ({
   goHome: () => set({
     appScreen: 'home',
     selectedInstrument: null,
+    masterPrint: null,
+    calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
+    isCalibrating: false,
+    distanceOk: false,
+    tensionScore: 0,
+    smoothedDeviation: 0,
+    rawDeviation: 0,
+    currentLayer: 'flow',
+    currentLayerInfo: DEFAULT_LAYER_INFO,
+    sessionActive: false,
+    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+    returnGlowTimer: 0,
+    lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
+    wristAnalysisPath: null,
+    driftDirection: 1,
+    lastSessionStats: null,
+    flowStreak: 0,
+    maxFlowStreak: 0,
+  }),
+
+  // „Zurück" auf dem results-Screen: nochmal üben mit gleicher Konfiguration.
+  // Instrument, focusMode, sensitivity und viewMode bleiben erhalten — nur der
+  // Analyse-/Sitzungs-/Kalibrierungszustand wird verworfen und wir landen wieder
+  // in `setup` (Trichtermodell, keine Sprünge). Siehe CONTEXT.md → „Zurück".
+  practiceAgain: () => set({
+    appScreen: 'setup',
     masterPrint: null,
     calibratedShoulderWidth: null,
     lastCalibrationAt: null,
