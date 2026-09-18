@@ -9,6 +9,7 @@ import { DistanceIndicator } from '@/components/distance-indicator'
 import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
+import { Home } from 'lucide-react'
 import type { StoredSession } from '@/core/types'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ export function SessionScreen() {
   const tensionScore = usePoseStore((s) => s.tensionScore)
   const statusColor = usePoseStore(selectStatusColor)
   const goToResults = usePoseStore((s) => s.goToResults)
+  const goHome = usePoseStore((s) => s.goHome)
   const startSession = usePoseStore((s) => s.startSession)
   const viewMode = usePoseStore((s) => s.viewMode)
   const hudFaded = usePoseStore(selectHudFaded)
@@ -118,6 +120,13 @@ export function SessionScreen() {
     resetAnalysisState()
   }, [resetAnalysisState])
 
+  // „Home" = Abbruch ohne Auswertung (Trichtermodell): Sitzung verwerfen, Kamera
+  // freigeben und zurück ins Hauptmenü — kein results-Screen. Siehe CONTEXT.md → „Home".
+  const handleAbort = useCallback(() => {
+    stopTracking()
+    goHome()
+  }, [stopTracking, goHome])
+
   const voiceCommands: VoiceCommandMap = useMemo(() => ({
     kalibrieren: handleCalibrate,
     start: handleStart,
@@ -183,11 +192,23 @@ export function SessionScreen() {
           DESKTOP / TABLET HUD (≥480px)
           ═══════════════════════════════════════════ */}
 
-      {/* HUD: Mode badge — top left */}
+      {/* HUD: Home-Abbruch + Mode badge — top left */}
       <div className={cn(
-        "hidden sm:block absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
+        "hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
         hudFaded && "opacity-20"
       )}>
+        <button
+          onClick={handleAbort}
+          aria-label="Hauptmenü"
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+            'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
+            'hover:bg-background/60 hover:text-foreground active:scale-95',
+          )}
+        >
+          <Home className="size-4" />
+          Home
+        </button>
         <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
           {MODE_LABELS[focusMode] ?? focusMode}
         </Badge>
@@ -283,9 +304,21 @@ export function SessionScreen() {
         "sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2",
         hudFaded && "opacity-20"
       )}>
-        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
-          {MODE_LABELS[focusMode] ?? focusMode}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAbort}
+            aria-label="Hauptmenü"
+            className={cn(
+              'flex items-center justify-center min-h-[36px] min-w-[36px] rounded-lg transition-all',
+              'bg-background/40 backdrop-blur border border-border/50 text-foreground/80 active:scale-95',
+            )}
+          >
+            <Home className="size-4" />
+          </button>
+          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
+            {MODE_LABELS[focusMode] ?? focusMode}
+          </Badge>
+        </div>
         {phase === 'tracking' && (
           <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur font-mono tabular-nums">
             {duration}
