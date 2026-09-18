@@ -1,16 +1,11 @@
 import { usePoseStore } from '@/store/pose-store'
-import type { FocusMode, SensitivityLevel } from '@/core/types'
+import type { SensitivityLevel } from '@/core/types'
+import { FOCUS_MODES } from '@/core/config/focus-modes'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
-
-const MODES: { value: FocusMode; label: string; icon: string; description: string }[] = [
-  { value: 'violin', label: 'Geige', icon: '🎻', description: 'Gesamte Spielhaltung' },
-  { value: 'wrist', label: 'Handgelenk', icon: '🤚', description: 'Fokus auf Handgelenk' },
-  { value: 'shoulder', label: 'Schulter', icon: '💪', description: 'Fokus auf Schultern' },
-]
 
 const LEVELS: { value: SensitivityLevel; label: string; description: string }[] = [
   { value: 'low', label: 'Profi (locker)', description: 'Mehr Spielraum' },
@@ -43,7 +38,7 @@ export function SetupScreen() {
         <h2 className="text-2xl font-bold text-foreground mb-6">Analysemodus wählen</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-          {MODES.map((mode) => (
+          {FOCUS_MODES.map((mode) => (
             <Card
               key={mode.value}
               className={cn(

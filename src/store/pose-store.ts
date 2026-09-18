@@ -83,6 +83,7 @@ export interface PoseState {
 
   // Navigation actions
   goToSetup: (instrument: Instrument) => void
+  enterSession: (instrument: Instrument) => void
   goToSession: () => void
   goToResults: (stats: SessionStats) => void
   goHome: () => void
@@ -139,7 +140,7 @@ const DEFAULT_LAYER_INFO: LayerInfo = {
   statusType: 'good',
 }
 
-export const usePoseStore = create<PoseState>((set) => ({
+export const usePoseStore = create<PoseState>((set, get) => ({
   // Navigation
   appScreen: 'home',
   selectedInstrument: null,
@@ -230,6 +231,14 @@ export const usePoseStore = create<PoseState>((set) => ({
     flowStreak: 0,
     maxFlowStreak: 0,
   }),
+
+  // V1-Flow: Home ist die Auswahlbühne, der CTA startet direkt die Session
+  // (kein Setup-Zwischenschritt). Setzt das Instrument und übernimmt den
+  // frischen Sitzungszustand von goToSession; der zuvor gewählte Fokus bleibt.
+  enterSession: (instrument) => {
+    get().goToSession()
+    set({ selectedInstrument: instrument })
+  },
 
   goToResults: (stats) => set({
     appScreen: 'results',

@@ -1,65 +1,99 @@
 import { usePoseStore } from '@/store/pose-store'
-import type { InstrumentMeta } from '@/core/types'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { FOCUS_MODES } from '@/core/config/focus-modes'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
-const INSTRUMENTS: InstrumentMeta[] = [
-  {
-    id: 'violin',
-    name: 'Violine',
-    icon: '🎻',
-    description: 'Haltungsanalyse für Geiger',
-    modes: ['violin', 'wrist', 'shoulder'],
-  },
-]
+// Home = Auswahlbühne (Variante A „Zentrierte Karten-Bühne", Ticket #26).
+// Instrument + Fokus werden hier markiert; der CTA startet die Übung direkt
+// (kein Setup-Zwischenschritt, Kalibrierung läuft im Session-Screen).
+
+const INSTRUMENT = {
+  name: 'Violine',
+  icon: '🎻',
+  description: 'Haltungsanalyse für Geiger',
+} as const
+
+const ANTI_STRESS =
+  'Anti-Stress-Garantie · kein Rot, keine Fehler — nur ruhige Hinweise zurück in die gute Haltung.'
 
 export function HomeScreen() {
-  const goToSetup = usePoseStore((s) => s.goToSetup)
+  const focusMode = usePoseStore((s) => s.focusMode)
+  const setFocusMode = usePoseStore((s) => s.setFocusMode)
+  const enterSession = usePoseStore((s) => s.enterSession)
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-12 px-4">
-      <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight text-sapphire-light">
-          ⚓ Blue Anchor
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center px-4 py-16 gap-12">
+      <header className="text-center space-y-3 max-w-xl">
+        {/* ⚓ ist Platzhalter — echtes Blue-Anchor-Music-Logo folgt später */}
+        <div className="text-5xl" aria-hidden>
+          ⚓
+        </div>
+        <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">
+          Willkommen bei Blue&nbsp;Anchor&nbsp;Music
         </h1>
-        <p className="text-lg text-muted-foreground">
-          KI-Haltungsanalyse
-        </p>
+        <p className="text-lg text-muted-foreground">Live-Haltungsanalyse für dein Instrument</p>
+      </header>
+
+      <div className="inline-flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-secondary-foreground">
+        <span className="h-2 w-2 rounded-full bg-accent" aria-hidden />
+        <span className="font-label">{ANTI_STRESS}</span>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 max-w-3xl w-full">
-        {INSTRUMENTS.map((instrument, index) => (
-          <InstrumentCard
-            key={instrument.id}
-            instrument={instrument}
-            index={index}
-            onClick={() => goToSetup(instrument.id)}
-          />
-        ))}
-      </div>
+      <section className="w-full max-w-3xl space-y-8">
+        <div className="space-y-3">
+          <h2 className="font-label text-xs uppercase tracking-widest text-muted-foreground">
+            Instrument
+          </h2>
+          {/* Aktuell nur ein Instrument — als gewählt markiert dargestellt */}
+          <div className="w-full rounded-xl border border-primary bg-secondary/40 p-6 flex items-center gap-5">
+            <span className="text-4xl" aria-hidden>
+              {INSTRUMENT.icon}
+            </span>
+            <span>
+              <span className="block text-lg font-semibold">{INSTRUMENT.name}</span>
+              <span className="block text-sm text-muted-foreground">{INSTRUMENT.description}</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="font-label text-xs uppercase tracking-widest text-muted-foreground">
+            Fokus
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {FOCUS_MODES.map((mode) => {
+              const selected = focusMode === mode.value
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setFocusMode(mode.value)}
+                  className={cn(
+                    'rounded-xl border p-5 text-center transition',
+                    selected
+                      ? 'border-primary bg-secondary/40 ring-1 ring-primary'
+                      : 'border-border bg-card hover:border-primary hover:bg-secondary/40',
+                  )}
+                >
+                  <div className="text-3xl mb-2" aria-hidden>
+                    {mode.icon}
+                  </div>
+                  <div className="font-semibold">{mode.label}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{mode.description}</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <Button
+          className="w-full h-12 text-base font-semibold"
+          onClick={() => enterSession('violin')}
+        >
+          Übung starten
+        </Button>
+      </section>
     </div>
-  )
-}
-
-function InstrumentCard({
-  instrument,
-  index,
-  onClick,
-}: {
-  instrument: InstrumentMeta
-  index: number
-  onClick: () => void
-}) {
-  return (
-    <Card
-      className="cursor-pointer transition-all hover:ring-sapphire/50 hover:bg-card/80 hover:shadow-[0_0_30px_rgba(33,150,243,0.15)] animate-[card-enter_0.5s_ease-out_both]"
-      style={{ animationDelay: `${index * 80}ms` }}
-      onClick={onClick}
-    >
-      <CardHeader>
-        <div className="text-5xl mb-2">{instrument.icon}</div>
-        <CardTitle className="text-xl text-foreground">{instrument.name}</CardTitle>
-        <CardDescription>{instrument.description}</CardDescription>
-      </CardHeader>
-    </Card>
   )
 }
