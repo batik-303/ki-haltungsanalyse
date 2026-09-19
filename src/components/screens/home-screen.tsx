@@ -90,27 +90,31 @@ function StepOne({ onNext }: { onNext: () => void }) {
   // Abständen: Hero → (Abstand) → Instrument → (mt-6) → Weiter-Button. Der
   // Button lebt bewusst im Fluss direkt unter der Karte, nicht am Bildschirmrand.
   return (
-    <main className="flex flex-1 flex-col justify-center gap-12 py-6">
-      {/* Präsentes Hero-Lockup: große Marke + Wortmarke, kompakt zusammen,
-          zentriert. scale-[1.2] vergrößert Marke UND Wortmarke proportional
-          um ~20 % (die Wortmarken-Fontgrößen sind fix). */}
-      <div className="flex w-full flex-col items-center gap-2 text-center">
+    // justify-center zentriert den Inhalt exakt vertikal; gap-16 gibt eine
+    // großzügige Trennung zwischen Marken-Header und Interaktion, sodass oben
+    // und unten gleich viel Luft bleibt (kein „geklatschtes" Layout).
+    <main className="flex flex-1 flex-col items-center justify-center gap-16 py-8">
+      {/* Präsenter Marken-Header: große Marke + Wortmarke + Untertitel + Badge
+          als eigener, ruhig atmender Block. scale-[1.2] vergrößert Marke UND
+          Wortmarke proportional um ~20 % (die Wortmarken-Fontgrößen sind fix). */}
+      <div className="flex w-full flex-col items-center gap-4 text-center">
         <div className="my-1 scale-[1.2]" aria-hidden>
           <AnchorLockup markSize={68} />
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Live-Haltungsanalyse für dein Instrument
         </p>
-        {/* Vertrauens-Badge: einzeilig, Icon inline, ehrlich formuliert
-            (100 % lokal; kein Flugmodus-Versprechen ohne Offline-Fähigkeit). */}
-        <span className="mx-auto mt-3 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
+        {/* Vertrauens-Badge: einzeilig, Icon exakt auf Textlinie (items-center
+            + gap-2), ehrlich formuliert (100 % lokal; kein Flugmodus-Versprechen
+            ohne Offline-Fähigkeit). */}
+        <span className="mx-auto inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3.5 py-1.5 font-label text-xs font-medium text-sapphire-deep">
           <Lock className="size-3.5 flex-none" aria-hidden />
           100 % lokal &amp; privat — deine Daten bleiben bei dir
         </span>
       </div>
 
       {/* Instrument + Weiter-Button als zusammengehörige Gruppe. */}
-      <div>
+      <div className="w-full">
         {/* 1. Instrument — eine Karte, als gewählt markiert (V1: nur Geige). */}
         <section className="space-y-3">
           <SectionLabel>1. Wähle dein Instrument</SectionLabel>
