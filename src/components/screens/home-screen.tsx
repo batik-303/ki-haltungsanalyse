@@ -90,19 +90,20 @@ function StepOne({ onNext }: { onNext: () => void }) {
   // Abständen: Hero → (Abstand) → Instrument → (mt-6) → Weiter-Button. Der
   // Button lebt bewusst im Fluss direkt unter der Karte, nicht am Bildschirmrand.
   return (
-    <main className="flex flex-1 flex-col justify-center gap-10 py-6">
-      {/* Präsentes Hero-Lockup: große Marke + Wortmarke, zentriert. */}
+    <main className="flex flex-1 flex-col justify-center gap-12 py-6">
+      {/* Präsentes Hero-Lockup: große Marke + Wortmarke, kompakt zusammen,
+          zentriert. scale-[1.2] vergrößert Marke UND Wortmarke proportional
+          um ~20 % (die Wortmarken-Fontgrößen sind fix). */}
       <div className="flex w-full flex-col items-center gap-2 text-center">
-        <div aria-hidden>
+        <div className="my-1 scale-[1.2]" aria-hidden>
           <AnchorLockup markSize={68} />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground">
           Live-Haltungsanalyse für dein Instrument
         </p>
         {/* Vertrauens-Badge: einzeilig, Icon inline, ehrlich formuliert
-            (100 % lokal; kein Flugmodus-Versprechen ohne Offline-Fähigkeit).
-            Klarer Abstand nach unten zur nächsten Sektion. */}
-        <span className="mx-auto mt-3 mb-2 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
+            (100 % lokal; kein Flugmodus-Versprechen ohne Offline-Fähigkeit). */}
+        <span className="mx-auto mt-3 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
           <Lock className="size-3.5 flex-none" aria-hidden />
           100 % lokal &amp; privat — deine Daten bleiben bei dir
         </span>
