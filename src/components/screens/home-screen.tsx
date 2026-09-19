@@ -147,18 +147,6 @@ function StepTwo({
 }) {
   return (
     <>
-      {/* Kompakter Header mit Zurück-Weg. */}
-      <header className="flex items-center gap-3 py-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="-ml-2 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 font-label text-sm font-semibold text-foreground/60 transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeft className="size-4 flex-none" />
-          Zurück
-        </button>
-      </header>
-
       <main className="flex flex-1 flex-col justify-center gap-6 py-2">
         {/* 2. Fokus — drei Modi bleiben wählbar (Q6, Analyzer-/Render-Dispatch). */}
         <section className="space-y-3">
@@ -203,17 +191,27 @@ function StepTwo({
           </div>
         </section>
 
-        {/* Gold-CTA direkt unter den Optionen: gehört zur zentrierten Gruppe,
-            damit kein großes Leerfeld zwischen Auswahl und Button entsteht.
+        {/* Aktionszeile: Zurück-Pfeil (Icon) links, Gold-CTA daneben.
+            Beide zentriert unter den Optionen — kein separater Kopf-Header mehr.
             Gold-Verlauf via Inline-Style überschreibt die Basis-`bg-primary`. */}
-        <Button
-          onClick={onStart}
-          style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
-          className="mt-2 h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
-        >
-          Kamera starten &amp; Kalibrieren
-          <ArrowRight className="size-5" />
-        </Button>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Zurück"
+            className="grid size-14 flex-none place-items-center rounded-2xl border border-border bg-card text-foreground/70 shadow-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          <Button
+            onClick={onStart}
+            style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
+            className="h-14 flex-1 gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
+          >
+            Kamera starten &amp; Kalibrieren
+            <ArrowRight className="size-5" />
+          </Button>
+        </div>
       </main>
     </>
   )
