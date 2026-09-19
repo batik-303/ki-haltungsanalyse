@@ -202,22 +202,19 @@ function StepTwo({
             })}
           </div>
         </section>
-      </main>
 
-      {/* Footer: Gold-CTA (design.md §4). */}
-      <footer className="space-y-3 pb-6">
-        {/* Gold-CTA auf dem shadcn-Button-Primitive (Fokus-Ring/Press aus
-            components.instructions.md); Gold-Verlauf via Inline-Style, der
-            die Basis-`bg-primary`-Fläche überschreibt. */}
+        {/* Gold-CTA direkt unter den Optionen: gehört zur zentrierten Gruppe,
+            damit kein großes Leerfeld zwischen Auswahl und Button entsteht.
+            Gold-Verlauf via Inline-Style überschreibt die Basis-`bg-primary`. */}
         <Button
           onClick={onStart}
           style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
-          className="h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
+          className="mt-2 h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
         >
           Kamera starten &amp; Kalibrieren
           <ArrowRight className="size-5" />
         </Button>
-      </footer>
+      </main>
     </>
   )
 }
