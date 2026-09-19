@@ -1,53 +1,25 @@
 import { usePoseStore } from '@/store/pose-store'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart'
-import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts'
-import { Home, RotateCcw } from 'lucide-react'
-import { getPersonalBestStreak, getTotalHoldMilestones } from '@/core/persistence/session-db'
+import { Medal, RotateCcw, Share2 } from 'lucide-react'
+import { getPersonalBestStreak } from '@/core/persistence/session-db'
+import { computeResultsView } from '@/core/session/results-view'
 
-const LAYER_COLORS = {
-  flow: '#2196F3',
-  bewusst: '#F1C40F',
-  achtung: '#FF9800',
-  limit: '#9B59B6',
-} as const
-
-const LAYER_LABELS = {
-  flow: 'Flow',
-  bewusst: 'Bewusst',
-  achtung: 'Achtung',
-  limit: 'Limit',
-} as const
-
-const MODE_LABELS: Record<string, string> = {
-  violin: '🎻 Geige',
-  wrist: '🤚 Handgelenk',
-  shoulder: '💪 Schulter',
-}
-
-const donutConfig: ChartConfig = {
-  flow: { label: 'Flow', color: LAYER_COLORS.flow },
-  bewusst: { label: 'Bewusst', color: LAYER_COLORS.bewusst },
-  achtung: { label: 'Achtung', color: LAYER_COLORS.achtung },
-  limit: { label: 'Limit', color: LAYER_COLORS.limit },
-}
-
-const timelineConfig: ChartConfig = {
-  tension: { label: 'Spannung', color: LAYER_COLORS.flow },
-}
+// Statischer Ruhe-Impuls (positiv, ohne Wertung — Feedback-Philosophie).
+const CALM_MESSAGE =
+  'Deine Schultern blieben heute weich. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.'
 
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
   const focusMode = usePoseStore((s) => s.focusMode)
   const practiceAgain = usePoseStore((s) => s.practiceAgain)
   const goHome = usePoseStore((s) => s.goHome)
+
+  // Bestmarke asynchron laden; bis dahin 0 (kein Rekord fälschlich melden).
+  const [personalBest, setPersonalBest] = useState(0)
+  useEffect(() => {
+    getPersonalBestStreak().then(setPersonalBest)
+  }, [])
 
   if (!lastStats) {
     return (
@@ -58,181 +30,97 @@ export function ResultsScreen() {
     )
   }
 
-  const { durationMinutes, durationSeconds, zonePercentages, tensionTimeline, maxFlowStreak, anchorPoints } = lastStats
-
-  const durationStr = `${durationMinutes}:${String(durationSeconds).padStart(2, '0')}`
-
-  // Personal best comparison
-  const [isNewRecord, setIsNewRecord] = useState(false)
-  const [, setPersonalBest] = useState(0)
-  const [, setTotalMilestones] = useState(0)
-
-  useEffect(() => {
-    getPersonalBestStreak().then((best) => {
-      setPersonalBest(best)
-      if (maxFlowStreak > 0 && maxFlowStreak >= best) {
-        setIsNewRecord(true)
-      }
-    })
-    getTotalHoldMilestones().then(setTotalMilestones)
-  }, [maxFlowStreak])
-
-  const donutData = [
-    { name: 'flow', value: Math.round(zonePercentages.flow), fill: LAYER_COLORS.flow },
-    { name: 'bewusst', value: Math.round(zonePercentages.bewusst), fill: LAYER_COLORS.bewusst },
-    { name: 'achtung', value: Math.round(zonePercentages.achtung), fill: LAYER_COLORS.achtung },
-    { name: 'limit', value: Math.round(zonePercentages.limit), fill: LAYER_COLORS.limit },
-  ].filter((d) => d.value > 0)
+  const view = computeResultsView(lastStats, focusMode, personalBest)
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-8 gap-8">
-      <div className="text-center space-y-1">
-        <h1 className="text-3xl font-bold text-foreground">Session-Übersicht</h1>
-        <p className="text-lg text-muted-foreground">
-          {MODE_LABELS[focusMode]} · {durationStr} Min
-        </p>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col items-center px-5 py-10">
+      <div className="w-full max-w-[560px] flex flex-col items-center gap-8 text-center">
+        {/* Mode-Chip: Instrument · Gesamtdauer */}
+        <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 font-label text-sm font-semibold text-secondary-foreground">
+          <span>{view.modeLabel}</span>
+          <span className="opacity-50">·</span>
+          <span className="font-mono font-medium tabular-nums">{view.totalDurationStr}</span>
+        </div>
 
-      <div className="w-full max-w-3xl grid gap-6 md:grid-cols-2">
-        {/* Donut chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Schicht-Verteilung</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={donutConfig} className="mx-auto h-[220px] w-[220px]">
-              <PieChart>
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Pie
-                  data={donutData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  strokeWidth={0}
-                >
-                  {donutData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
+        {/* Hero: „Im Anker"-Dauer */}
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="font-label text-[0.78rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Im Anker
+          </div>
+          <div className="font-headline font-light leading-[0.92] tracking-[-0.03em] tabular-nums text-primary text-[clamp(4.5rem,22vw,8.5rem)]">
+            {view.anchorDurationStr}
+            <span className="ml-[0.1em] text-[0.32em] font-normal tracking-normal text-muted-foreground">
+              min
+            </span>
+          </div>
+          <div className="mt-1.5 text-base text-muted-foreground">
+            {view.flowPercent}% der Zeit in ruhiger Haltung
+          </div>
+        </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {(['flow', 'bewusst', 'achtung', 'limit'] as const).map((layer) => (
-                <div key={layer} className="flex items-center gap-2 text-xs">
-                  <div
-                    className="size-3 rounded-full"
-                    style={{ backgroundColor: LAYER_COLORS[layer] }}
-                  />
-                  <span className="text-muted-foreground">{LAYER_LABELS[layer]}</span>
-                  <span className="ml-auto text-foreground font-mono font-medium tabular-nums">
-                    {Math.round(zonePercentages[layer])}%
-                  </span>
-                </div>
-              ))}
+        {/* Erfolgs-Karte: sanfter Amber-Verlauf, Medaille in accent */}
+        <div
+          className="flex w-full items-center gap-4 rounded-2xl p-6 text-left shadow-sm"
+          style={{ background: 'linear-gradient(160deg, #ffffff, var(--color-accent-soft))' }}
+        >
+          <div className="grid size-12 flex-none place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
+            <Medal className="size-6" />
+          </div>
+          <div>
+            <div className="font-headline text-base font-bold text-foreground">{view.successTitle}</div>
+            <div className="mt-0.5 text-sm text-muted-foreground">
+              Längste Serie am Stück:{' '}
+              <b className="font-mono font-medium text-foreground">{view.streakStr}</b> min
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Summary stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Zusammenfassung</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <StatRow label="Dauer" value={`${durationStr} Min`} />
-            <StatRow label="Gute Haltung" value={`${Math.round(zonePercentages.flow)}%`} highlight />
-            <StatRow label="Längste Serie" value={`${Math.floor(maxFlowStreak)}s am Stück`} highlight />
-            {typeof anchorPoints === 'number' && (
-              <StatRow label="Ankerpunkte" value={`${anchorPoints}`} highlight />
-            )}
-            {typeof anchorPoints === 'number' && (
-              <div className="text-xs text-muted-foreground -mt-2 pl-1">
-                Je 5 Sekunden blau = 1 Ankerpunkt
-              </div>
-            )}
-            {isNewRecord && (
-              <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-center animate-pulse">
-                <span className="text-amber-400 text-sm font-semibold">🏆 Neuer persönlicher Rekord!</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Ruhe-Impuls-Karte: secondary auf secondary-foreground */}
+        <div className="w-full rounded-2xl bg-secondary px-6 py-5 text-left text-secondary-foreground">
+          <div className="font-label text-[0.72rem] font-semibold uppercase tracking-[0.08em] opacity-80">
+            Ruhe-Impuls
+          </div>
+          <p className="mt-2 font-headline text-[1.02rem] font-medium leading-relaxed">
+            {CALM_MESSAGE}
+          </p>
+        </div>
+
+        {/* Zähler-Hinweis: Ankerpunkte, Zahl in flow-Blau (mono) */}
+        {view.anchorPoints !== undefined && (
+          <div className="font-label text-[0.82rem] text-muted-foreground">
+            Zähler heute:{' '}
+            <b className="font-mono font-medium text-layer-flow">{view.anchorPoints}</b> Ankerpunkte
+            · je 5 s ruhig = 1 Punkt
+          </div>
+        )}
+
+        {/* Aktionen: gestapelt, volle Breite */}
+        <div className="flex w-full flex-col gap-3">
+          <Button
+            className="h-12 w-full gap-2 rounded-full text-base font-semibold"
+            onClick={practiceAgain}
+          >
+            <RotateCcw className="size-[18px]" />
+            Neue Übung starten
+          </Button>
+          {/* „Ergebnis teilen" bleibt Nebel — nur Slot, kein Verhalten (#44). */}
+          <Button
+            variant="outline"
+            className="h-12 w-full gap-2 rounded-full border-[1.5px] text-base font-semibold text-primary"
+          >
+            <Share2 className="size-[18px]" />
+            Ergebnis teilen
+          </Button>
+          {/* Navigations-Affordanz aus #30/#34 erhalten: zurück ins Hauptmenü. */}
+          <Button
+            variant="link"
+            className="mt-1 h-auto text-sm font-normal text-muted-foreground"
+            onClick={goHome}
+          >
+            Zum Hauptmenü
+          </Button>
+        </div>
       </div>
-
-      {/* Timeline chart */}
-      {tensionTimeline.length > 0 && (
-        <Card className="w-full max-w-3xl">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Spannungsverlauf</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={timelineConfig} className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={tensionTimeline}>
-                  <defs>
-                    <linearGradient id="tensionGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={LAYER_COLORS.flow} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={LAYER_COLORS.flow} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="t"
-                    tickFormatter={(v: number) => `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`}
-                    stroke="#5a6a7a"
-                    fontSize={10}
-                  />
-                  <YAxis domain={[0, 100]} stroke="#5a6a7a" fontSize={10} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="tension"
-                    stroke={LAYER_COLORS.flow}
-                    fill="url(#tensionGradient)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Navigation buttons */}
-      <div className="flex gap-4">
-        <Button
-          variant="outline"
-          size="lg"
-          className="gap-2"
-          onClick={practiceAgain}
-        >
-          <RotateCcw className="size-4" />
-          Nochmal üben
-        </Button>
-        <Button
-          size="lg"
-          className="gap-2 bg-sapphire hover:bg-sapphire-deep text-white"
-          onClick={goHome}
-        >
-          <Home className="size-4" />
-          Hauptmenü
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function StatRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-sm font-mono font-semibold tabular-nums ${highlight ? 'text-sapphire-light' : 'text-foreground'}`}>
-        {value}
-      </span>
     </div>
   )
 }
