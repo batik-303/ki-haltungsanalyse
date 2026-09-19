@@ -6,7 +6,7 @@ import { INSTRUMENTS } from '@/core/config/instruments'
 import { AnchorLockup } from '@/components/brand/anchor-mark'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ArrowLeft, ArrowRight, Check, EyeOff, Lock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 
 // Home = 2-Schritte-Wizard im Stitch-Layout „Willkommen & Ausrichtung" (#49,
 // Referenz docs/design/design.md). Ziel: beide Schritte passen „above the fold"
@@ -27,9 +27,6 @@ const SKY_GRADIENT =
 const CTA_GRADIENT =
   'linear-gradient(180deg, #C99718 0%, var(--color-gold-dark) 55%, #946905 100%)'
 
-const ANTI_STRESS =
-  'Im Spiel bleibt der Bildschirm dunkel für freien Blick auf die Noten.'
-
 type WizardStep = 1 | 2
 
 // Dunkler Haken-Kreis für die aktive Auswahl (design.md §4, --ui-primary).
@@ -41,14 +38,6 @@ function ActiveCheck() {
     >
       <Check className="size-4" strokeWidth={3} />
     </span>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-label text-xs font-bold uppercase tracking-wider text-foreground/60">
-      {children}
-    </h2>
   )
 }
 
@@ -94,32 +83,20 @@ function StepOne({ onNext }: { onNext: () => void }) {
     // großzügige Trennung zwischen Marken-Header und Interaktion, sodass oben
     // und unten gleich viel Luft bleibt (kein „geklatschtes" Layout).
     <main className="flex flex-1 flex-col items-center justify-center gap-16 py-8">
-      {/* Präsenter Marken-Header: große Marke + Wortmarke + Untertitel + Badge
-          als eigener, ruhig atmender Block. scale-[1.2] vergrößert Marke UND
-          Wortmarke proportional um ~20 % (die Wortmarken-Fontgrößen sind fix). */}
+      {/* Präsenter Marken-Header: große Marke + Wortmarke als eigener, ruhig
+          atmender Block. */}
       <div className="flex w-full flex-col items-center gap-4 text-center">
         {/* Gestapelt + zentriert: Anker oben, Wortmarke darunter auf einer
-            Mittelachse — sauber zentriert zum Untertitel/Badge. */}
+            Mittelachse. */}
         <div aria-hidden>
           <AnchorLockup markSize={80} stacked />
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live-Haltungsanalyse für dein Instrument
-        </p>
-        {/* Vertrauens-Badge: einzeilig, Icon exakt auf Textlinie (items-center
-            + gap-2), ehrlich formuliert (100 % lokal; kein Flugmodus-Versprechen
-            ohne Offline-Fähigkeit). */}
-        <span className="mx-auto inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3.5 py-1.5 font-label text-xs font-medium text-sapphire-deep">
-          <Lock className="size-3.5 flex-none" aria-hidden />
-          100 % lokal &amp; privat — deine Daten bleiben bei dir
-        </span>
       </div>
 
       {/* Instrument + Weiter-Button als zusammengehörige Gruppe. */}
       <div className="w-full">
         {/* 1. Instrument — eine Karte, als gewählt markiert (V1: nur Geige). */}
         <section className="space-y-3">
-          <SectionLabel>1. Wähle dein Instrument</SectionLabel>
           {INSTRUMENTS.map((instrument) => (
             <div
               key={instrument.id}
@@ -170,27 +147,9 @@ function StepTwo({
 }) {
   return (
     <>
-      {/* Kompakter Header mit Fortschritt + Zurück-Weg. Beide Elemente
-          whitespace-nowrap + gekürzt, damit nichts in der schmalen Spalte
-          umbricht (Label „Fokus wählen" wäre redundant zur Sektion darunter). */}
-      <header className="flex items-center gap-3 py-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="-ml-2 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 font-label text-sm font-semibold text-foreground/60 transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeft className="size-4 flex-none" />
-          Zurück
-        </button>
-        <span className="ml-auto whitespace-nowrap font-label text-xs font-bold uppercase tracking-wider text-foreground/60">
-          Schritt 2 von 2
-        </span>
-      </header>
-
       <main className="flex flex-1 flex-col justify-center gap-6 py-2">
         {/* 2. Fokus — drei Modi bleiben wählbar (Q6, Analyzer-/Render-Dispatch). */}
         <section className="space-y-3">
-          <SectionLabel>2. Wähle deinen Fokus</SectionLabel>
           <div className="space-y-3">
             {FOCUS_MODES.map((mode) => {
               const selected = focusMode === mode.value
@@ -232,47 +191,28 @@ function StepTwo({
           </div>
         </section>
 
-        {/* Anti-Stress-Karte: halbtransparent + backdrop-blur (design.md §4).
-            bg-card/70 dient zugleich als Fallback ohne backdrop-filter. */}
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card/70 p-4 shadow-sm backdrop-blur">
-          <span
-            className="grid size-11 flex-none place-items-center rounded-xl bg-sapphire-deep/10 text-sapphire-deep"
-            aria-hidden
+        {/* Aktionszeile: Zurück-Pfeil (Icon) links, Gold-CTA daneben.
+            Beide zentriert unter den Optionen — kein separater Kopf-Header mehr.
+            Gold-Verlauf via Inline-Style überschreibt die Basis-`bg-primary`. */}
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Zurück"
+            className="grid size-14 flex-none place-items-center rounded-2xl border border-border bg-card text-foreground/70 shadow-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <EyeOff className="size-5" />
-          </span>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">Anti-Stress-Garantie:</span>{' '}
-            {ANTI_STRESS}
-          </p>
+            <ArrowLeft className="size-5" />
+          </button>
+          <Button
+            onClick={onStart}
+            style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
+            className="h-14 flex-1 gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
+          >
+            Kamera starten &amp; Kalibrieren
+            <ArrowRight className="size-5" />
+          </Button>
         </div>
       </main>
-
-      {/* Footer: Gold-CTA + Trust-Zeile (design.md §4). */}
-      <footer className="space-y-3 pb-6">
-        {/* Gold-CTA auf dem shadcn-Button-Primitive (Fokus-Ring/Press aus
-            components.instructions.md); Gold-Verlauf via Inline-Style, der
-            die Basis-`bg-primary`-Fläche überschreibt. */}
-        <Button
-          onClick={onStart}
-          style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
-          className="h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
-        >
-          Kamera starten &amp; Kalibrieren
-          <ArrowRight className="size-5" />
-        </Button>
-        <p className="flex items-center justify-center gap-2 font-label text-xs text-foreground/50">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-sapphire-deep" aria-hidden />
-            Keine Registrierung nötig
-          </span>
-          <span aria-hidden>·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-sapphire-deep" aria-hidden />
-            Lokale KI-Erkennung
-          </span>
-        </p>
-      </footer>
     </>
   )
 }
