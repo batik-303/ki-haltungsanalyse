@@ -13,6 +13,7 @@ import { createMovingAverage } from '../core/signal/smoothing'
 import { createOneEuroFilter } from '../core/signal/one-euro-filter'
 import { computeTension } from '../core/signal/tension'
 import { computeShoulderWidth, checkDistance } from '../core/calibration/distance-check'
+import { createReadinessGate, computeWristAxisOk } from '../core/calibration/readiness-gate'
 import { createSessionTracker } from '../core/session/session-tracker'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
@@ -99,6 +100,10 @@ export function usePoseDetection(
   // Last analysis path used in the wrist branch (for transition smoothing).
   const lastAnalysisPathRef = useRef<'hand' | 'pose-fallback' | null>(null)
 
+  // Bereitschafts-Tor vor dem Countdown (#36). Reine Zustandsmaschine als
+  // useRef (Triple-State: Analyse-Zustand nie in Zustand/Store).
+  const readinessGateRef = useRef(createReadinessGate())
+
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
     violinRef.current.reset()
@@ -113,6 +118,9 @@ export function usePoseDetection(
     wristRailColorRef.current = createWristRailColor()
     angleDiffEmaRef.current = 0
     lastAnalysisPathRef.current = null
+    readinessGateRef.current.reset()
+    usePoseStore.getState().setReadiness('positioning', 0, false)
+    usePoseStore.getState().setReadinessArmed(false)
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
   }, [])
@@ -287,6 +295,35 @@ export function usePoseDetection(
 
         if (store.distanceOk !== distOk) {
           usePoseStore.setState({ distanceOk: distOk })
+        }
+
+        // ── Bereitschafts-Tor vor dem Countdown (#36) ──
+        // Nur vor der Kalibrierung und nur für Modi mit Instrument-Spielhaltung
+        // (violin/wrist). Die Achse ersetzt die technisch unmögliche
+        // Geigen-Erkennung: der angehobene Unterarm zeigt die Spielhaltung.
+        if (
+          !store.masterPrint &&
+          !store.isCalibrating &&
+          (store.focusMode === 'violin' || store.focusMode === 'wrist')
+        ) {
+          const elbow = landmarks[13]!
+          const wristLm = landmarks[15]!
+          const axis = computeWristAxisOk(elbow, wristLm, aspect)
+          const readiness = readinessGateRef.current.update({
+            distanceOk: distOk,
+            wristAxisOk: axis.ok,
+            dtMs: dt * 1000,
+          })
+          if (
+            readiness.phase !== store.readinessPhase ||
+            readiness.timedOut !== store.readinessTimedOut ||
+            Math.abs(readiness.holdProgress - store.readinessHoldProgress) > 0.02
+          ) {
+            usePoseStore.getState().setReadiness(readiness.phase, readiness.holdProgress, readiness.timedOut)
+          }
+          if (readiness.justArmed) {
+            usePoseStore.getState().setReadinessArmed(true)
+          }
         }
 
         // Analysis (only when calibrated)
@@ -594,6 +631,13 @@ export function usePoseDetection(
         wristSlideShieldRef.current = 0
         if (store.distanceOk) {
           usePoseStore.setState({ distanceOk: false })
+        }
+        // Bereitschafts-Tor zurücksetzen, solange noch nicht kalibriert (#36).
+        if (!store.masterPrint && !store.isCalibrating) {
+          readinessGateRef.current.update({ distanceOk: false, wristAxisOk: false, dtMs: dt * 1000 })
+          if (store.readinessPhase !== 'positioning') {
+            usePoseStore.getState().setReadiness('positioning', 0, false)
+          }
         }
         renderFrame(ctx, canvas.width, canvas.height, now, null, dt, handLandmarksRef.current)
       }
