@@ -25,11 +25,11 @@ export function HomeScreen() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center px-4 py-16 gap-12">
       <header className="flex flex-col items-center gap-5 text-center max-w-xl">
-        {/* Echte Blue-Anchor-Music-Marke (Variante „Gummiband", #37/#39):
-            „Willkommen bei" über „Blue Anchor Music", zentriert. */}
-        <h1 className="sr-only">Willkommen bei Blue Anchor Music</h1>
+        {/* Echte Blue-Anchor-Music-Marke (Variante „Aufwärts", #48):
+            horizontales Lockup „BLUE ANCHOR" / „M U S I C". */}
+        <h1 className="sr-only">Blue Anchor Music</h1>
         <div aria-hidden>
-          <AnchorLockup markSize={96} />
+          <AnchorLockup markSize={48} />
         </div>
         <p className="text-lg text-muted-foreground">Live-Haltungsanalyse für dein Instrument</p>
       </header>

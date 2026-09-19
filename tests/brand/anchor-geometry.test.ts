@@ -4,16 +4,31 @@ import {
   ANCHOR_MARK_VIEWBOX,
 } from '../../src/core/brand/anchor-geometry'
 
-// Reine Geometrie-Logik der Blue-Anchor-Marke (Variante „Gummiband", #37/#39).
-// Der leuchtende Ankerpunkt + der elastische „Weg" (Hals) sind als SVG in einem
-// festen viewBox definiert; bei Favicon-Größen (≤32px) wird die Krümmung dezenter
-// und der Hals dicker. Diese Umschaltung ist die testbare reine Logik.
+// Reine Geometrie-Logik der Blue-Anchor-Marke (Variante „Aufwärts", #48).
+// Der „Weg" (Hals) ist jetzt ein gerader, senkrechter Steg + leuchtender
+// Ankerpunkt (Notenkopf), nicht mehr das elastische Gummiband (#37/#41).
+// Bei Favicon-Größen (≤32px) wird der Steg dicker und der Glow-Blur kleiner —
+// diese größenabhängige Umschaltung ist die testbare reine Logik.
 
 describe('computeAnchorMarkGeometry', () => {
-  it('nutzt bei voller Größe den Referenz-Gummiband-Pfad aus #37', () => {
+  it('liefert einen geraden, senkrechten und zentrierten Steg', () => {
     const g = computeAnchorMarkGeometry(96)
-    expect(g.neckPath).toBe('M60 104 C 52 78 68 56 60 22')
-    expect(g.neckStrokeWidth).toBeCloseTo(6.5)
+    // Senkrecht: gleiche x-Koordinate oben wie unten.
+    expect(g.steg.x1).toBe(g.steg.x2)
+    // Zentriert in der Marke (viewBox-Breite 120).
+    expect(g.steg.x1).toBe(60)
+    // Läuft von oben nach unten in Richtung Ankerpunkt.
+    expect(g.steg.y1).toBeLessThan(g.steg.y2)
+  })
+
+  it('setzt den Ankerpunkt zentriert unter den Steg', () => {
+    const g = computeAnchorMarkGeometry(96)
+    expect(g.dot.cx).toBe(g.steg.x1)
+    expect(g.dot.r).toBeGreaterThan(0)
+    // Der Punkt sitzt unterhalb des Steg-Fußes …
+    expect(g.dot.cy).toBeGreaterThan(g.steg.y2)
+    // … und der Steg reicht bis in den Punkt hinein (kein Spalt).
+    expect(g.steg.y2).toBeGreaterThanOrEqual(g.dot.cy - g.dot.r)
   })
 
   it('zeigt das Glanzlicht ab 48px, verbirgt es bei Favicon-Größen', () => {
@@ -23,18 +38,10 @@ describe('computeAnchorMarkGeometry', () => {
     expect(computeAnchorMarkGeometry(16).showHighlight).toBe(false)
   })
 
-  it('macht den Hals bei Favicon-Größen dicker als bei voller Größe', () => {
+  it('macht den Steg bei Favicon-Größen dicker als bei voller Größe', () => {
     const compact = computeAnchorMarkGeometry(32)
     const full = computeAnchorMarkGeometry(96)
-    expect(compact.neckStrokeWidth).toBeGreaterThan(full.neckStrokeWidth)
-  })
-
-  it('nimmt bei Favicon-Größen die Krümmung dezent zurück (anderer Pfad)', () => {
-    const compact = computeAnchorMarkGeometry(24)
-    const full = computeAnchorMarkGeometry(96)
-    expect(compact.neckPath).not.toBe(full.neckPath)
-    // Beide Pfade starten am selben Fußpunkt des Ankerpunkts.
-    expect(compact.neckPath.startsWith('M60 104')).toBe(true)
+    expect(compact.stegStrokeWidth).toBeGreaterThan(full.stegStrokeWidth)
   })
 
   it('reduziert den Glow-Blur bei Favicon-Größen', () => {
@@ -44,8 +51,11 @@ describe('computeAnchorMarkGeometry', () => {
   })
 
   it('behandelt genau 32px als kompakt und 33px als volle Größe (Grenzfall)', () => {
-    expect(computeAnchorMarkGeometry(32).neckStrokeWidth).toBeGreaterThan(6.5)
-    expect(computeAnchorMarkGeometry(33).neckStrokeWidth).toBeCloseTo(6.5)
+    const full = computeAnchorMarkGeometry(96)
+    expect(computeAnchorMarkGeometry(32).stegStrokeWidth).toBeGreaterThan(
+      full.stegStrokeWidth,
+    )
+    expect(computeAnchorMarkGeometry(33).stegStrokeWidth).toBe(full.stegStrokeWidth)
   })
 
   it('exportiert einen festen viewBox für scharfe Skalierung', () => {
