@@ -164,18 +164,20 @@ function StepTwo({
 }) {
   return (
     <>
-      {/* Kompakter Header mit Fortschritt + Zurück-Weg. */}
+      {/* Kompakter Header mit Fortschritt + Zurück-Weg. Beide Elemente
+          whitespace-nowrap + gekürzt, damit nichts in der schmalen Spalte
+          umbricht (Label „Fokus wählen" wäre redundant zur Sektion darunter). */}
       <header className="flex items-center gap-3 py-5">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 font-label text-xs font-semibold text-foreground/60 transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="-ml-2 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 font-label text-sm font-semibold text-foreground/60 transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <ArrowLeft className="size-4" />
-          Zurück zu Schritt 1
+          <ArrowLeft className="size-4 flex-none" />
+          Zurück
         </button>
-        <span className="ml-auto font-label text-xs font-bold uppercase tracking-wider text-foreground/60">
-          Schritt 2 von 2: Fokus wählen
+        <span className="ml-auto whitespace-nowrap font-label text-xs font-bold uppercase tracking-wider text-foreground/60">
+          Schritt 2 von 2
         </span>
       </header>
 
