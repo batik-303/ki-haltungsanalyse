@@ -91,19 +91,35 @@ interface AnchorLockupProps {
   /** Kompakte Wortmarke (~18 px) für den Header; ohne Wert Hero-Größe (~24 px).
    *  design.md §3.3: „Header ~18 px, Hero ~24–26 px." */
   compact?: boolean
+  /** Gestapelte Hero-Variante: Marke oben, Wortmarke zentriert darunter — alles
+   *  auf einer Mittelachse (bessere optische Zentrierung als das horizontale
+   *  Lockup). Ohne Wert bleibt das horizontale Standard-Lockup (#48). */
+  stacked?: boolean
   className?: string
 }
 
 /**
- * Horizontales Lockup (#48): Marke links, daneben die Wortmarke „BLUE ANCHOR"
- * über gesperrtem „M U S I C". „Willkommen bei" entfällt (Karten-Entscheidung Q5).
- * Marke bleibt farbgleich; die Wortmarke folgt den Theme-Tokens.
+ * Lockup (#48): Marke + Wortmarke „BLUE ANCHOR" über gesperrtem „M U S I C".
+ * Standard horizontal (Marke links); `stacked` stapelt für den Hero vertikal
+ * und zentriert. „Willkommen bei" entfällt (Karten-Entscheidung Q5). Marke
+ * bleibt farbgleich; die Wortmarke folgt den Theme-Tokens.
  */
-export function AnchorLockup({ markSize = 40, compact = false, className }: AnchorLockupProps) {
+export function AnchorLockup({
+  markSize = 40,
+  compact = false,
+  stacked = false,
+  className,
+}: AnchorLockupProps) {
   return (
-    <div className={cn('flex items-center gap-1.5', className)}>
+    <div
+      className={cn(
+        'flex gap-1.5',
+        stacked ? 'flex-col items-center' : 'items-center',
+        className,
+      )}
+    >
       <AnchorMark size={markSize} />
-      <span className="flex flex-col leading-none">
+      <span className={cn('flex flex-col leading-none', stacked && 'items-center')}>
         <span
           className={cn(
             'font-headline font-extrabold uppercase leading-none tracking-wider text-foreground',
@@ -116,7 +132,7 @@ export function AnchorLockup({ markSize = 40, compact = false, className }: Anch
         <span
           aria-hidden
           className={cn(
-            'mt-0.5 flex justify-between font-label font-bold uppercase leading-none text-muted-foreground',
+            'mt-0.5 flex w-full justify-between font-label font-bold uppercase leading-none text-muted-foreground',
             compact ? 'text-[8px]' : 'text-[10px]',
           )}
         >

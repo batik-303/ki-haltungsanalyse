@@ -98,10 +98,12 @@ function StepOne({ onNext }: { onNext: () => void }) {
           als eigener, ruhig atmender Block. scale-[1.2] vergrößert Marke UND
           Wortmarke proportional um ~20 % (die Wortmarken-Fontgrößen sind fix). */}
       <div className="flex w-full flex-col items-center gap-4 text-center">
-        <div className="my-1 scale-[1.2]" aria-hidden>
-          <AnchorLockup markSize={68} />
+        {/* Gestapelt + zentriert: Anker oben, Wortmarke darunter auf einer
+            Mittelachse — sauber zentriert zum Untertitel/Badge. */}
+        <div aria-hidden>
+          <AnchorLockup markSize={80} stacked />
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Live-Haltungsanalyse für dein Instrument
         </p>
         {/* Vertrauens-Badge: einzeilig, Icon exakt auf Textlinie (items-center
