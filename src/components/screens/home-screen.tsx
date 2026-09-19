@@ -1,6 +1,7 @@
 import { usePoseStore } from '@/store/pose-store'
 import { FOCUS_MODES } from '@/core/config/focus-modes'
 import { Button } from '@/components/ui/button'
+import { AnchorLockup } from '@/components/brand/anchor-mark'
 import { cn } from '@/lib/utils'
 
 // Home = Auswahlbühne (Variante A „Zentrierte Karten-Bühne", Ticket #26).
@@ -23,14 +24,13 @@ export function HomeScreen() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center px-4 py-16 gap-12">
-      <header className="text-center space-y-3 max-w-xl">
-        {/* ⚓ ist Platzhalter — echtes Blue-Anchor-Music-Logo folgt später */}
-        <div className="text-5xl" aria-hidden>
-          ⚓
+      <header className="flex flex-col items-center gap-5 text-center max-w-xl">
+        {/* Echte Blue-Anchor-Music-Marke (Variante „Gummiband", #37/#39):
+            „Willkommen bei" über „Blue Anchor Music", zentriert. */}
+        <h1 className="sr-only">Willkommen bei Blue Anchor Music</h1>
+        <div aria-hidden>
+          <AnchorLockup markSize={96} />
         </div>
-        <h1 className="font-headline text-4xl font-bold tracking-tight text-primary">
-          Willkommen bei Blue&nbsp;Anchor&nbsp;Music
-        </h1>
         <p className="text-lg text-muted-foreground">Live-Haltungsanalyse für dein Instrument</p>
       </header>
 

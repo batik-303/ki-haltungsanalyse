@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 150" width="120" height="150" role="img" aria-label="Blue Anchor Music">
+  <!-- Favicon-Fassung der Blue-Anchor-Marke (#39): dezentere Krümmung, dickerer
+       Hals, kleinerer Glow-Blur — Werte gespiegelt aus computeAnchorMarkGeometry(≤32). -->
+  <defs>
+    <radialGradient id="dot" cx="42%" cy="38%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="30%" stop-color="#64b5f6"/>
+      <stop offset="100%" stop-color="#1565c0"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="60" cy="112" r="30" fill="rgba(33,150,243,0.4)" filter="url(#glow)"/>
+  <path d="M60 104 C 57 82 63 58 60 22" fill="none" stroke="#2196f3" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="60" cy="112" r="22" fill="url(#dot)"/>
+</svg>
