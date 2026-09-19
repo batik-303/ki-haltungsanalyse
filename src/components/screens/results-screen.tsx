@@ -5,10 +5,6 @@ import { Medal, RotateCcw, Share2 } from 'lucide-react'
 import { getPersonalBestStreak } from '@/core/persistence/session-db'
 import { computeResultsView } from '@/core/session/results-view'
 
-// Statischer Ruhe-Impuls (positiv, ohne Wertung — Feedback-Philosophie).
-const CALM_MESSAGE =
-  'Deine Schultern blieben heute weich. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.'
-
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
   const focusMode = usePoseStore((s) => s.focusMode)
@@ -61,7 +57,7 @@ export function ResultsScreen() {
         {/* Erfolgs-Karte: sanfter Amber-Verlauf, Medaille in accent */}
         <div
           className="flex w-full items-center gap-4 rounded-2xl p-6 text-left shadow-sm"
-          style={{ background: 'linear-gradient(160deg, #ffffff, var(--color-accent-soft))' }}
+          style={{ background: 'linear-gradient(160deg, var(--color-card), var(--color-accent-soft))' }}
         >
           <div className="grid size-12 flex-none place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
             <Medal className="size-6" />
@@ -81,7 +77,7 @@ export function ResultsScreen() {
             Ruhe-Impuls
           </div>
           <p className="mt-2 font-headline text-[1.02rem] font-medium leading-relaxed">
-            {CALM_MESSAGE}
+            {view.calmMessage}
           </p>
         </div>
 

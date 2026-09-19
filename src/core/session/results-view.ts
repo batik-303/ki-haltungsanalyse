@@ -7,6 +7,19 @@ const MODE_LABELS: Record<FocusMode, string> = {
   shoulder: '💪 Schulter',
 }
 
+// Ruhe-Impuls je Modus — bewusst als Einladung formuliert (Präsens/Futur),
+// nicht als Behauptung über die gerade gemessene Haltung. So bleibt die
+// Botschaft positiv und trifft, ohne ein Ergebnis zu unterstellen, das den
+// Daten widersprechen könnte (Feedback-Philosophie).
+const MODE_CALM_MESSAGES: Record<FocusMode, string> = {
+  violin:
+    'Lass die Geige leicht auf der Schulter ruhen — ohne festzuhalten. Nimm dieses Gefühl mit in die nächste Übung.',
+  wrist:
+    'Lass dein Handgelenk locker und getragen. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.',
+  shoulder:
+    'Lass deine Schultern weich und tief. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.',
+}
+
 /** Aufbereitete Werte für den „Anker-Fokus"-Results-Screen (Variante A, #21/#44). */
 export interface ResultsView {
   /** Mode-Chip, z. B. „🎻 Geige". */
@@ -23,6 +36,8 @@ export interface ResultsView {
   isNewRecord: boolean
   /** Überschrift der Erfolgs-Karte — immer positiv formuliert. */
   successTitle: string
+  /** Modusgerechter Ruhe-Impuls (Einladung, keine Ergebnis-Behauptung). */
+  calmMessage: string
   /** Ankerpunkte der Session (fehlt, wenn keine erfasst wurden). */
   anchorPoints?: number
 }
@@ -61,6 +76,7 @@ export function computeResultsView(
     streakStr: formatMmSs(stats.maxFlowStreak),
     isNewRecord,
     successTitle: isNewRecord ? 'Neue persönliche Bestmarke' : 'Deine längste ruhige Serie',
+    calmMessage: MODE_CALM_MESSAGES[focusMode],
     anchorPoints: stats.anchorPoints,
   }
 }

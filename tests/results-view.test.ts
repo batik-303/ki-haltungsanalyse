@@ -75,4 +75,18 @@ describe('computeResultsView', () => {
     const v = computeResultsView(baseStats({ maxFlowStreak: 0 }), 'violin', 0)
     expect(v.isNewRecord).toBe(false)
   })
+
+  it('liefert für jeden Modus einen nicht-leeren Ruhe-Impuls', () => {
+    for (const mode of ['violin', 'wrist', 'shoulder'] as const) {
+      expect(computeResultsView(baseStats(), mode, 0).calmMessage.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('passt den Ruhe-Impuls an den Modus an (Handgelenk vs. Schulter)', () => {
+    const wrist = computeResultsView(baseStats(), 'wrist', 0).calmMessage
+    const shoulder = computeResultsView(baseStats(), 'shoulder', 0).calmMessage
+    expect(wrist).not.toBe(shoulder)
+    expect(wrist).toContain('Handgelenk')
+    expect(shoulder).toContain('Schulter')
+  })
 })
