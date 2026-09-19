@@ -100,6 +100,13 @@ Dieses Projekt wendet **strikt Test-Driven Development** an — ausnahmslos:
 ## Git-Workflow
 
 - **Branch-Basis**: Neue Features/Fixes **immer aus aktuellem `main`** abzweigen — zuerst `git checkout main && git pull --ff-only`, dann `git checkout -b <typ>/<kurzbeschreibung>` (z. B. `docs/…`, `feat/…`, `fix/…`, `chore/…`).
+- **Worktree je Implementierungs-Session**: Wird eine **Implementierungs-Session** gestartet (Produktionscode bauen, insb. ein `wayfinder:task`-Ticket), legt der Agent **einen eigenen Git-Worktree aus aktuellem `main`** an und arbeitet **ausschließlich darin** — **nie** im geteilten Haupt-Clone, damit parallel laufende Agenten die Umsetzung nicht stören.
+  ```bash
+  git checkout main && git pull --ff-only
+  git worktree add ../ki-haltungsanalyse-<typ>-<kurzbeschreibung> -b <typ>/<kurzbeschreibung>
+  cd ../ki-haltungsanalyse-<typ>-<kurzbeschreibung>
+  ```
+  Commits, Push und PR passieren im Worktree. **Nach dem Squash-Merge aufräumen**: `git worktree remove ../ki-haltungsanalyse-<typ>-<kurzbeschreibung>` (der Feature-Branch wird serverseitig automatisch gelöscht). In Claude Code alternativ die native Worktree-Isolation nutzen: `isolation: "worktree"` beim Agent-Tool bzw. `EnterWorktree`/`ExitWorktree`. Reine Lese-/Entscheidungs-Sessions (Wayfinder-Grilling/Research/Prototype, Doku) brauchen **keinen** Worktree.
 - **Kein direkter Push auf `main`**: `main` ist per Ruleset „Protect main" geschützt (kein Bypass, keine Force-Pushes, kein Löschen). Änderungen kommen **ausschließlich über einen Pull Request** rein.
 - **Review**: Jeder PR braucht **1 Approval** vom Code-Owner **@baxt5878** (`.github/CODEOWNERS`) vor dem Merge.
 - **Merge**: nur **Squash-Merge**; der Feature-Branch wird nach dem Merge **automatisch gelöscht**.
