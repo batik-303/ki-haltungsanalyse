@@ -4,7 +4,7 @@ import { INSTRUMENTS } from '@/core/config/instruments'
 import { AnchorLockup } from '@/components/brand/anchor-mark'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { ArrowRight, Check, EyeOff } from 'lucide-react'
+import { ArrowRight, Check, EyeOff, Lock } from 'lucide-react'
 
 // Home = Auswahlbühne im Stitch-Layout „Willkommen & Ausrichtung" (#49,
 // Referenz docs/design/design.md). Struktur aus dem Stitch-Entwurf, Farben
@@ -66,6 +66,15 @@ export function HomeScreen() {
             <p className="mt-1 text-sm text-muted-foreground">
               Live-Haltungsanalyse für dein Instrument
             </p>
+            {/* Vertrauens-Badge: ruhige Zusicherung direkt unter dem Untertitel.
+                Bewusst ehrlich formuliert (100 % lokal, keine Daten verlassen
+                das Gerät) — kein Flugmodus-Versprechen, solange keine echte
+                Offline-/PWA-Fähigkeit existiert. Sapphire-Ton wie die
+                Anti-Stress-Karte (design.md §4). */}
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
+              <Lock className="size-3.5" aria-hidden />
+              100 % lokal &amp; privat — keine Daten verlassen dein Gerät
+            </span>
           </div>
 
           {/* 1. Instrument — eine Karte, als gewählt markiert (V1: nur Geige). */}
