@@ -56,13 +56,7 @@ export function HomeScreen() {
       <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-safe pb-safe">
         <h1 className="sr-only">Blue Anchor Music</h1>
 
-        {/* Header: Logo-Lockup links, kein Person-Avatar (kein Login V1, Q7).
-            Kompakte Wortmarke (~18 px), Marke ~32 px (design.md §3.1/§3.3). */}
-        <header className="flex items-center py-5" aria-hidden>
-          <AnchorLockup markSize={32} compact />
-        </header>
-
-        <main className="flex flex-1 flex-col gap-6 pb-8">
+        <main className="flex flex-1 flex-col gap-6 pt-8 pb-8">
           {/* Hero-Lockup: horizontales Lockup (Marke + Wortmarke), als Block
               zentriert (design.md §3.2/§3.3 „horizontal nebeneinander"). */}
           <div className="flex flex-col items-center gap-2 py-4 text-center">
