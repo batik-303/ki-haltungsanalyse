@@ -6,6 +6,7 @@ import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-contro
 import { CalibrationOverlay } from '@/components/calibration-overlay'
 import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceIndicator } from '@/components/distance-indicator'
+import { ReadinessHint } from '@/components/readiness-hint'
 import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
@@ -34,6 +35,8 @@ export function SessionScreen() {
   const startSession = usePoseStore((s) => s.startSession)
   const viewMode = usePoseStore((s) => s.viewMode)
   const hudFaded = usePoseStore(selectHudFaded)
+  const readinessArmed = usePoseStore((s) => s.readinessArmed)
+  const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
   const { resetAnalysisState, landmarkerRef, handLandmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
@@ -146,6 +149,18 @@ export function SessionScreen() {
     setMicActive(true)
   }, [startListening])
 
+  // Bereitschafts-Tor scharf (#36): sobald Distanz + Spielhaltung kurz gehalten
+  // wurden, startet der Countdown automatisch — deckt alle Auslöser ab (Stimme,
+  // eigener Klick, Eltern/Lehrer). Die Kante wird sofort quittiert, damit sie
+  // nur einmal feuert; der manuelle „Kalibrieren"-Button bleibt als Rückfall.
+  useEffect(() => {
+    if (!readinessArmed) return
+    setReadinessArmed(false)
+    if (phase === 'ready-to-calibrate' && !calState) {
+      handleCalibrate()
+    }
+  }, [readinessArmed, phase, calState, handleCalibrate, setReadinessArmed])
+
   const handleToggleMic = useCallback(() => {
     if (micActive) {
       stopListening()
@@ -187,6 +202,9 @@ export function SessionScreen() {
 
       {/* Distance indicator (pre-calibration) — hinter dem Overlay ausblenden */}
       {!calState && <DistanceIndicator />}
+
+      {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
+      {!calState && <ReadinessHint />}
 
       {/* ═══════════════════════════════════════════
           DESKTOP / TABLET HUD (≥480px)
