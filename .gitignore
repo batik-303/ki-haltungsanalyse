@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Design-Prototypen (Wegwerf-Artefakte, nur lokal — via Issue verlinkt, nicht eingecheckt)
+prototype/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
