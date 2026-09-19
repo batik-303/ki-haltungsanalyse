@@ -88,6 +88,9 @@ export function AnchorMark({ size = 40, title, className }: AnchorMarkProps) {
 interface AnchorLockupProps {
   /** Renderbreite der Marke in px. */
   markSize?: number
+  /** Kompakte Wortmarke (~18 px) für den Header; ohne Wert Hero-Größe (~24 px).
+   *  design.md §3.3: „Header ~18 px, Hero ~24–26 px." */
+  compact?: boolean
   className?: string
 }
 
@@ -96,18 +99,26 @@ interface AnchorLockupProps {
  * über gesperrtem „M U S I C". „Willkommen bei" entfällt (Karten-Entscheidung Q5).
  * Marke bleibt farbgleich; die Wortmarke folgt den Theme-Tokens.
  */
-export function AnchorLockup({ markSize = 40, className }: AnchorLockupProps) {
+export function AnchorLockup({ markSize = 40, compact = false, className }: AnchorLockupProps) {
   return (
     <div className={cn('flex items-center gap-1.5', className)}>
       <AnchorMark size={markSize} />
       <span className="flex flex-col leading-none">
-        <span className="font-headline text-2xl font-extrabold uppercase leading-none tracking-wider text-foreground">
+        <span
+          className={cn(
+            'font-headline font-extrabold uppercase leading-none tracking-wider text-foreground',
+            compact ? 'text-lg' : 'text-2xl',
+          )}
+        >
           Blue Anchor
         </span>
         {/* „M U S I C": gesperrt auf Wortmarken-Breite (justify-between). */}
         <span
           aria-hidden
-          className="mt-0.5 flex justify-between font-label text-[10px] font-bold uppercase leading-none text-muted-foreground"
+          className={cn(
+            'mt-0.5 flex justify-between font-label font-bold uppercase leading-none text-muted-foreground',
+            compact ? 'text-[8px]' : 'text-[10px]',
+          )}
         >
           {MUSIK.map((c) => (
             <span key={c}>{c}</span>
