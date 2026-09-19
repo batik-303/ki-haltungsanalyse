@@ -59,7 +59,7 @@ export function HomeScreen() {
         <main className="flex flex-1 flex-col gap-6 pt-8 pb-8">
           {/* Hero-Lockup: horizontales Lockup (Marke + Wortmarke), als Block
               zentriert (design.md §3.2/§3.3 „horizontal nebeneinander"). */}
-          <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <div className="flex w-full flex-col items-center gap-2 py-4 text-center">
             <div aria-hidden>
               <AnchorLockup markSize={40} />
             </div>
@@ -71,9 +71,9 @@ export function HomeScreen() {
                 das Gerät) — kein Flugmodus-Versprechen, solange keine echte
                 Offline-/PWA-Fähigkeit existiert. Sapphire-Ton wie die
                 Anti-Stress-Karte (design.md §4). */}
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
-              <Lock className="size-3.5" aria-hidden />
-              100 % lokal &amp; privat — keine Daten verlassen dein Gerät
+            <span className="mx-auto mt-2 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
+              <Lock className="size-3.5 flex-none" aria-hidden />
+              100 % lokal &amp; privat — deine Daten bleiben bei dir
             </span>
           </div>
 
