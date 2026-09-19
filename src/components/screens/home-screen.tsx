@@ -86,25 +86,30 @@ export function HomeScreen() {
 // --- Schritt 1: Branding + Instrumentenauswahl -----------------------------
 
 function StepOne({ onNext }: { onNext: () => void }) {
+  // Ein einziger, vertikal zentrierter Block (justify-center) mit ausgewogenen
+  // Abständen: Hero → (Abstand) → Instrument → (mt-6) → Weiter-Button. Der
+  // Button lebt bewusst im Fluss direkt unter der Karte, nicht am Bildschirmrand.
   return (
-    <>
-      <main className="flex flex-1 flex-col justify-center gap-8 py-6">
-        {/* Präsentes Hero-Lockup: große Marke + Wortmarke, zentriert. */}
-        <div className="flex w-full flex-col items-center gap-2 text-center">
-          <div aria-hidden>
-            <AnchorLockup markSize={56} />
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Live-Haltungsanalyse für dein Instrument
-          </p>
-          {/* Vertrauens-Badge: einzeilig, Icon inline, ehrlich formuliert
-              (100 % lokal; kein Flugmodus-Versprechen ohne Offline-Fähigkeit). */}
-          <span className="mx-auto mt-2 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
-            <Lock className="size-3.5 flex-none" aria-hidden />
-            100 % lokal &amp; privat — deine Daten bleiben bei dir
-          </span>
+    <main className="flex flex-1 flex-col justify-center gap-10 py-6">
+      {/* Präsentes Hero-Lockup: große Marke + Wortmarke, zentriert. */}
+      <div className="flex w-full flex-col items-center gap-2 text-center">
+        <div aria-hidden>
+          <AnchorLockup markSize={68} />
         </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Live-Haltungsanalyse für dein Instrument
+        </p>
+        {/* Vertrauens-Badge: einzeilig, Icon inline, ehrlich formuliert
+            (100 % lokal; kein Flugmodus-Versprechen ohne Offline-Fähigkeit).
+            Klarer Abstand nach unten zur nächsten Sektion. */}
+        <span className="mx-auto mt-3 mb-2 inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-sapphire-deep/10 px-3 py-1 font-label text-xs font-medium text-sapphire-deep">
+          <Lock className="size-3.5 flex-none" aria-hidden />
+          100 % lokal &amp; privat — deine Daten bleiben bei dir
+        </span>
+      </div>
 
+      {/* Instrument + Weiter-Button als zusammengehörige Gruppe. */}
+      <div>
         {/* 1. Instrument — eine Karte, als gewählt markiert (V1: nur Geige). */}
         <section className="space-y-3">
           <SectionLabel>1. Wähle dein Instrument</SectionLabel>
@@ -129,19 +134,17 @@ function StepOne({ onNext }: { onNext: () => void }) {
             </div>
           ))}
         </section>
-      </main>
 
-      {/* Weiter zu Schritt 2 (Sapphire-Primary-CTA). */}
-      <footer className="pb-6">
+        {/* Weiter zu Schritt 2 (Sapphire-Primary-CTA), moderat unter der Karte. */}
         <Button
           onClick={onNext}
-          className="h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md"
+          className="mt-6 h-14 w-full gap-2 rounded-2xl text-base font-bold shadow-md"
         >
           Weiter zur Fokus-Auswahl
           <ArrowRight className="size-5" />
         </Button>
-      </footer>
-    </>
+      </div>
+    </main>
   )
 }
 
