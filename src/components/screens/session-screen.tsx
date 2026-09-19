@@ -116,10 +116,14 @@ export function SessionScreen() {
     }
   }, [goToResults, stopTracking])
 
+  // Bewusstes „Neu kalibrieren" (#35): der einzige Punkt, an dem eine erhaltene
+  // Kalibrierung verworfen wird. Der Store-`recalibrate` räumt masterPrint,
+  // Schulterbreite, Zeitstempel und das Bereitschafts-Tor auf; danach müssen
+  // auch die rAF-Loop-Refs zurückgesetzt werden (Triple-State-System).
   const handleRecalibrate = useCallback(() => {
     const store = usePoseStore.getState()
     if (store.isCalibrating) return
-    usePoseStore.setState({ masterPrint: null, sessionActive: false })
+    store.recalibrate()
     resetAnalysisState()
   }, [resetAnalysisState])
 

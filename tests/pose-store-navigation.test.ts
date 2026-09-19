@@ -32,13 +32,15 @@ beforeEach(() => {
   usePoseStore.getState().goHome()
 })
 
-// ── results „Zurück" = nochmal üben (neue Sitzung, gleiche Konfiguration) → setup ──
+// ── results „Nochmal üben" = neue Sitzung, gleiche Konfiguration → session ──
+// Seit #35 bleibt die Kalibrierung erhalten und wir gehen direkt in die
+// Session (setup wurde mit #26 aus dem V1-Flow genommen).
 
 describe('practiceAgain', () => {
-  it('führt zurück nach "setup" statt direkt in die Sitzung', () => {
+  it('führt direkt in die "session" (kein setup-Zwischenschritt mehr)', () => {
     usePoseStore.setState({ appScreen: 'results' })
     usePoseStore.getState().practiceAgain()
-    expect(usePoseStore.getState().appScreen).toBe('setup')
+    expect(usePoseStore.getState().appScreen).toBe('session')
   })
 
   it('bewahrt Instrument, focusMode und sensitivity (gleiche Konfiguration)', () => {
@@ -55,7 +57,7 @@ describe('practiceAgain', () => {
     expect(s.sensitivity).toBe('high')
   })
 
-  it('setzt Kalibrierung, Sitzung und Statistik zurück', () => {
+  it('setzt Sitzung und Statistik zurück, bewahrt aber die Kalibrierung (#35)', () => {
     usePoseStore.setState({
       appScreen: 'results',
       masterPrint: VIOLIN_PRINT,
@@ -73,9 +75,10 @@ describe('practiceAgain', () => {
     })
     usePoseStore.getState().practiceAgain()
     const s = usePoseStore.getState()
-    expect(s.masterPrint).toBeNull()
-    expect(s.calibratedShoulderWidth).toBeNull()
-    expect(s.lastCalibrationAt).toBeNull()
+    // Kalibrierung bleibt erhalten (#35) — nur Sitzung/Statistik werden geleert.
+    expect(s.masterPrint).toEqual(VIOLIN_PRINT)
+    expect(s.calibratedShoulderWidth).toBe(0.42)
+    expect(s.lastCalibrationAt).toBe(1234)
     expect(s.sessionActive).toBe(false)
     expect(s.lastSessionStats).toBeNull()
     expect(s.tensionScore).toBe(0)

@@ -111,6 +111,7 @@ export interface PoseState {
   setCalibrating: (calibrating: boolean) => void
   toggleDebugLandmarks: () => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
+  recalibrate: () => void
   startSession: () => void
   updateFrame: (data: FrameUpdate) => void
   endSession: (stats: SessionStats | null) => void
@@ -227,11 +228,13 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     selectedInstrument: instrument,
   }),
 
+  // Session-Eintritt (#35): eine vorhandene Kalibrierung bleibt erhalten, damit
+  // Schüler über die Übungswoche zwischen den Stunden weiterüben, ohne bei jedem
+  // Eintritt neu zu kalibrieren. Bei erhaltener Kalibrierung landet die Session
+  // direkt im „bereit"-Zustand (selectSessionPhase → 'ready-to-start'). Der
+  // einzige bewusste Verwerf-Punkt ist `recalibrate` (plus `setFocusMode`).
   goToSession: () => set({
     appScreen: 'session',
-    masterPrint: null,
-    calibratedShoulderWidth: null,
-    lastCalibrationAt: null,
     isCalibrating: false,
     distanceOk: false,
     readinessPhase: 'positioning',
@@ -300,15 +303,13 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     maxFlowStreak: 0,
   }),
 
-  // „Zurück" auf dem results-Screen: nochmal üben mit gleicher Konfiguration.
-  // Instrument, focusMode, sensitivity und viewMode bleiben erhalten — nur der
-  // Analyse-/Sitzungs-/Kalibrierungszustand wird verworfen und wir landen wieder
-  // in `setup` (Trichtermodell, keine Sprünge). Siehe CONTEXT.md → „Zurück".
+  // „Nochmal üben" auf dem results-Screen: neue Sitzung, gleiche Konfiguration.
+  // Instrument, focusMode, sensitivity, viewMode UND die Kalibrierung bleiben
+  // erhalten (#35) — nur der Analyse-/Sitzungs-/Statistikzustand wird zurück-
+  // gesetzt. Führt direkt in die `session` (setup wurde mit #26 aus dem V1-Flow
+  // genommen); mit erhaltener Kalibrierung landet man sofort im „bereit"-Zustand.
   practiceAgain: () => set({
-    appScreen: 'setup',
-    masterPrint: null,
-    calibratedShoulderWidth: null,
-    lastCalibrationAt: null,
+    appScreen: 'session',
     isCalibrating: false,
     distanceOk: false,
     readinessPhase: 'positioning',
@@ -395,6 +396,39 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     driftDirection: 1,
   }),
 
+  // Bewusstes „Neu kalibrieren" (#35) — der EINZIGE Verwerf-Punkt für eine
+  // erhaltene Kalibrierung (neben `setFocusMode`). Verwirft masterPrint,
+  // Schulterbreite und Zeitstempel und setzt das Bereitschafts-Tor sowie den
+  // sichtbaren Analyse-Zustand auf „positioning" zurück.
+  //
+  // V1-Persistenz-Naht: Hier (und in `calibrate`) hängt später ein Lade-/
+  // Speicher-Hook um den Store — recalibrate löscht die persistierte
+  // Kalibrierung des aktuellen focusMode, calibrate schreibt sie. Bewusst noch
+  // nicht implementiert (bleibt V0.1 in-memory); siehe Issue #35 / ADR.
+  recalibrate: () => set({
+    masterPrint: null,
+    calibratedShoulderWidth: null,
+    lastCalibrationAt: null,
+    isCalibrating: false,
+    sessionActive: false,
+    readinessPhase: 'positioning',
+    readinessHoldProgress: 0,
+    readinessArmed: false,
+    readinessTimedOut: false,
+    tensionScore: 0,
+    smoothedDeviation: 0,
+    rawDeviation: 0,
+    currentLayer: 'flow',
+    currentLayerInfo: DEFAULT_LAYER_INFO,
+    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+    returnGlowTimer: 0,
+    lastBendForward: true,
+    wristRailAngleDeg: 0,
+    wristRailIsBlue: true,
+    wristAnalysisPath: null,
+    driftDirection: 1,
+  }),
+
   startSession: () => set({
     sessionActive: true,
     sessionStart: performance.now(),
@@ -426,10 +460,11 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     ...(data.wristAnalysisPath !== undefined && { wristAnalysisPath: data.wristAnalysisPath }),
   }),
 
+  // Sitzungsende (#35): Kalibrierung bleibt erhalten, damit die Wiederholung
+  // („Nochmal üben") direkt in den „bereit"-Zustand führt. Verworfen wird sie
+  // nur bewusst über `recalibrate` (oder bei `setFocusMode`).
   endSession: (stats) => set({
     sessionActive: false,
-    masterPrint: null,
-    lastCalibrationAt: null,
     tensionScore: 0,
     smoothedDeviation: 0,
     rawDeviation: 0,
