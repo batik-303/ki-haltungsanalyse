@@ -412,18 +412,23 @@ function PhoneButton({ onClick, children, primary, discreet }: { onClick: () => 
   )
 }
 
-// Segmentierter Ansicht-Umschalter (Desktop/Tablet): der aktive Modus ist in Saphir
-// hervorgehoben. Ein Klick auf das inaktive Segment schaltet um; der aktive tut nichts.
+// Segmentierter Ansicht-Umschalter (Desktop/Tablet): der aktive Modus ist im
+// tiefen Saphir hervorgehoben. Ein Klick auf das inaktive Segment schaltet um;
+// der aktive tut nichts.
+//
+// Bewusst nicht `sapphire` — das ist `--color-layer-flow`, die Flow-Farbe auf
+// dem Canvas. Ein Bedienelement in Layer-Blau liest sich wie ein Haltungssignal
+// (dieselbe Trennung, die #29 zwischen CTA-Gold und Warn-Amber zieht).
 function ViewToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () => void }) {
   return (
-    <div className="flex items-center rounded-lg overflow-hidden backdrop-blur border border-sapphire/40 text-xs font-medium">
+    <div className="flex items-center rounded-lg overflow-hidden backdrop-blur border border-sapphire-deep/50 text-xs font-medium">
       <button
         onClick={() => viewMode !== 'analyse' && onToggle()}
         aria-pressed={viewMode === 'analyse'}
         className={cn(
           'px-3 py-2 transition-all active:scale-95',
           viewMode === 'analyse'
-            ? 'bg-sapphire text-white'
+            ? 'bg-sapphire-deep text-white'
             : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
         )}
       >
@@ -435,7 +440,7 @@ function ViewToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () =
         className={cn(
           'px-3 py-2 transition-all active:scale-95',
           viewMode === 'flow'
-            ? 'bg-sapphire text-white'
+            ? 'bg-sapphire-deep text-white'
             : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
         )}
       >
