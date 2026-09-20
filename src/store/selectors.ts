@@ -17,8 +17,8 @@ export function selectSessionPhase(state: PoseState): SessionPhase {
 export function selectPhaseHint(state: PoseState): string {
   switch (selectSessionPhase(state)) {
     case 'positioning': return 'Positioniere dich vor der Kamera'
-    case 'ready-to-calibrate': return "Sage 'Kalibrieren' wenn bereit"
-    case 'calibrating': return 'Kalibrierung läuft...'
+    case 'ready-to-calibrate': return 'Sag „bereit“ – oder tippe „Haltung speichern“'
+    case 'calibrating': return 'Einen Moment …'
     case 'tracking': return "Sage 'Stop' zum Beenden"
   }
 }
