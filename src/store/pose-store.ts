@@ -13,6 +13,7 @@ import type {
 } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import type { ReadinessPhase } from '../core/calibration/readiness-gate'
+import type { PositioningStatus } from '../core/calibration/distance-guidance'
 
 export interface PoseState {
   // Navigation
@@ -30,6 +31,9 @@ export interface PoseState {
   lastCalibrationAt: number | null
   isCalibrating: boolean
   distanceOk: boolean
+  // Richtung der Distanz fürs Positionier-Feedback („näher"/„zurück"). `distanceOk`
+  // bleibt der Boolean fürs Gate; hier steht zusätzlich die Richtung für den Hinweis.
+  distanceStatus: PositioningStatus
 
   // Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59) — Snapshot fürs UI/
   // Canvas-Rand-Feedback. Die eigentliche Zustandsmaschine lebt als useRef im
@@ -169,6 +173,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   lastCalibrationAt: null,
   isCalibrating: false,
   distanceOk: false,
+  distanceStatus: 'no-body',
 
   // Kalibrier-Auslöser (#59)
   readinessPhase: 'idle',
@@ -238,6 +243,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       appScreen: 'session',
       isCalibrating: false,
       distanceOk: false,
+      distanceStatus: 'no-body',
       readinessPhase: 'idle',
       readinessArmed: false,
       readinessTimedOut: false,
@@ -283,6 +289,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     lastCalibrationAt: null,
     isCalibrating: false,
     distanceOk: false,
+    distanceStatus: 'no-body',
     readinessPhase: 'idle',
     readinessArmed: false,
     readinessTimedOut: false,
@@ -316,6 +323,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       appScreen: 'session',
       isCalibrating: false,
       distanceOk: false,
+      distanceStatus: 'no-body',
       readinessPhase: 'idle',
       readinessArmed: false,
       readinessTimedOut: false,
