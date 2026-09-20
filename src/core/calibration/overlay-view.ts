@@ -7,7 +7,7 @@
  * Komponente übersetzt `tone` in die konkreten Glas-Farben.
  *
  * Grundsatz der Feedback-Philosophie: **kein Rot**. Ein misslungener Versuch ist
- * kein Fehler, sondern der ermutigende Amber-Zustand „Nochmal versuchen".
+ * kein Fehler, sondern der ermutigende Accent-Zustand „Nochmal versuchen".
  */
 
 /** Warum ein Kalibrier-Versuch nicht gespeichert werden konnte. */
@@ -24,12 +24,16 @@ export type CalibrationPhase =
   | { kind: 'retry'; reason?: CalibrationFailureReason }
 
 /**
- * Semantischer Ton — die Komponente mappt ihn auf die literalen Glas-Farben.
+ * Semantischer Ton — die Komponente mappt ihn auf die konkreten Farben.
  * Geteilt mit dem Bereitschafts-Tor (#36), das `success` für den grünen
  * „passt / los geht's"-Zustand nutzt; das Kalibrier-Overlay selbst zeigt seit
- * #58 nur noch `sapphire` (Countdown) und `amber` (Nochmal versuchen).
+ * #58 nur noch `sapphire` (Countdown) und `accent` (Nochmal versuchen).
+ *
+ * `accent` hieß früher `amber` und wurde als Warn-Amber `#ffb800` gezeichnet.
+ * Das ist der Ton der Haltungs-Warnung — ein Bedienknopf darin liest sich wie
+ * ein Haltungssignal. Der Ton trägt jetzt den Marken-Accent (Geigenholz-Gold).
  */
-export type CalibrationTone = 'sapphire' | 'success' | 'amber'
+export type CalibrationTone = 'sapphire' | 'success' | 'accent'
 
 /** Was die CTA auslöst — oder `none`, solange der Countdown läuft. */
 export type CalibrationCtaAction = 'recalibrate' | 'none'
@@ -73,7 +77,7 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
               ? 'Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“'
               : 'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
         glyph: '↻',
-        tone: 'amber',
+        tone: 'accent',
         cta: 'Erneut versuchen',
         ctaIcon: '↻',
         ctaAction: 'recalibrate',

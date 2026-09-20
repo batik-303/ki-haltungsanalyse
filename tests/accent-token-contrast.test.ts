@@ -22,6 +22,15 @@ function readRootToken(name: string): string {
   return match[1].toLowerCase()
 }
 
+/** Liest einen Token-Wert aus dem `[data-theme="dark"] { … }`-Block (Session-Teilbaum). */
+function readDarkToken(name: string): string {
+  const darkBlock = css.match(/\[data-theme="dark"\]\s*\{([\s\S]*?)\}/)
+  const body = darkBlock?.[1] ?? ''
+  const match = body.match(new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{6})`))
+  if (!match?.[1]) throw new Error(`Token --${name} nicht in [data-theme="dark"] gefunden`)
+  return match[1].toLowerCase()
+}
+
 /** Relative Luminanz nach WCAG 2.1. */
 function relativeLuminance(hex: string): number {
   const h = hex.replace('#', '')
@@ -55,6 +64,21 @@ describe('Heller Accent-Ton (#29 Geigenholz-Gold)', () => {
     const accent = readRootToken('ui-accent')
     const foreground = readRootToken('ui-accent-foreground')
     expect(foreground).toBe('#2b1a00')
+    expect(contrastRatio(accent, foreground)).toBeGreaterThanOrEqual(4.5)
+  })
+})
+
+describe('Session-Accent (dunkler Teilbaum) — ein Gold über die ganze App', () => {
+  it('nutzt dasselbe Geigenholz-Gold wie der helle Chrome, nicht ein eigenes #daa520', () => {
+    const accent = readDarkToken('ui-accent')
+    expect(accent).toBe(readRootToken('ui-accent'))
+    expect(accent).not.toBe('#daa520')
+  })
+
+  it('setzt eine dunkle Textfarbe, die WCAG AA (4.5:1) erfüllt — nicht Weiß', () => {
+    const accent = readDarkToken('ui-accent')
+    const foreground = readDarkToken('ui-accent-foreground')
+    expect(foreground).not.toBe('#ffffff')
     expect(contrastRatio(accent, foreground)).toBeGreaterThanOrEqual(4.5)
   })
 })

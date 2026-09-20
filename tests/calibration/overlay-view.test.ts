@@ -6,7 +6,7 @@ import { computeCalibrationView } from '../../src/core/calibration/overlay-view'
  * `computeCalibrationView` ist die reine Kernlogik — sie bildet die
  * Kalibrier-Phase auf das Ansichtsmodell (Titel, Hinweis, Ring, CTA) ab.
  * Grundsatz: positive Sprache, **kein Rot** — ein misslungener Versuch führt
- * in den Amber-Zustand „Nochmal versuchen", nicht in einen Fehler.
+ * in den ermutigenden Accent-Zustand „Nochmal versuchen", nicht in einen Fehler.
  */
 describe('computeCalibrationView', () => {
   describe('Countdown (counting)', () => {
@@ -38,11 +38,11 @@ describe('computeCalibrationView', () => {
   // Das Overlay kennt daher nur noch `counting` und `retry`.
 
   describe('Nochmal versuchen (retry) — kein Rot', () => {
-    it('nutzt den Amber-Ton und die Wiederhol-CTA (ohne das Wort „kalibrieren")', () => {
+    it('nutzt den Accent-Ton und die Wiederhol-CTA (ohne das Wort „kalibrieren")', () => {
       const view = computeCalibrationView({ kind: 'retry' })
       expect(view.title).toBe('Nochmal versuchen')
       expect(view.glyph).toBe('↻')
-      expect(view.tone).toBe('amber')
+      expect(view.tone).toBe('accent')
       expect(view.cta).toBe('Erneut versuchen')
       expect(view.cta.toLowerCase()).not.toContain('kalibr')
       expect(view.ctaIcon).toBe('↻')
@@ -59,7 +59,7 @@ describe('computeCalibrationView', () => {
     it('lädt bei fehlender Spielhaltung sanft neu ein (weiche Erfassung, #59)', () => {
       const view = computeCalibrationView({ kind: 'retry', reason: 'no_posture' })
       expect(view.hint).toBe('Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“')
-      expect(view.tone).toBe('amber')
+      expect(view.tone).toBe('accent')
       expect(view.ctaAction).toBe('recalibrate')
     })
 
@@ -79,6 +79,6 @@ describe('computeCalibrationView', () => {
       computeCalibrationView({ kind: 'retry', reason: 'no_hand' }).tone,
     ]
     expect(tones).not.toContain('error')
-    expect(new Set(tones)).toEqual(new Set(['sapphire', 'amber']))
+    expect(new Set(tones)).toEqual(new Set(['sapphire', 'accent']))
   })
 })
