@@ -32,7 +32,6 @@ export function SessionScreen() {
   const statusColor = usePoseStore(selectStatusColor)
   const goToResults = usePoseStore((s) => s.goToResults)
   const goHome = usePoseStore((s) => s.goHome)
-  const startSession = usePoseStore((s) => s.startSession)
   const viewMode = usePoseStore((s) => s.viewMode)
   const hudFaded = usePoseStore(selectHudFaded)
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
@@ -62,7 +61,13 @@ export function SessionScreen() {
       (remaining) => setCalState({ kind: 'counting', count: remaining }),
       (success, reason) => {
         if (success) {
-          setCalState({ kind: 'success' })
+          // Erfolg geht direkt in die Analyse über (#58): keine „gespeichert"-
+          // Bestätigung. Der Store hat die Session bereits gestartet
+          // (calibrate → sessionActive); hier wird der frisch zurückgesetzte
+          // Session-Tracker (rAF-Loop-Ref) scharf geschaltet und das Overlay
+          // ausgeblendet — die Analyse läuft sofort weiter.
+          startTracking()
+          setCalState(null)
         } else {
           // Weiche Erfassung (#59): nichts gespeichert → Tor zurück auf idle,
           // damit der Nutzer ruhig neu auslösen kann (kein Wiederholzwang).
@@ -71,7 +76,7 @@ export function SessionScreen() {
         }
       },
     )
-  }, [landmarkerRef, startCountdown, resetAnalysisState])
+  }, [landmarkerRef, startCountdown, resetAnalysisState, startTracking])
 
   // Bewusster Kalibrier-Auslöser (#59): „bereit"/„Haltung speichern" (T4) und
   // der Rückfall-Knopf laufen hierüber. Kein Sofort-Countdown mehr — das
@@ -79,14 +84,6 @@ export function SessionScreen() {
   const handleArm = useCallback(() => {
     armReadiness()
   }, [armReadiness])
-
-  const handleStart = useCallback(() => {
-    const store = usePoseStore.getState()
-    if (!store.masterPrint || store.sessionActive) return
-    startTracking()
-    startSession()
-    setCalState(null)
-  }, [startSession, startTracking])
 
   const handleStop = useCallback(async () => {
     const store = usePoseStore.getState()
@@ -153,13 +150,14 @@ export function SessionScreen() {
   }, [stopTracking, goHome])
 
   const voiceCommands: VoiceCommandMap = useMemo(() => ({
+    // #59: „kalibrieren"/„bereit" armiert das Distanz-Gate (kein Sofort-
+    // Countdown). #58: der „start"-Befehl entfällt — es gibt keinen Start-Schritt.
     kalibrieren: handleArm,
-    start: handleStart,
     stop: handleStop,
     neu: handleRecalibrate,
     flow: () => usePoseStore.getState().setViewMode('flow'),
     analyse: () => usePoseStore.getState().setViewMode('analyse'),
-  }), [handleArm, handleStart, handleStop, handleRecalibrate])
+  }), [handleArm, handleStop, handleRecalibrate])
 
   const { startListening, stopListening } = useVoiceCommands(voiceCommands, true)
   const [micActive, setMicActive] = useState(false)
@@ -170,6 +168,22 @@ export function SessionScreen() {
     startListening()
     setMicActive(true)
   }, [startListening])
+
+  // Auto-Start bei erhaltener Kalibrierung (#35 + #58): Wird die Session mit
+  // bereits gültigem MasterPrint betreten („Nochmal üben" / Wiedereintritt),
+  // läuft die Analyse sofort — es gibt keinen „Start"-Schritt. Der Store hat
+  // sessionActive dabei schon gesetzt; hier wird der frisch gemountete
+  // Session-Tracker (rAF-Loop-Ref) genau einmal scharf geschaltet. Eine frische
+  // Kalibrierung startet den Tracker stattdessen im Kalibrier-Erfolgszweig.
+  const didAutoStartRef = useRef(false)
+  useEffect(() => {
+    if (didAutoStartRef.current) return
+    const store = usePoseStore.getState()
+    if (store.masterPrint && store.sessionActive) {
+      didAutoStartRef.current = true
+      startTracking()
+    }
+  }, [startTracking])
 
   // Auslöse-Tor scharf (#59): der Countdown startet, sobald der bewusste
   // Auslöser (via `handleArm`) mit passendem Abstand zusammenkommt — das
@@ -217,7 +231,6 @@ export function SessionScreen() {
         <CalibrationOverlay
           phase={calState}
           modeLabel={MODE_LABELS[focusMode] ?? focusMode}
-          onStart={handleStart}
           onRecalibrate={() => { setCalState(null); handleArm() }}
         />
       )}
@@ -267,7 +280,7 @@ export function SessionScreen() {
       )}
 
       {/* HUD: Tension bar — bottom left */}
-      {!calState && (phase === 'ready-to-start' || phase === 'tracking') && (
+      {!calState && phase === 'tracking' && (
         <div className={cn(
           "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] left-[clamp(8px,2vh,16px)] z-10 w-[clamp(160px,20vw,192px)] transition-opacity duration-700",
           hudFaded && "opacity-20"
@@ -320,12 +333,6 @@ export function SessionScreen() {
           {phase === 'ready-to-calibrate' && (
             <FallbackButton onClick={handleArm}>Kalibrieren</FallbackButton>
           )}
-          {phase === 'ready-to-start' && (
-            <>
-              <FallbackButton onClick={handleStart}>Start</FallbackButton>
-              <FallbackButton onClick={handleRecalibrate}>Neu kalibrieren</FallbackButton>
-            </>
-          )}
           {phase === 'tracking' && (
             <>
               <FallbackButton onClick={handleStop}>Stop</FallbackButton>
@@ -367,13 +374,13 @@ export function SessionScreen() {
       </div>
 
       {/* Bottom bar: Tension + Controls — Kalibrierung läuft im Overlay */}
-      {!calState && (phase === 'ready-to-calibrate' || phase === 'ready-to-start' || phase === 'tracking') && (
+      {!calState && (phase === 'ready-to-calibrate' || phase === 'tracking') && (
         <div className={cn(
           "sm:hidden absolute bottom-0 left-0 right-0 z-10 flex flex-row items-center gap-2 bg-surface/80 p-2 pb-safe backdrop-blur transition-all duration-300",
           hudFaded && "opacity-15"
         )}>
           {/* Compact tension bar */}
-          {(phase === 'ready-to-start' || phase === 'tracking') && (
+          {phase === 'tracking' && (
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
                 <span className="shrink-0">Spannung</span>
@@ -407,12 +414,6 @@ export function SessionScreen() {
 
             {phase === 'ready-to-calibrate' && (
               <PhoneButton onClick={handleArm}>Kalibrieren</PhoneButton>
-            )}
-            {phase === 'ready-to-start' && (
-              <>
-                <PhoneButton onClick={handleStart}>Start</PhoneButton>
-                <PhoneButton onClick={handleRecalibrate}>↻</PhoneButton>
-              </>
             )}
             {phase === 'tracking' && (
               <>

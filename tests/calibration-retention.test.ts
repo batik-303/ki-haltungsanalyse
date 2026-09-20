@@ -46,36 +46,40 @@ describe('goToSession bewahrt eine vorhandene Kalibrierung', () => {
     expect(usePoseStore.getState().appScreen).toBe('session')
   })
 
-  it('landet direkt im „bereit"-Zustand (ohne erzwungene Neu-Kalibrierung)', () => {
+  it('läuft mit erhaltener Kalibrierung direkt in die Analyse (kein Start-Schritt, #58)', () => {
     seedCalibrated()
     usePoseStore.getState().goToSession()
-    expect(selectSessionPhase(usePoseStore.getState())).toBe('ready-to-start')
+    const s = usePoseStore.getState()
+    expect(selectSessionPhase(s)).toBe('tracking')
+    expect(s.sessionActive).toBe(true)
+    expect(s.sessionStart).toBeGreaterThan(0)
   })
 })
 
 describe('enterSession bewahrt eine vorhandene Kalibrierung', () => {
-  it('geht mit erhaltener Kalibrierung direkt in die bereite Session', () => {
+  it('geht mit erhaltener Kalibrierung direkt in die laufende Analyse (#58)', () => {
     seedCalibrated()
     usePoseStore.getState().enterSession('violin')
     expectCalibrationKept()
     const s = usePoseStore.getState()
     expect(s.appScreen).toBe('session')
     expect(s.selectedInstrument).toBe('violin')
-    expect(selectSessionPhase(s)).toBe('ready-to-start')
+    expect(selectSessionPhase(s)).toBe('tracking')
+    expect(s.sessionActive).toBe(true)
   })
 })
 
 describe('practiceAgain (results „Nochmal üben")', () => {
-  it('führt mit erhaltener Kalibrierung direkt in die Session', () => {
+  it('führt mit erhaltener Kalibrierung direkt in die laufende Analyse (#58)', () => {
     seedCalibrated()
     usePoseStore.setState({ appScreen: 'results' })
     usePoseStore.getState().practiceAgain()
     expect(usePoseStore.getState().appScreen).toBe('session')
     expectCalibrationKept()
-    expect(selectSessionPhase(usePoseStore.getState())).toBe('ready-to-start')
+    expect(selectSessionPhase(usePoseStore.getState())).toBe('tracking')
   })
 
-  it('setzt Sitzung und Statistik zurück, ohne die Kalibrierung anzutasten', () => {
+  it('startet eine frische Session (läuft sofort) und verwirft nur die alte Statistik', () => {
     seedCalibrated()
     usePoseStore.setState({
       appScreen: 'results',
@@ -91,7 +95,10 @@ describe('practiceAgain (results „Nochmal üben")', () => {
     })
     usePoseStore.getState().practiceAgain()
     const s = usePoseStore.getState()
-    expect(s.sessionActive).toBe(false)
+    // Neue Session läuft sofort (kein Start-Schritt, #58) …
+    expect(s.sessionActive).toBe(true)
+    expect(s.sessionStart).toBeGreaterThan(0)
+    // … die alte Statistik/Zonen sind aber zurückgesetzt.
     expect(s.lastSessionStats).toBeNull()
     expect(s.tensionScore).toBe(0)
     expect(s.sessionZones).toEqual({ flow: 0, bewusst: 0, achtung: 0, limit: 0 })
