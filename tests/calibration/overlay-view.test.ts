@@ -10,7 +10,7 @@ import { computeCalibrationView } from '../../src/core/calibration/overlay-view'
  */
 describe('computeCalibrationView', () => {
   describe('Countdown (counting)', () => {
-    it('zeigt die Restsekunde als Ring-Glyph und den sapphire-Ton', () => {
+    it('zeigt die Restsekunde als großen Zähler (nur die Zahl) und den sapphire-Ton', () => {
       const view = computeCalibrationView({ kind: 'counting', count: 3 })
       expect(view.title).toBe('Haltung einnehmen')
       expect(view.hint).toBe('Halte deine optimale Spielhaltung …')
@@ -20,16 +20,16 @@ describe('computeCalibrationView', () => {
       expect(view.ctaAction).toBe('none')
     })
 
-    it('füllt den Ring anteilig zur Restzeit (count / 3)', () => {
-      expect(computeCalibrationView({ kind: 'counting', count: 3 }).progress).toBeCloseTo(1)
-      expect(computeCalibrationView({ kind: 'counting', count: 2 }).progress).toBeCloseTo(2 / 3)
-      expect(computeCalibrationView({ kind: 'counting', count: 1 }).progress).toBeCloseTo(1 / 3)
+    it('zählt die reine Restsekunde herunter (kein Ring, kein Fortschritt)', () => {
+      // T4 #60: Variante A zeigt nur die klare Zahl — kein Ring, kein
+      // `progress`-Feld mehr im Ansichtsmodell.
+      expect(computeCalibrationView({ kind: 'counting', count: 2 }).glyph).toBe('2')
+      expect(computeCalibrationView({ kind: 'counting', count: 1 }).glyph).toBe('1')
+      expect('progress' in computeCalibrationView({ kind: 'counting', count: 2 })).toBe(false)
     })
 
-    it('begrenzt den Fortschritt auf 0..1 (kein Über-/Unterlauf)', () => {
-      expect(computeCalibrationView({ kind: 'counting', count: 9 }).progress).toBe(1)
-      expect(computeCalibrationView({ kind: 'counting', count: 0 }).progress).toBe(0)
-      expect(computeCalibrationView({ kind: 'counting', count: -1 }).progress).toBe(0)
+    it('vermeidet in der CTA das Wort „kalibrieren" (T4 #60)', () => {
+      expect(computeCalibrationView({ kind: 'counting', count: 3 }).cta.toLowerCase()).not.toContain('kalibr')
     })
   })
 
@@ -38,20 +38,22 @@ describe('computeCalibrationView', () => {
   // Das Overlay kennt daher nur noch `counting` und `retry`.
 
   describe('Nochmal versuchen (retry) — kein Rot', () => {
-    it('nutzt den Amber-Ton und die Wiederhol-CTA', () => {
+    it('nutzt den Amber-Ton und die Wiederhol-CTA (ohne das Wort „kalibrieren")', () => {
       const view = computeCalibrationView({ kind: 'retry' })
       expect(view.title).toBe('Nochmal versuchen')
       expect(view.glyph).toBe('↻')
       expect(view.tone).toBe('amber')
-      expect(view.cta).toBe('Erneut kalibrieren')
+      expect(view.cta).toBe('Erneut versuchen')
+      expect(view.cta.toLowerCase()).not.toContain('kalibr')
       expect(view.ctaIcon).toBe('↻')
       expect(view.ctaAction).toBe('recalibrate')
       expect(view.ctaBusy).toBe(false)
     })
 
-    it('nennt bei fehlender Hand den konkreten Hinweis', () => {
+    it('nennt bei fehlender Hand den konkreten Hinweis (auf „bereit" umgetextet)', () => {
       const view = computeCalibrationView({ kind: 'retry', reason: 'no_hand' })
-      expect(view.hint).toBe('Hand sichtbar ins Bild halten und erneut kalibrieren')
+      expect(view.hint).toBe('Hand sichtbar ins Bild halten und „bereit“ sagen')
+      expect(view.hint.toLowerCase()).not.toContain('kalibr')
     })
 
     it('lädt bei fehlender Spielhaltung sanft neu ein (weiche Erfassung, #59)', () => {
@@ -61,12 +63,12 @@ describe('computeCalibrationView', () => {
       expect(view.ctaAction).toBe('recalibrate')
     })
 
-    it('gibt sonst einen allgemeinen, ermutigenden Hinweis', () => {
+    it('gibt sonst einen allgemeinen, ermutigenden Hinweis (auf „bereit" umgetextet)', () => {
       expect(computeCalibrationView({ kind: 'retry', reason: 'no_pose' }).hint).toBe(
-        'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
+        'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
       )
       expect(computeCalibrationView({ kind: 'retry' }).hint).toBe(
-        'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
+        'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
       )
     })
   })

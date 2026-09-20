@@ -4,9 +4,10 @@ import { computeCalibrationView, type CalibrationPhase, type CalibrationTone } f
  * Kalibrier-Overlay — Variante C „Minimal HUD" (Ticket #28, Karte #15).
  *
  * Keine Karte: ein großer, frei über dem dunklen Kamerabild schwebender
- * Countdown-Ring als Mittelpunkt, Titel/Hinweis als heller Text mit Scrim,
- * kompakte CTA am unteren Rand, Status-Pill oben. Folgt dem Projektgrundsatz
- * „Canvas ist primär, Chrome minimal und am Rand".
+ * Countdown-Zähler (nur die reine Zahl, kein Ring — T4 #60) als Mittelpunkt,
+ * Titel/Hinweis als heller Text mit Scrim, kompakte CTA am unteren Rand,
+ * Status-Pill oben. Folgt dem Projektgrundsatz „Canvas ist primär, Chrome
+ * minimal und am Rand".
  *
  * Rein präsentational: Phase/Countdown kommen als Props aus `session-screen.tsx`,
  * die Ansichtslogik aus der reinen Funktion `computeCalibrationView`. Kein
@@ -23,7 +24,6 @@ const SUCCESS = '#2ecc71'
 const AMBER = '#ffb800'
 const AMBER_FG = '#3d2c00'
 const PRIMARY = '#002b49'
-const RING_TRACK = 'rgba(255,255,255,0.28)'
 
 const ARC_COLOR: Record<CalibrationTone, string> = {
   sapphire: SAPPHIRE,
@@ -35,7 +35,7 @@ interface CalibrationOverlayProps {
   phase: CalibrationPhase
   /** Beschriftung des aktiven Fokus-Modus für die Status-Pill (z. B. „🎻 Geige"). */
   modeLabel: string
-  /** CTA „Erneut kalibrieren" (Nochmal versuchen). */
+  /** CTA „Erneut versuchen" (weiche Erfassung → neu einladen). */
   onRecalibrate: () => void
 }
 
@@ -61,11 +61,9 @@ export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: Calibrat
         </div>
       </div>
 
-      {/* Ring + Titel/Hinweis — zentriert */}
+      {/* Großer, klarer Zähler + Titel/Hinweis — zentriert (T4 #60: nur die Zahl, kein Ring) */}
       <div className="flex flex-col items-center gap-5 px-6 text-center">
-        <div className="drop-shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
-          <CountdownRing glyph={view.glyph} arc={arc} progress={view.progress} />
-        </div>
+        <CountdownGlyph glyph={view.glyph} color={arc} />
         <div style={{ textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
           <div className="font-headline text-2xl font-extrabold text-white sm:text-[26px]">{view.title}</div>
           <div className="mt-1.5 font-sans text-[15px] text-white/85">{view.hint}</div>
@@ -88,48 +86,26 @@ export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: Calibrat
           {view.cta}
         </button>
         <div className="flex items-center gap-1.5 font-label text-[13px] text-white/85">
-          <span>🎤 Oder sprich</span>
-          <span className="font-semibold">„Kalibrieren“</span>
+          <span>🎤 Oder sag</span>
+          <span className="font-semibold">„bereit“</span>
         </div>
       </div>
     </div>
   )
 }
 
-const RING_SIZE = 168
-const RING_STROKE = 10
-
-function CountdownRing({ glyph, arc, progress }: { glyph: string; arc: string; progress: number }) {
-  const r = (RING_SIZE - RING_STROKE) / 2
-  const circ = 2 * Math.PI * r
+/**
+ * Großer, klarer Zähler (T4 #60, Variante A „Randglühen"): nur die reine Zahl
+ * (bzw. der Wiederhol-Pfeil), **kein** Ring und **kein** Rahmen. Ein weicher
+ * Schlagschatten hebt die Ziffer vom dunklen Kamerabild ab.
+ */
+function CountdownGlyph({ glyph, color }: { glyph: string; color: string }) {
   return (
-    <svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} className="block">
-      <circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={r} fill="none" stroke={RING_TRACK} strokeWidth={RING_STROKE} />
-      <circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={r}
-        fill="none"
-        stroke={arc}
-        strokeWidth={RING_STROKE}
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        strokeDashoffset={circ * (1 - progress)}
-        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
-        style={{ transition: 'stroke-dashoffset 0.85s linear, stroke 0.3s' }}
-      />
-      <text
-        x="50%"
-        y="50%"
-        dominantBaseline="central"
-        textAnchor="middle"
-        className="font-headline"
-        fontWeight={800}
-        fontSize={RING_SIZE * 0.36}
-        fill={arc}
-      >
-        {glyph}
-      </text>
-    </svg>
+    <div
+      className="font-headline font-extrabold leading-none tabular-nums drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+      style={{ color, fontSize: 'clamp(96px, 26vw, 168px)' }}
+    >
+      {glyph}
+    </div>
   )
 }

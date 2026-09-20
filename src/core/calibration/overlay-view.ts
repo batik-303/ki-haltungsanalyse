@@ -1,8 +1,9 @@
 /**
  * Reine Ansichtslogik für das Kalibrier-Overlay (Variante C „Minimal HUD", Ticket #28).
  *
- * Bildet die Kalibrier-Phase auf ein Ansichtsmodell ab: Titel, Hinweis, Ring-Glyph,
- * Ton und CTA. Bewusst frei von React/DOM und von literalen Styling-Farben — die
+ * Bildet die Kalibrier-Phase auf ein Ansichtsmodell ab: Titel, Hinweis, Glyph
+ * (großer Zähler, kein Ring seit T4 #60), Ton und CTA. Bewusst frei von
+ * React/DOM und von literalen Styling-Farben — die
  * Komponente übersetzt `tone` in die konkreten Glas-Farben.
  *
  * Grundsatz der Feedback-Philosophie: **kein Rot**. Ein misslungener Versuch ist
@@ -36,20 +37,18 @@ export type CalibrationCtaAction = 'recalibrate' | 'none'
 export interface CalibrationView {
   title: string
   hint: string
-  /** Zeichen in der Ring-Mitte: Restsekunde, Haken oder Wiederhol-Pfeil. */
+  /**
+   * Zeichen im Mittelpunkt: Restsekunde (großer, klarer Zähler) oder
+   * Wiederhol-Pfeil. Seit T4 #60 ohne umgebenden Ring — nur die reine Zahl
+   * (Variante A „Randglühen", T1 #57).
+   */
   glyph: string
   tone: CalibrationTone
-  /** Ring-Füllung 0..1. */
-  progress: number
   cta: string
   ctaIcon: string
   ctaAction: CalibrationCtaAction
   ctaBusy: boolean
 }
-
-const COUNTDOWN_SECONDS = 3
-
-const clamp01 = (value: number): number => Math.max(0, Math.min(1, value))
 
 export function computeCalibrationView(phase: CalibrationPhase): CalibrationView {
   switch (phase.kind) {
@@ -59,8 +58,7 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
         hint: 'Halte deine optimale Spielhaltung …',
         glyph: String(phase.count),
         tone: 'sapphire',
-        progress: clamp01(phase.count / COUNTDOWN_SECONDS),
-        cta: 'Kalibriere …',
+        cta: 'Speichere …',
         ctaIcon: '↻',
         ctaAction: 'none',
         ctaBusy: true,
@@ -70,14 +68,13 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
         title: 'Nochmal versuchen',
         hint:
           phase.reason === 'no_hand'
-            ? 'Hand sichtbar ins Bild halten und erneut kalibrieren'
+            ? 'Hand sichtbar ins Bild halten und „bereit“ sagen'
             : phase.reason === 'no_posture'
               ? 'Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“'
-              : 'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
+              : 'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
         glyph: '↻',
         tone: 'amber',
-        progress: 1,
-        cta: 'Erneut kalibrieren',
+        cta: 'Erneut versuchen',
         ctaIcon: '↻',
         ctaAction: 'recalibrate',
         ctaBusy: false,

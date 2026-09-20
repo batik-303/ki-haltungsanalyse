@@ -7,9 +7,11 @@ interface SpeechRecognitionEvent {
 
 export type VoiceCommandMap = Record<string, () => void>
 
-// Use short stems so conjugated forms ("kalibriere", "kalibriert") still match
+// Use short stems so conjugated forms ("kalibriere", "kalibriert") still match.
+// T4 #60: „bereit" ist der sichtbare, primäre Auslöser; „kalibrieren" bleibt nur
+// als unsichtbares Synonym in der Voice-Map (kein UI-Text mehr).
 const COMMAND_KEYWORDS: Record<string, string[]> = {
-  kalibrieren: ['kalibrier', 'calibrat'],
+  kalibrieren: ['bereit', 'kalibrier', 'calibrat'],
   start: ['start', 'los'],
   stop: ['stop', 'stopp', 'ende'],
   neu: ['neu', 'nochmal', 'erneut'],

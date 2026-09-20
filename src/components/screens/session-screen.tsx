@@ -5,7 +5,7 @@ import { useCalibration } from '@/hooks/use-calibration'
 import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-control'
 import { CalibrationOverlay } from '@/components/calibration-overlay'
 import type { CalibrationPhase } from '@/core/calibration/overlay-view'
-import { DistanceIndicator } from '@/components/distance-indicator'
+import { DistanceGlow } from '@/components/distance-glow'
 import { ReadinessHint } from '@/components/readiness-hint'
 import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
@@ -235,8 +235,8 @@ export function SessionScreen() {
         />
       )}
 
-      {/* Distance indicator (pre-calibration) — hinter dem Overlay ausblenden */}
-      {!calState && <DistanceIndicator />}
+      {/* Distanz-Rand-Führung „Randglühen" (vor Kalibrierung) — hinter dem Overlay aus */}
+      {!calState && <DistanceGlow />}
 
       {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
       {!calState && <ReadinessHint />}
@@ -331,7 +331,7 @@ export function SessionScreen() {
           hudFaded && "opacity-20"
         )}>
           {phase === 'ready-to-calibrate' && (
-            <FallbackButton onClick={handleArm}>Kalibrieren</FallbackButton>
+            <FallbackButton onClick={handleArm}>Haltung speichern</FallbackButton>
           )}
           {phase === 'tracking' && (
             <>
@@ -413,7 +413,7 @@ export function SessionScreen() {
             </button>
 
             {phase === 'ready-to-calibrate' && (
-              <PhoneButton onClick={handleArm}>Kalibrieren</PhoneButton>
+              <PhoneButton onClick={handleArm}>Speichern</PhoneButton>
             )}
             {phase === 'tracking' && (
               <>
