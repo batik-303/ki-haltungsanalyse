@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { usePoseStore } from '@/store/pose-store'
 import { usePoseDetection } from '@/hooks/use-pose-detection'
 import { useCalibration } from '@/hooks/use-calibration'
-import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-control'
+import { useVoiceCommands, type VoiceCommandMap, type VoiceStatus } from '@/hooks/use-voice-control'
 import { CalibrationOverlay } from '@/components/calibration-overlay'
 import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
@@ -159,14 +159,13 @@ export function SessionScreen() {
     analyse: () => usePoseStore.getState().setViewMode('analyse'),
   }), [handleArm, handleStop, handleRecalibrate])
 
-  const { startListening, stopListening } = useVoiceCommands(voiceCommands, true)
-  const [micActive, setMicActive] = useState(false)
+  const { startListening, stopListening, status: voiceStatus, error: voiceError } = useVoiceCommands(voiceCommands, true)
   const [calState, setCalState] = useState<CalibrationPhase | null>(null)
 
-  // Auto-start mic on mount — runs after first user interaction (camera permission)
+  // Auto-start mic on mount — runs after first user interaction (camera permission).
+  // Der sichtbare Zustand kommt jetzt aus `voiceStatus` (nicht mehr optimistisch).
   useEffect(() => {
     startListening()
-    setMicActive(true)
   }, [startListening])
 
   // Auto-Start bei erhaltener Kalibrierung (#35 + #58): Wird die Session mit
@@ -197,15 +196,17 @@ export function SessionScreen() {
     }
   }, [readinessArmed, phase, calState, handleCalibrate, setReadinessArmed])
 
+  // Mikro-Knopf: läuft die Erkennung, schaltet ein Tipp sie aus. Ist sie aus oder
+  // in einem Fehlerzustand (z. B. Mikro nicht freigegeben), ist der Tipp eine
+  // echte Nutzergeste — genau das, was manche Browser (Safari) zum Neustart der
+  // Spracherkennung verlangen. So heilt ein stiller Ausfall per Tipp.
   const handleToggleMic = useCallback(() => {
-    if (micActive) {
+    if (voiceStatus === 'listening' || voiceStatus === 'starting') {
       stopListening()
-      setMicActive(false)
     } else {
       startListening()
-      setMicActive(true)
     }
-  }, [micActive, startListening, stopListening])
+  }, [voiceStatus, startListening, stopListening])
 
   return (
     <div data-theme="dark" className="fixed inset-0 bg-black">
@@ -309,7 +310,7 @@ export function SessionScreen() {
           "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
           hudFaded && "opacity-20"
         )}>
-          <MicButton active={micActive} hint={hint} onClick={handleToggleMic} />
+          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
         </div>
       )}
 
@@ -320,7 +321,7 @@ export function SessionScreen() {
           hudFaded && "opacity-20"
         )}>
           <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
-          <MicButton active={micActive} hint={hint} onClick={handleToggleMic} />
+          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
         </div>
       )}
 
@@ -395,14 +396,18 @@ export function SessionScreen() {
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleToggleMic}
+              aria-label="Sprachsteuerung umschalten"
               className={cn(
                 'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
-                micActive
+                voiceStatus === 'listening'
                   ? 'bg-background/75 border border-white/25 text-white'
-                  : 'bg-sapphire/80 text-white hover:bg-sapphire',
+                  : voiceStatus === 'error' || voiceStatus === 'unsupported'
+                    // Kein Rot: Amber lädt zum Antippen (Neustart per Geste) ein.
+                    ? 'bg-amber-500/85 text-amber-950'
+                    : 'bg-sapphire/80 text-white hover:bg-sapphire',
               )}
             >
-              {micActive ? '🎤' : '🔇'}
+              {voiceStatus === 'listening' ? '🎤' : voiceStatus === 'error' || voiceStatus === 'unsupported' ? '⚠️' : '🔇'}
             </button>
 
             {phase === 'ready-to-calibrate' && (
@@ -438,19 +443,41 @@ function PhoneButton({ onClick, children, primary }: { onClick: () => void; chil
   )
 }
 
-function MicButton({ active, hint, onClick }: { active: boolean; hint: string; onClick: () => void }) {
+function MicButton({
+  status,
+  error,
+  hint,
+  onClick,
+}: {
+  status: VoiceStatus
+  error: string | null
+  hint: string
+  onClick: () => void
+}) {
+  // Beobachtbarer Zustand statt blindem „aktiv" — ein stiller Ausfall wird sichtbar.
+  const label =
+    status === 'listening' ? `🎤 ${hint}`
+    : status === 'starting' ? '🎤 startet …'
+    : status === 'error' || status === 'unsupported' ? `🎤 ${error ?? 'Mikro aus — tippen'}`
+    : '🎤 Aus — tippen zum Aktivieren'
+
+  const isProblem = status === 'error' || status === 'unsupported'
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        'px-4 py-2 rounded-lg text-xs font-medium transition-all',
+        'px-4 py-2 rounded-lg text-xs font-medium transition-all max-w-[min(80vw,420px)] truncate',
         'backdrop-blur text-white active:scale-95',
-        active
+        status === 'listening'
           ? 'bg-background/75 border border-white/25 text-white hover:bg-background/85'
-          : 'bg-sapphire/80 hover:bg-sapphire',
+          : isProblem
+            // Kein Rot (Feedback-Grundsatz): Amber lädt zum Antippen ein, statt zu tadeln.
+            ? 'bg-amber-500/85 text-amber-950 border border-amber-300/40 hover:bg-amber-500'
+            : 'bg-sapphire/80 hover:bg-sapphire',
       )}
     >
-      {active ? `🎤 ${hint}` : '🎤 Aus'}
+      {label}
     </button>
   )
 }
