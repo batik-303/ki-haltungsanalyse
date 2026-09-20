@@ -315,7 +315,7 @@ export function SessionScreen() {
               'px-4 py-2 rounded-lg text-xs font-medium transition-all',
               'backdrop-blur text-white active:scale-95',
               micActive
-                ? 'bg-background/40 border border-border/50 text-muted-foreground hover:bg-background/60'
+                ? 'bg-background/75 border border-white/25 text-white hover:bg-background/85'
                 : 'bg-sapphire/80 hover:bg-sapphire',
             )}
           >
@@ -331,7 +331,7 @@ export function SessionScreen() {
           hudFaded && "opacity-20"
         )}>
           {phase === 'ready-to-calibrate' && (
-            <FallbackButton onClick={handleArm}>Haltung speichern</FallbackButton>
+            <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
           )}
           {phase === 'tracking' && (
             <>
@@ -405,7 +405,7 @@ export function SessionScreen() {
               className={cn(
                 'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
                 micActive
-                  ? 'bg-background/40 border border-border/50 text-muted-foreground'
+                  ? 'bg-background/75 border border-white/25 text-white'
                   : 'bg-sapphire/80 text-white hover:bg-sapphire',
               )}
             >
@@ -413,7 +413,7 @@ export function SessionScreen() {
             </button>
 
             {phase === 'ready-to-calibrate' && (
-              <PhoneButton onClick={handleArm}>Speichern</PhoneButton>
+              <PhoneButton onClick={handleArm} primary>Speichern</PhoneButton>
             )}
             {phase === 'tracking' && (
               <>
@@ -428,14 +428,16 @@ export function SessionScreen() {
   )
 }
 
-function PhoneButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function PhoneButton({ onClick, children, primary }: { onClick: () => void; children: React.ReactNode; primary?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'px-3 py-3 min-h-[44px] rounded-lg text-xs font-medium transition-all',
-        'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
-        'hover:bg-background/60 hover:text-foreground active:scale-95',
+        'min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
+        primary
+          // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
+          ? 'px-4 py-3 font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
+          : 'px-3 py-3 bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
       )}
     >
       {children}
@@ -443,14 +445,16 @@ function PhoneButton({ onClick, children }: { onClick: () => void; children: Rea
   )
 }
 
-function FallbackButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function FallbackButton({ onClick, children, primary }: { onClick: () => void; children: React.ReactNode; primary?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'px-4 py-2 rounded-lg text-xs font-medium transition-all',
-        'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
-        'hover:bg-background/60 hover:text-foreground',
+        'rounded-lg font-medium transition-all backdrop-blur',
+        primary
+          // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
+          ? 'px-6 py-2.5 text-sm font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90 active:scale-95'
+          : 'px-4 py-2 text-xs bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
       )}
     >
       {children}
