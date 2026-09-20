@@ -60,11 +60,3 @@ export function selectSessionDuration(state: PoseState): string {
   const sec = Math.floor(elapsed % 60)
   return `${min}:${sec.toString().padStart(2, '0')}`
 }
-
-// ── HUD fade: true when tension has been low for sustained period ──
-// Uses flowStreak as proxy — if streak > 2s, tension has been < 5 for 2+ seconds
-export function selectHudFaded(state: PoseState): boolean {
-  if (!state.masterPrint) return false
-  if (!state.sessionActive && !state.masterPrint) return false
-  return state.flowStreak > 2
-}
