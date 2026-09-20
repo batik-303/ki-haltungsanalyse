@@ -1,19 +1,20 @@
 /**
- * Gestuftes Bereitschafts-Tor vor dem Kalibrier-Countdown (Ticket #36).
+ * Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (Ticket #59, Karte #56).
  *
- * Statt eines Sofort-Countdowns (der beim Griff zum Bildschirm die Haltung
- * verschiebt und einen falschen Master-Print speichert) prüft dieses Tor
- * **die Haltung** und nicht *wer ausgelöst hat* — eine Mechanik deckt alle
- * Auslöser ab (Stimme, eigener Klick, Eltern/Lehrer).
+ * Kein Auto-Arm: der Countdown startet **nur auf bewussten Auslöser**
+ * (`requestArm()` — aus Stimme „bereit" / Knopf „Haltung speichern"). Das Tor
+ * ist ein Distanz-Gate: löst man bei nicht passendem Abstand aus, **wartet** es
+ * (sanfte Führung) und feuert **automatisch**, sobald der Abstand passt — kein
+ * erneutes Drücken.
  *
- * Ablauf: positioning → (Distanz ok) → posture → (Spielhaltung kurz gehalten)
- * → holding → armed (→ Countdown auslösen).
+ * Ablauf: idle → (requestArm) → waiting → (distanceOk) → armed (→ Countdown).
  *
- * Bewusste V1-Grenze: **keine echte Geigen-Erkennung**. MediaPipe Pose sieht
- * nur den Körper, keine Objekte. Als Ersatz dient die **Spielhaltung**: der
- * angehobene Unterarm (`computeWristAxisOk`) entsteht praktisch nur mit
- * Instrument oben und ist damit ein guter Indikator. Reine, testbare Logik —
- * kein React, kein DOM.
+ * Die **Spielhaltung** (`computeWristAxisOk`) prüft nicht mehr dieses Tor,
+ * sondern der **Erfassungsmoment** (Snapshot bei 0, siehe `use-calibration`):
+ * sitzt sie dort nicht, wird nichts gespeichert und es lädt sanft neu ein
+ * (weiche Erfassung). Bewusste V1-Grenze: **keine echte Geigen-Erkennung** —
+ * MediaPipe Pose sieht nur den Körper; der angehobene Unterarm ist der Ersatz.
+ * Reine, testbare Logik — kein React, kein DOM.
  */
 
 import type { Landmark } from '../types'
@@ -63,41 +64,45 @@ export function computeWristAxisOk(
   return { ok, elevationDeg, visible }
 }
 
-// ── Bereitschafts-Zustandsmaschine ──────────────────────────────────
+// ── Auslöse-Zustandsmaschine (Distanz-Gate mit Auto-Start) ──────────
 
-export type ReadinessPhase = 'positioning' | 'posture' | 'holding' | 'armed'
+/**
+ * Phasen des Kalibrier-Auslösers (Ticket #59):
+ * - `idle`: ruhig, kein bewusster Auslöser — nur die Distanz-Ampel führt.
+ * - `waiting`: Auslöser kam, aber der Abstand passt noch nicht → sanfte Führung;
+ *   der Countdown startet **automatisch**, sobald `distanceOk`.
+ * - `armed`: scharf — der Countdown feuert (Kante `justArmed`) und bleibt bis
+ *   `reset()` verriegelt.
+ */
+export type ReadinessPhase = 'idle' | 'waiting' | 'armed'
 
 export interface ReadinessInput {
   /** Distanz zur Kamera passt (Store-`distanceOk`). */
   distanceOk: boolean
-  /** Spielhaltung erkannt (`computeWristAxisOk(...).ok`). */
-  wristAxisOk: boolean
   /** Vergangene Zeit seit dem letzten Frame in Millisekunden. */
   dtMs: number
 }
 
 export interface ReadinessState {
   phase: ReadinessPhase
-  /** Bisher gehaltene Zeit in Spielhaltung (ms). */
-  holdMs: number
-  /** Fortschritt zur nötigen Haltezeit, 0..1. */
-  holdProgress: number
-  /** Nur auf der Frame true, in der das Tor scharf wird (Kante). */
+  /** Nur auf der Frame true, in der das Tor scharf wird (Kante → Countdown). */
   justArmed: boolean
-  /** Bereitschaft dauert ungewöhnlich lange — nur Hinweis, **kein** Sperren. */
+  /** Warten auf den Abstand dauert ungewöhnlich lange — Hinweis, **kein** Sperren. */
   timedOut: boolean
 }
 
 export interface ReadinessGateOptions {
-  /** Nötige Haltezeit der Spielhaltung, bis der Countdown startet (~1 s). */
-  holdDurationMs?: number
-  /** Zeit in Bereitschaft ohne Scharfschaltung, ab der `timedOut` meldet. */
+  /** Wartezeit auf den Abstand, ab der `timedOut` sanft auf den Knopf lenkt. */
   timeoutMs?: number
 }
 
-const clamp01 = (v: number): number => Math.max(0, Math.min(1, v))
-
 export interface ReadinessGate {
+  /**
+   * Bewusster Auslöser (Stimme „bereit" / Knopf „Haltung speichern", T4).
+   * Latcht den Wunsch; `update` schaltet scharf, sobald der Abstand passt.
+   * Einmal scharf, ist ein weiterer Aufruf wirkungslos (idempotent bis `reset`).
+   */
+  requestArm(): void
   update(input: ReadinessInput): ReadinessState
   reset(): void
   state(): ReadinessState
@@ -105,35 +110,38 @@ export interface ReadinessGate {
 
 /**
  * Factory mit Closure-Zustand (Projektmuster: als `useRef` im Hook halten,
- * nie in Zustand/Store). `armed` ist verriegelt bis `reset()`, damit ein
- * kurzes Wackeln während des Countdowns die Scharfschaltung nicht aufhebt.
+ * nie in Zustand/Store). Kein Auto-Arm: es passiert nichts ohne `requestArm()`.
+ * `armed` ist verriegelt bis `reset()`, damit ein kurzes Wackeln des Abstands
+ * während des Countdowns die Scharfschaltung nicht aufhebt.
  */
 export function createReadinessGate(options: ReadinessGateOptions = {}): ReadinessGate {
-  const holdDurationMs = options.holdDurationMs ?? 1000
   const timeoutMs = options.timeoutMs ?? 20000
 
-  let phase: ReadinessPhase = 'positioning'
-  let holdMs = 0
-  let sinceReadyMs = 0
+  let phase: ReadinessPhase = 'idle'
+  let armRequested = false
   let armed = false
   let justArmed = false
+  let waitingMs = 0
 
   function snapshot(): ReadinessState {
     return {
       phase,
-      holdMs,
-      holdProgress: clamp01(holdMs / holdDurationMs),
       justArmed,
-      timedOut: !armed && sinceReadyMs >= timeoutMs,
+      timedOut: phase === 'waiting' && waitingMs >= timeoutMs,
     }
   }
 
   function reset(): void {
-    phase = 'positioning'
-    holdMs = 0
-    sinceReadyMs = 0
+    phase = 'idle'
+    armRequested = false
     armed = false
     justArmed = false
+    waitingMs = 0
+  }
+
+  function requestArm(): void {
+    if (armed) return
+    armRequested = true
   }
 
   function update(input: ReadinessInput): ReadinessState {
@@ -143,84 +151,69 @@ export function createReadinessGate(options: ReadinessGateOptions = {}): Readine
       return snapshot()
     }
 
-    if (!input.distanceOk) {
-      phase = 'positioning'
-      holdMs = 0
-      sinceReadyMs = 0
+    // Ruhig, solange kein bewusster Auslöser kam.
+    if (!armRequested) {
+      phase = 'idle'
       justArmed = false
+      waitingMs = 0
       return snapshot()
     }
 
-    sinceReadyMs += input.dtMs
-
-    if (input.wristAxisOk) {
-      holdMs += input.dtMs
-      if (holdMs >= holdDurationMs) {
-        armed = true
-        justArmed = true
-        phase = 'armed'
-      } else {
-        phase = 'holding'
-      }
+    if (input.distanceOk) {
+      // Abstand passt → Countdown feuert von selbst (kein erneutes Drücken).
+      armed = true
+      justArmed = true
+      phase = 'armed'
+      waitingMs = 0
     } else {
-      // Haltung verloren → Haltezeit zurücksetzen (kurz halten, kein Zufall).
-      holdMs = 0
-      phase = 'posture'
+      // Auslöser kam, Abstand noch nicht → warten und sanft führen.
+      phase = 'waiting'
+      justArmed = false
+      waitingMs += input.dtMs
     }
 
     return snapshot()
   }
 
-  return { update, reset, state: snapshot }
+  return { requestArm, update, reset, state: snapshot }
 }
 
-// ── Ansichtsmodell für das Canvas-Rand-Feedback ─────────────────────
+// ── Ansichtsmodell für das Distanz-/Bereitschafts-Feedback ──────────
 
 export interface ReadinessView {
   hint: string
   tone: CalibrationTone
-  /** Ring-/Balken-Füllung 0..1 (Haltezeit-Fortschritt). */
-  progress: number
 }
 
 /**
- * Bildet den Bereitschafts-Zustand auf ein Ansichtsmodell ab. Ehrliche Sprache
- * („Spielhaltung", nie „Geige erkannt") und positive, ermutigende Töne — kein
- * Rot, im Einklang mit der Feedback-Philosophie.
+ * Bildet die Auslöse-Phase auf ein Ansichtsmodell ab. Ehrliche Sprache (nie
+ * „Geige erkannt" — Pose sieht keine Objekte) und positive, ermutigende Töne —
+ * **kein Rot**, im Einklang mit der Feedback-Philosophie.
  *
- * Bei `timedOut` (die Spielhaltung wird ungewöhnlich lange nicht erreicht) lenkt
- * der Hinweis sanft auf den manuellen „Kalibrieren"-Rückfall — kein Druck, kein
- * Einsperren, nur ein freundlicher Ausweg.
+ * Bei `timedOut` (der Abstand passt ungewöhnlich lange nicht) lenkt der Hinweis
+ * sanft auf den Knopf „Haltung speichern" — kein Druck, kein Einsperren, nur ein
+ * freundlicher Ausweg.
  */
 export function computeReadinessView(
-  state: Pick<ReadinessState, 'phase' | 'holdProgress' | 'timedOut'>,
+  state: Pick<ReadinessState, 'phase' | 'timedOut'>,
 ): ReadinessView {
   switch (state.phase) {
-    case 'positioning':
+    case 'idle':
       return {
-        hint: 'Stell dich mittig vor die Kamera',
+        hint: 'Sag „bereit“, wenn du so weit bist',
         tone: 'sapphire',
-        progress: 0,
       }
-    case 'posture':
+    case 'waiting':
       return {
         hint: state.timedOut
-          ? 'Klappt nicht? Tippe unten auf „Kalibrieren“'
-          : 'Jetzt halte dein Instrument in Spielhaltung',
+          ? 'Klappt der Abstand nicht? Tippe auf „Haltung speichern“'
+          : 'Rück dich in den guten Abstand — es startet dann von selbst',
         tone: 'sapphire',
-        progress: 0,
-      }
-    case 'holding':
-      return {
-        hint: 'Super — kurz so halten',
-        tone: 'sapphire',
-        progress: clamp01(state.holdProgress),
       }
     case 'armed':
       return {
         hint: 'Los geht’s',
         tone: 'success',
-        progress: 1,
       }
   }
 }

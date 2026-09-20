@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { usePoseStore } from '../store/pose-store'
 import { createMasterPrint } from '../core/calibration/master-print'
 import { computeShoulderWidth } from '../core/calibration/distance-check'
+import { computeWristAxisOk } from '../core/calibration/readiness-gate'
 import type { Landmark } from '../core/types'
 import { PoseLandmarker, HandLandmarker } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
@@ -43,6 +44,20 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, onCalib
     const store = usePoseStore.getState()
     const canvas = canvasRef?.current
     const aspect = canvas && canvas.height > 0 ? canvas.width / canvas.height : 1
+
+    // Weiche Erfassung (#59): Die Spielhaltung wird nicht mehr vorab als Tor
+    // geprüft, sondern **hier im Erfassungsmoment** (Snapshot bei 0). Sitzt der
+    // angehobene Unterarm nicht (Ersatz für die technisch unmögliche
+    // Geigen-Erkennung), wird **nichts gespeichert** — kein korrupter
+    // MasterPrint. Der Aufrufer lädt daraufhin sanft neu ein („nochmal", ohne
+    // harten Fehler, ohne Wiederholzwang). Nur für Modi mit Instrument-Haltung.
+    if (store.focusMode === 'violin' || store.focusMode === 'wrist') {
+      const elbow = landmarks[13]
+      const wrist = landmarks[15]
+      if (!elbow || !wrist || !computeWristAxisOk(elbow, wrist, aspect).ok) {
+        return { success: false, reason: 'no_posture' }
+      }
+    }
 
     // Wrist mode requires HandLandmarker — see master-print for rationale.
     let handLandmarks: Landmark[] | null = null

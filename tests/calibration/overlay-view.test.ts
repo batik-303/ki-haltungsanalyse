@@ -64,6 +64,13 @@ describe('computeCalibrationView', () => {
       expect(view.hint).toBe('Hand sichtbar ins Bild halten und erneut kalibrieren')
     })
 
+    it('lädt bei fehlender Spielhaltung sanft neu ein (weiche Erfassung, #59)', () => {
+      const view = computeCalibrationView({ kind: 'retry', reason: 'no_posture' })
+      expect(view.hint).toBe('Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“')
+      expect(view.tone).toBe('amber')
+      expect(view.ctaAction).toBe('recalibrate')
+    })
+
     it('gibt sonst einen allgemeinen, ermutigenden Hinweis', () => {
       expect(computeCalibrationView({ kind: 'retry', reason: 'no_pose' }).hint).toBe(
         'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
