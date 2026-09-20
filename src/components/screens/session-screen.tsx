@@ -8,11 +8,11 @@ import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
-import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
+import { selectSessionPhase, selectPhaseHint } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
 import { Home } from 'lucide-react'
-import type { StoredSession } from '@/core/types'
+import type { StoredSession, ViewMode } from '@/core/types'
 import { cn } from '@/lib/utils'
 
 const MODE_LABELS: Record<string, string> = {
@@ -28,13 +28,15 @@ export function SessionScreen() {
   const focusMode = usePoseStore((s) => s.focusMode)
   const phase = usePoseStore(selectSessionPhase)
   const hint = usePoseStore(selectPhaseHint)
-  const duration = usePoseStore(selectSessionDuration)
-  const tensionScore = usePoseStore((s) => s.tensionScore)
-  const statusColor = usePoseStore(selectStatusColor)
   const goToResults = usePoseStore((s) => s.goToResults)
   const goHome = usePoseStore((s) => s.goHome)
   const viewMode = usePoseStore((s) => s.viewMode)
-  const hudFaded = usePoseStore(selectHudFaded)
+  // Die HUD wird NICHT mehr an die Haltung gekoppelt aus-/eingeblendet: das
+  // koppelte das Sichtbarwerden an eine zappelnde Spannungs-Kennzahl und flackerte
+  // beim Spielen. Stattdessen ist die Steuerung immer sichtbar — im Analyse-Modus
+  // farbig, im Flow-Modus bewusst diskret (weißer Text, ohne Farbe), damit die
+  // periphere Ansicht ruhig bleibt und „Beenden" trotzdem jederzeit greifbar ist.
+  const isFlow = viewMode === 'flow'
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
@@ -150,6 +152,14 @@ export function SessionScreen() {
     goHome()
   }, [stopTracking, goHome])
 
+  // Ansicht umschalten: Analyse (volles Bild + Skelett) ⇄ Flow (ruhige, ambiente
+  // Ansicht). Bisher nur per Sprache („flow"/„analyse") erreichbar — jetzt auch als
+  // sichtbarer Knopf, damit der Flow-Modus überhaupt auffindbar ist.
+  const handleToggleView = useCallback(() => {
+    const store = usePoseStore.getState()
+    store.setViewMode(store.viewMode === 'flow' ? 'analyse' : 'flow')
+  }, [])
+
   const voiceCommands: VoiceCommandMap = useMemo(() => ({
     // #59: „kalibrieren"/„bereit" armiert das Distanz-Gate (kein Sofort-
     // Countdown). #58: der „start"-Befehl entfällt — es gibt keinen Start-Schritt.
@@ -249,10 +259,7 @@ export function SessionScreen() {
           ═══════════════════════════════════════════ */}
 
       {/* HUD: Home-Abbruch + Mode badge — top left */}
-      <div className={cn(
-        "hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
-        hudFaded && "opacity-20"
-      )}>
+      <div className="hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10">
         <button
           onClick={handleAbort}
           aria-label="Hauptmenü"
@@ -270,71 +277,42 @@ export function SessionScreen() {
         </Badge>
       </div>
 
-      {/* HUD: Session timer — top right */}
-      {phase === 'tracking' && (
-        <div className={cn(
-          "hidden sm:block absolute top-[clamp(8px,2vh,16px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
-          hudFaded && "opacity-20"
-        )}>
-          <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur font-mono tabular-nums">
-            {duration}
-          </Badge>
-        </div>
-      )}
-
-      {/* HUD: Tension bar — bottom left */}
-      {!calState && phase === 'tracking' && (
-        <div className={cn(
-          "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] left-[clamp(8px,2vh,16px)] z-10 w-[clamp(160px,20vw,192px)] transition-opacity duration-700",
-          hudFaded && "opacity-20"
-        )}>
-          <div className="bg-background/60 backdrop-blur rounded-lg px-3 py-2">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Spannung</span>
-              <span className="font-mono tabular-nums">{Math.round(tensionScore)}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: `${Math.min(tensionScore, 100)}%`,
-                  backgroundColor: statusColor,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HUD: Mikrofon-Hinweis — im Tracking unten rechts */}
-      {!calState && phase === 'tracking' && (
-        <div className={cn(
-          "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
-          hudFaded && "opacity-20"
-        )}>
-          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
-        </div>
-      )}
+      {/* Timer & Spannungsleiste bewusst entfernt: der Timer stresst und widerspricht
+          der ruhigen Philosophie (Übungsdauer erscheint stattdessen am Ende auf der
+          Ergebnis-Seite). Die Spannung führt ohnehin der Canvas selbst über Glühen/
+          Farbe — die Prozentleiste war redundant. */}
 
       {/* HUD: Einstieg — zentrierter Stapel: Gold-Knopf oben, Sprach-Hinweis darunter */}
       {!calState && phase === 'ready-to-calibrate' && (
-        <div className={cn(
-          "hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10 transition-opacity duration-300",
-          hudFaded && "opacity-20"
-        )}>
+        <div className="hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10">
           <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
           <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
         </div>
       )}
 
-      {/* HUD: Tracking-Steuerung — bottom center */}
+      {/* HUD: Tracking-Steuerung — zentrierter Stapel: [Beenden] [Flow⇄Analyse] oben,
+          Sprach-Hinweis mittig darunter (analog zum Einstieg-Stapel). „Neu kalibrieren"
+          entfällt in V0.1 (bleibt per Sprache „neu" erreichbar); Home liegt oben links. */}
       {!calState && phase === 'tracking' && (
-        <div className={cn(
-          "hidden sm:flex absolute bottom-[clamp(8px,2vh,16px)] left-1/2 -translate-x-1/2 z-10 gap-3 transition-opacity duration-300",
-          hudFaded && "opacity-20"
-        )}>
-          <FallbackButton onClick={handleStop}>Stop</FallbackButton>
-          <FallbackButton onClick={handleRecalibrate}>Neu kalibrieren</FallbackButton>
+        <div className="hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10">
+          <div className="flex items-center gap-3">
+            {isFlow ? (
+              // Flow-Modus: diskrete, farblose Kärtchen (nur weißer Text), damit die
+              // periphere Ansicht ruhig bleibt. Statt des segmentierten Umschalters
+              // ein schlichter Rückweg „Analyse".
+              <>
+                <FallbackButton onClick={handleStop} discreet>Beenden</FallbackButton>
+                <FallbackButton onClick={handleToggleView} discreet>Analyse</FallbackButton>
+              </>
+            ) : (
+              // Analyse-Modus: farbige Hauptaktion + segmentierter Ansicht-Umschalter.
+              <>
+                <FallbackButton onClick={handleStop} primary>Beenden</FallbackButton>
+                <ViewToggle viewMode={viewMode} onToggle={handleToggleView} />
+              </>
+            )}
+          </div>
+          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
         </div>
       )}
 
@@ -342,11 +320,8 @@ export function SessionScreen() {
           PHONE HUD (<480px)
           ═══════════════════════════════════════════ */}
 
-      {/* Top bar: Mode badge + Timer */}
-      <div className={cn(
-        "sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2",
-        hudFaded && "opacity-20"
-      )}>
+      {/* Top bar: Home + Mode badge */}
+      <div className="sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2">
         <div className="flex items-center gap-2">
           <button
             onClick={handleAbort}
@@ -362,39 +337,16 @@ export function SessionScreen() {
             {MODE_LABELS[focusMode] ?? focusMode}
           </Badge>
         </div>
-        {phase === 'tracking' && (
-          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur font-mono tabular-nums">
-            {duration}
-          </Badge>
-        )}
       </div>
 
-      {/* Bottom bar: Tension + Controls — Kalibrierung läuft im Overlay */}
+      {/* Bottom bar: Controls — Kalibrierung läuft im Overlay */}
       {!calState && (phase === 'ready-to-calibrate' || phase === 'tracking') && (
         <div className={cn(
-          "sm:hidden absolute bottom-0 left-0 right-0 z-10 flex flex-row items-center gap-2 bg-surface/80 p-2 pb-safe backdrop-blur transition-all duration-300",
-          hudFaded && "opacity-15"
+          "sm:hidden absolute bottom-0 left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
+          // Flow-Modus: keine Balken-Fläche, nur schwebende diskrete Knöpfe (ruhig).
+          !isFlow && "bg-surface/80 backdrop-blur",
         )}>
-          {/* Compact tension bar */}
-          {phase === 'tracking' && (
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
-                <span className="shrink-0">Spannung</span>
-                <span className="font-mono tabular-nums">{Math.round(tensionScore)}%</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(tensionScore, 100)}%`,
-                    backgroundColor: statusColor,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Controls */}
+          {/* Controls — Spannungsleiste bewusst entfernt (Canvas führt) */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleToggleMic}
@@ -417,8 +369,20 @@ export function SessionScreen() {
             )}
             {phase === 'tracking' && (
               <>
-                <PhoneButton onClick={handleStop}>Stop</PhoneButton>
-                <PhoneButton onClick={handleRecalibrate}>↻</PhoneButton>
+                {/* Flow-Modus: diskretes, farbloses „Beenden" + Rückweg „Analyse"
+                    (weißer Text). Analyse-Modus: farbiger CTA + Umschalt-Icon. */}
+                <PhoneButton onClick={handleStop} primary={!isFlow} discreet={isFlow}>Beenden</PhoneButton>
+                {isFlow ? (
+                  <PhoneButton onClick={handleToggleView} discreet>Analyse</PhoneButton>
+                ) : (
+                <button
+                  onClick={handleToggleView}
+                  aria-label="Zur Flow-Ansicht wechseln"
+                  className="min-h-[44px] px-2.5 rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95 bg-sapphire/80 text-white hover:bg-sapphire"
+                >
+                  🌊
+                </button>
+                )}
               </>
             )}
           </div>
@@ -428,13 +392,16 @@ export function SessionScreen() {
   )
 }
 
-function PhoneButton({ onClick, children, primary }: { onClick: () => void; children: React.ReactNode; primary?: boolean }) {
+function PhoneButton({ onClick, children, primary, discreet }: { onClick: () => void; children: React.ReactNode; primary?: boolean; discreet?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
         'min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
-        primary
+        discreet
+          // Flow-Modus: farbloses, diskretes Kärtchen — nur weißer Text
+          ? 'px-4 py-3 bg-white/10 border border-white/25 text-white hover:bg-white/20'
+          : primary
           // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
           ? 'px-4 py-3 font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
           : 'px-3 py-3 bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
@@ -442,6 +409,39 @@ function PhoneButton({ onClick, children, primary }: { onClick: () => void; chil
     >
       {children}
     </button>
+  )
+}
+
+// Segmentierter Ansicht-Umschalter (Desktop/Tablet): der aktive Modus ist in Saphir
+// hervorgehoben. Ein Klick auf das inaktive Segment schaltet um; der aktive tut nichts.
+function ViewToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () => void }) {
+  return (
+    <div className="flex items-center rounded-lg overflow-hidden backdrop-blur border border-sapphire/40 text-xs font-medium">
+      <button
+        onClick={() => viewMode !== 'analyse' && onToggle()}
+        aria-pressed={viewMode === 'analyse'}
+        className={cn(
+          'px-3 py-2 transition-all active:scale-95',
+          viewMode === 'analyse'
+            ? 'bg-sapphire text-white'
+            : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
+        )}
+      >
+        Analyse
+      </button>
+      <button
+        onClick={() => viewMode !== 'flow' && onToggle()}
+        aria-pressed={viewMode === 'flow'}
+        className={cn(
+          'px-3 py-2 transition-all active:scale-95',
+          viewMode === 'flow'
+            ? 'bg-sapphire text-white'
+            : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
+        )}
+      >
+        Flow
+      </button>
+    </div>
   )
 }
 
@@ -484,15 +484,18 @@ function MicButton({
   )
 }
 
-function FallbackButton({ onClick, children, primary }: { onClick: () => void; children: React.ReactNode; primary?: boolean }) {
+function FallbackButton({ onClick, children, primary, discreet }: { onClick: () => void; children: React.ReactNode; primary?: boolean; discreet?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'rounded-lg font-medium transition-all backdrop-blur',
-        primary
+        'rounded-lg font-medium transition-all backdrop-blur active:scale-95',
+        discreet
+          // Flow-Modus: farbloses, diskretes Kärtchen — nur weißer Text, gleiche Form
+          ? 'px-6 py-2.5 text-sm bg-white/10 border border-white/25 text-white hover:bg-white/20'
+          : primary
           // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
-          ? 'px-6 py-2.5 text-sm font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90 active:scale-95'
+          ? 'px-6 py-2.5 text-sm font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
           : 'px-4 py-2 text-xs bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
       )}
     >
