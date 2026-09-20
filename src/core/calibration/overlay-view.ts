@@ -10,7 +10,7 @@
  */
 
 /** Warum ein Kalibrier-Versuch nicht gespeichert werden konnte. */
-export type CalibrationFailureReason = 'no_pose' | 'no_hand'
+export type CalibrationFailureReason = 'no_pose' | 'no_hand' | 'no_posture'
 
 /** Zustände, die das Overlay tragen muss. `idle` = Overlay ausgeblendet. */
 export type CalibrationPhase =
@@ -74,7 +74,9 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
         hint:
           phase.reason === 'no_hand'
             ? 'Hand sichtbar ins Bild halten und erneut kalibrieren'
-            : 'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
+            : phase.reason === 'no_posture'
+              ? 'Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“'
+              : 'Haltung noch nicht erkannt — ruhig hinstellen und erneut kalibrieren',
         glyph: '↻',
         tone: 'amber',
         progress: 1,

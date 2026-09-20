@@ -13,7 +13,7 @@ import { createMovingAverage } from '../core/signal/smoothing'
 import { createOneEuroFilter } from '../core/signal/one-euro-filter'
 import { computeTension } from '../core/signal/tension'
 import { computeShoulderWidth, checkDistance } from '../core/calibration/distance-check'
-import { createReadinessGate, computeWristAxisOk } from '../core/calibration/readiness-gate'
+import { createReadinessGate } from '../core/calibration/readiness-gate'
 import { createSessionTracker } from '../core/session/session-tracker'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
@@ -100,8 +100,8 @@ export function usePoseDetection(
   // Last analysis path used in the wrist branch (for transition smoothing).
   const lastAnalysisPathRef = useRef<'hand' | 'pose-fallback' | null>(null)
 
-  // Bereitschafts-Tor vor dem Countdown (#36). Reine Zustandsmaschine als
-  // useRef (Triple-State: Analyse-Zustand nie in Zustand/Store).
+  // Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59). Reine Zustandsmaschine
+  // als useRef (Triple-State: Analyse-Zustand nie in Zustand/Store).
   const readinessGateRef = useRef(createReadinessGate())
 
   const resetAnalysisState = useCallback(() => {
@@ -119,7 +119,7 @@ export function usePoseDetection(
     angleDiffEmaRef.current = 0
     lastAnalysisPathRef.current = null
     readinessGateRef.current.reset()
-    usePoseStore.getState().setReadiness('positioning', 0, false)
+    usePoseStore.getState().setReadiness('idle', false)
     usePoseStore.getState().setReadinessArmed(false)
     const mode = usePoseStore.getState().focusMode
     sessionRef.current = createSessionTracker(mode)
@@ -297,29 +297,21 @@ export function usePoseDetection(
           usePoseStore.setState({ distanceOk: distOk })
         }
 
-        // ── Bereitschafts-Tor vor dem Countdown (#36) ──
-        // Nur vor der Kalibrierung und nur für Modi mit Instrument-Spielhaltung
-        // (violin/wrist). Die Achse ersetzt die technisch unmögliche
-        // Geigen-Erkennung: der angehobene Unterarm zeigt die Spielhaltung.
-        if (
-          !store.masterPrint &&
-          !store.isCalibrating &&
-          (store.focusMode === 'violin' || store.focusMode === 'wrist')
-        ) {
-          const elbow = landmarks[13]!
-          const wristLm = landmarks[15]!
-          const axis = computeWristAxisOk(elbow, wristLm, aspect)
+        // ── Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59) ──
+        // Kein Auto-Arm mehr: das Tor feuert nur, wenn zuvor bewusst ausgelöst
+        // wurde (`requestArm` via `armReadiness`). Es reicht die Distanz durch
+        // und schaltet scharf, sobald der Abstand passt. Die Spielhaltung wird
+        // erst im Erfassungsmoment geprüft (siehe use-calibration).
+        if (!store.masterPrint && !store.isCalibrating) {
           const readiness = readinessGateRef.current.update({
             distanceOk: distOk,
-            wristAxisOk: axis.ok,
             dtMs: dt * 1000,
           })
           if (
             readiness.phase !== store.readinessPhase ||
-            readiness.timedOut !== store.readinessTimedOut ||
-            Math.abs(readiness.holdProgress - store.readinessHoldProgress) > 0.02
+            readiness.timedOut !== store.readinessTimedOut
           ) {
-            usePoseStore.getState().setReadiness(readiness.phase, readiness.holdProgress, readiness.timedOut)
+            usePoseStore.getState().setReadiness(readiness.phase, readiness.timedOut)
           }
           if (readiness.justArmed) {
             usePoseStore.getState().setReadinessArmed(true)
@@ -632,11 +624,16 @@ export function usePoseDetection(
         if (store.distanceOk) {
           usePoseStore.setState({ distanceOk: false })
         }
-        // Bereitschafts-Tor zurücksetzen, solange noch nicht kalibriert (#36).
+        // Auslöse-Tor weiterführen, solange noch nicht kalibriert (#59). Ohne
+        // Körper gilt der Abstand als nicht ok → ein bewusster Auslöser wartet
+        // ruhig weiter (waiting), ohne Körper bleibt es idle.
         if (!store.masterPrint && !store.isCalibrating) {
-          readinessGateRef.current.update({ distanceOk: false, wristAxisOk: false, dtMs: dt * 1000 })
-          if (store.readinessPhase !== 'positioning') {
-            usePoseStore.getState().setReadiness('positioning', 0, false)
+          const readiness = readinessGateRef.current.update({ distanceOk: false, dtMs: dt * 1000 })
+          if (
+            readiness.phase !== store.readinessPhase ||
+            readiness.timedOut !== store.readinessTimedOut
+          ) {
+            usePoseStore.getState().setReadiness(readiness.phase, readiness.timedOut)
           }
         }
         renderFrame(ctx, canvas.width, canvas.height, now, null, dt, handLandmarksRef.current)
@@ -656,5 +653,12 @@ export function usePoseDetection(
     return sessionRef.current.stop()
   }, [])
 
-  return { resetAnalysisState, landmarkerRef, handLandmarkerRef, startTracking, stopTracking }
+  // Bewusster Kalibrier-Auslöser (#59): Stimme „bereit" / Knopf „Haltung
+  // speichern" (T4) rufen dies auf. Latcht den Wunsch im Auslöse-Tor; der
+  // Countdown feuert automatisch, sobald der Abstand passt (Distanz-Gate).
+  const armReadiness = useCallback(() => {
+    readinessGateRef.current.requestArm()
+  }, [])
+
+  return { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, startTracking, stopTracking }
 }

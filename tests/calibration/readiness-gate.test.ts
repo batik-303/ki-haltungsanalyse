@@ -2,113 +2,116 @@ import { describe, expect, it } from 'vitest'
 import { createReadinessGate } from '../../src/core/calibration/readiness-gate'
 
 /**
- * Ticket #36: Gestuftes Bereitschafts-Tor vor dem Countdown.
+ * Ticket #59 (Karte #56): Kern-Auslöselogik neu ausgerichtet.
  *
- * Ablauf (reine Zustandsmaschine, per Frame gefüttert):
- *   positioning → (Distanz ok) → posture → (Spielhaltung kurz gehalten)
- *   → holding → armed (→ Countdown auslösen).
+ * Kein Auto-Arm mehr: der Countdown startet **nur auf bewussten Auslöser**
+ * (`requestArm()` — aus Stimme „bereit" / Knopf „Haltung speichern", T4). Das
+ * Tor ist ein **Distanz-Gate mit Auto-Start**:
+ *   idle → (requestArm) → waiting (Abstand passt nicht, sanfte Führung)
+ *        → (distanceOk) → armed (Countdown feuert von selbst, kein erneutes
+ *          Drücken).
  *
- * Grundsätze: kurz halten (kein Zufalls-Treffer), kein Einsperren (Timeout
- * meldet nur, sperrt nicht), armed ist verriegelt bis `reset()`.
+ * Grundsätze: ruhig (keine Uhr, kein Halten), kein Einsperren (Timeout meldet
+ * nur, sperrt nicht), armed ist verriegelt bis `reset()`. Die Spielhaltung
+ * (`wristAxisOk`) prüft nicht mehr dieses Tor, sondern der Erfassungsmoment.
  */
 describe('createReadinessGate', () => {
-  const opts = { holdDurationMs: 1000, timeoutMs: 5000 }
+  const opts = { timeoutMs: 5000 }
 
-  it('startet im Zustand positioning', () => {
+  it('startet im Zustand idle — ruhig, ohne Auslöser', () => {
     const gate = createReadinessGate(opts)
     const s = gate.state()
-    expect(s.phase).toBe('positioning')
-    expect(s.holdMs).toBe(0)
+    expect(s.phase).toBe('idle')
+    expect(s.justArmed).toBe(false)
+    expect(s.timedOut).toBe(false)
+  })
+
+  it('bleibt idle, solange kein bewusster Auslöser kam — auch bei passendem Abstand', () => {
+    const gate = createReadinessGate(opts)
+    const s = gate.update({ distanceOk: true, dtMs: 500 })
+    expect(s.phase).toBe('idle')
     expect(s.justArmed).toBe(false)
   })
 
-  it('bleibt in positioning, solange die Distanz nicht passt — auch bei guter Haltung', () => {
+  it('feuert bei bewusstem Auslöser + passendem Abstand sofort (justArmed nur auf der Kante)', () => {
     const gate = createReadinessGate(opts)
-    const s = gate.update({ distanceOk: false, wristAxisOk: true, dtMs: 500 })
-    expect(s.phase).toBe('positioning')
-    expect(s.holdMs).toBe(0)
-  })
-
-  it('wechselt bei guter Distanz ohne Spielhaltung nach posture', () => {
-    const gate = createReadinessGate(opts)
-    const s = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 500 })
-    expect(s.phase).toBe('posture')
-    expect(s.holdMs).toBe(0)
-  })
-
-  it('sammelt Haltezeit in holding und zeigt anteiligen Fortschritt', () => {
-    const gate = createReadinessGate(opts)
-    const s = gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
-    expect(s.phase).toBe('holding')
-    expect(s.holdMs).toBe(500)
-    expect(s.holdProgress).toBeCloseTo(0.5)
-    expect(s.justArmed).toBe(false)
-  })
-
-  it('scharf (armed) erst, wenn die Haltezeit erreicht ist — justArmed nur auf der Übergangs-Frame', () => {
-    const gate = createReadinessGate(opts)
-    gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
-    const armed = gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
+    gate.requestArm()
+    const armed = gate.update({ distanceOk: true, dtMs: 16 })
     expect(armed.phase).toBe('armed')
     expect(armed.justArmed).toBe(true)
-    expect(armed.holdProgress).toBe(1)
 
-    const next = gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
+    const next = gate.update({ distanceOk: true, dtMs: 16 })
     expect(next.phase).toBe('armed')
     expect(next.justArmed).toBe(false)
   })
 
-  it('setzt die Haltezeit zurück, wenn die Spielhaltung mittendrin verloren geht', () => {
+  it('wartet bei bewusstem Auslöser ohne passenden Abstand — kein Feuern', () => {
     const gate = createReadinessGate(opts)
-    gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
-    const lost = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 100 })
-    expect(lost.phase).toBe('posture')
-    expect(lost.holdMs).toBe(0)
+    gate.requestArm()
+    const s = gate.update({ distanceOk: false, dtMs: 500 })
+    expect(s.phase).toBe('waiting')
+    expect(s.justArmed).toBe(false)
   })
 
-  it('fällt nach positioning zurück, wenn die Distanz mittendrin verloren geht', () => {
+  it('startet den Countdown automatisch, sobald der Abstand passt — kein erneutes Drücken', () => {
     const gate = createReadinessGate(opts)
-    gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 500 })
-    const lost = gate.update({ distanceOk: false, wristAxisOk: true, dtMs: 100 })
-    expect(lost.phase).toBe('positioning')
-    expect(lost.holdMs).toBe(0)
+    gate.requestArm()
+    expect(gate.update({ distanceOk: false, dtMs: 500 }).phase).toBe('waiting')
+    expect(gate.update({ distanceOk: false, dtMs: 500 }).phase).toBe('waiting')
+    const armed = gate.update({ distanceOk: true, dtMs: 500 })
+    expect(armed.phase).toBe('armed')
+    expect(armed.justArmed).toBe(true)
   })
 
-  it('verriegelt armed bis reset() — kein Un-Arm durch verlorene Haltung', () => {
+  it('verriegelt armed bis reset() — verlorener Abstand hebt die Scharfschaltung nicht auf', () => {
     const gate = createReadinessGate(opts)
-    gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 1000 })
-    const wobble = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 100 })
+    gate.requestArm()
+    gate.update({ distanceOk: true, dtMs: 16 })
+    const wobble = gate.update({ distanceOk: false, dtMs: 100 })
     expect(wobble.phase).toBe('armed')
     expect(wobble.justArmed).toBe(false)
+  })
 
+  it('ignoriert weitere Auslöser, solange bereits scharf (idempotent)', () => {
+    const gate = createReadinessGate(opts)
+    gate.requestArm()
+    const first = gate.update({ distanceOk: true, dtMs: 16 })
+    expect(first.justArmed).toBe(true)
+    gate.requestArm()
+    const again = gate.update({ distanceOk: true, dtMs: 16 })
+    expect(again.justArmed).toBe(false)
+  })
+
+  it('reset() bringt zurück nach idle und verwirft den Auslöse-Wunsch', () => {
+    const gate = createReadinessGate(opts)
+    gate.requestArm()
+    gate.update({ distanceOk: true, dtMs: 16 })
     gate.reset()
-    expect(gate.state().phase).toBe('positioning')
-    expect(gate.state().holdMs).toBe(0)
+    const s = gate.state()
+    expect(s.phase).toBe('idle')
+    // Nach reset feuert ein alter Wunsch nicht nach:
+    const after = gate.update({ distanceOk: true, dtMs: 16 })
+    expect(after.phase).toBe('idle')
+    expect(after.justArmed).toBe(false)
   })
 
-  it('meldet einen Timeout, ohne zu sperren (kein Einsperren)', () => {
+  it('meldet einen Timeout beim Warten auf den Abstand, ohne zu sperren', () => {
     const gate = createReadinessGate(opts)
-    // Distanz ok, aber Haltung nie erreicht → Timeout nach 5000 ms.
-    let s = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 3000 })
+    gate.requestArm()
+    let s = gate.update({ distanceOk: false, dtMs: 3000 })
     expect(s.timedOut).toBe(false)
-    s = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 3000 })
+    s = gate.update({ distanceOk: false, dtMs: 3000 })
     expect(s.timedOut).toBe(true)
-    // Trotz Timeout weiterhin bedienbar: gute Haltung führt weiter Richtung armed.
-    s = gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 1000 })
+    // Trotz Timeout weiter bedienbar: sobald der Abstand passt, feuert es.
+    s = gate.update({ distanceOk: true, dtMs: 500 })
     expect(s.phase).toBe('armed')
+    expect(s.justArmed).toBe(true)
   })
 
-  it('setzt den Timeout-Zähler zurück, wenn die Distanz verloren geht', () => {
+  it('meldet keinen Timeout im idle (ohne Auslöser läuft keine Wartezeit)', () => {
     const gate = createReadinessGate(opts)
-    gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 4000 })
-    gate.update({ distanceOk: false, wristAxisOk: false, dtMs: 1000 })
-    const s = gate.update({ distanceOk: true, wristAxisOk: false, dtMs: 2000 })
+    const s = gate.update({ distanceOk: false, dtMs: 99999 })
+    expect(s.phase).toBe('idle')
     expect(s.timedOut).toBe(false)
-  })
-
-  it('begrenzt den Fortschritt auf 1, auch bei Überlauf der Haltezeit', () => {
-    const gate = createReadinessGate(opts)
-    const s = gate.update({ distanceOk: true, wristAxisOk: true, dtMs: 9999 })
-    expect(s.holdProgress).toBe(1)
   })
 })

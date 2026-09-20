@@ -38,7 +38,7 @@ export function SessionScreen() {
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
-  const { resetAnalysisState, landmarkerRef, handLandmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
+  const { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
   const { startCountdown } = useCalibration({
     videoRef,
@@ -47,6 +47,9 @@ export function SessionScreen() {
     onCalibrated: resetAnalysisState,
   })
 
+  // Interner Countdown-Läufer. Wird **nicht** direkt vom Nutzer aufgerufen,
+  // sondern vom Auslöse-Tor (`readinessArmed`-Effekt), sobald der bewusste
+  // Auslöser + der passende Abstand zusammenkommen (#59).
   const handleCalibrate = useCallback(() => {
     const landmarker = landmarkerRef.current
     if (!landmarker) return
@@ -57,10 +60,25 @@ export function SessionScreen() {
       3,
       landmarker,
       (remaining) => setCalState({ kind: 'counting', count: remaining }),
-      (success, reason) =>
-        setCalState(success ? { kind: 'success' } : { kind: 'retry', reason }),
+      (success, reason) => {
+        if (success) {
+          setCalState({ kind: 'success' })
+        } else {
+          // Weiche Erfassung (#59): nichts gespeichert → Tor zurück auf idle,
+          // damit der Nutzer ruhig neu auslösen kann (kein Wiederholzwang).
+          resetAnalysisState()
+          setCalState({ kind: 'retry', reason })
+        }
+      },
     )
-  }, [landmarkerRef, startCountdown])
+  }, [landmarkerRef, startCountdown, resetAnalysisState])
+
+  // Bewusster Kalibrier-Auslöser (#59): „bereit"/„Haltung speichern" (T4) und
+  // der Rückfall-Knopf laufen hierüber. Kein Sofort-Countdown mehr — das
+  // Distanz-Gate feuert automatisch, sobald der Abstand passt.
+  const handleArm = useCallback(() => {
+    armReadiness()
+  }, [armReadiness])
 
   const handleStart = useCallback(() => {
     const store = usePoseStore.getState()
@@ -135,13 +153,13 @@ export function SessionScreen() {
   }, [stopTracking, goHome])
 
   const voiceCommands: VoiceCommandMap = useMemo(() => ({
-    kalibrieren: handleCalibrate,
+    kalibrieren: handleArm,
     start: handleStart,
     stop: handleStop,
     neu: handleRecalibrate,
     flow: () => usePoseStore.getState().setViewMode('flow'),
     analyse: () => usePoseStore.getState().setViewMode('analyse'),
-  }), [handleCalibrate, handleStart, handleStop, handleRecalibrate])
+  }), [handleArm, handleStart, handleStop, handleRecalibrate])
 
   const { startListening, stopListening } = useVoiceCommands(voiceCommands, true)
   const [micActive, setMicActive] = useState(false)
@@ -153,10 +171,10 @@ export function SessionScreen() {
     setMicActive(true)
   }, [startListening])
 
-  // Bereitschafts-Tor scharf (#36): sobald Distanz + Spielhaltung kurz gehalten
-  // wurden, startet der Countdown automatisch — deckt alle Auslöser ab (Stimme,
-  // eigener Klick, Eltern/Lehrer). Die Kante wird sofort quittiert, damit sie
-  // nur einmal feuert; der manuelle „Kalibrieren"-Button bleibt als Rückfall.
+  // Auslöse-Tor scharf (#59): der Countdown startet, sobald der bewusste
+  // Auslöser (via `handleArm`) mit passendem Abstand zusammenkommt — das
+  // Distanz-Gate hat schon gewartet, hier fällt nur noch die Kante. Sie wird
+  // sofort quittiert, damit sie nur einmal feuert.
   useEffect(() => {
     if (!readinessArmed) return
     setReadinessArmed(false)
@@ -200,7 +218,7 @@ export function SessionScreen() {
           phase={calState}
           modeLabel={MODE_LABELS[focusMode] ?? focusMode}
           onStart={handleStart}
-          onRecalibrate={handleCalibrate}
+          onRecalibrate={() => { setCalState(null); handleArm() }}
         />
       )}
 
@@ -300,7 +318,7 @@ export function SessionScreen() {
           hudFaded && "opacity-20"
         )}>
           {phase === 'ready-to-calibrate' && (
-            <FallbackButton onClick={handleCalibrate}>Kalibrieren</FallbackButton>
+            <FallbackButton onClick={handleArm}>Kalibrieren</FallbackButton>
           )}
           {phase === 'ready-to-start' && (
             <>
@@ -388,7 +406,7 @@ export function SessionScreen() {
             </button>
 
             {phase === 'ready-to-calibrate' && (
-              <PhoneButton onClick={handleCalibrate}>Kalibrieren</PhoneButton>
+              <PhoneButton onClick={handleArm}>Kalibrieren</PhoneButton>
             )}
             {phase === 'ready-to-start' && (
               <>
