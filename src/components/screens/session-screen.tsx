@@ -162,11 +162,9 @@ export function SessionScreen() {
   const { startListening, stopListening, status: voiceStatus, error: voiceError } = useVoiceCommands(voiceCommands, true)
   const [calState, setCalState] = useState<CalibrationPhase | null>(null)
 
-  // Auto-start mic on mount — runs after first user interaction (camera permission).
-  // Der sichtbare Zustand kommt jetzt aus `voiceStatus` (nicht mehr optimistisch).
-  useEffect(() => {
-    startListening()
-  }, [startListening])
+  // Freihändiger Start: `useVoiceCommands(…, true)` lässt die Erkennung von selbst
+  // anlaufen (siehe Hook). Kein separater Mount-Effekt mehr — der hatte mit dem
+  // Auto-Stopp des Hooks um den Start gerennt und ihn im Dev (StrictMode) tot gelegt.
 
   // Auto-Start bei erhaltener Kalibrierung (#35 + #58): Wird die Session mit
   // bereits gültigem MasterPrint betreten („Nochmal üben" / Wiedereintritt),

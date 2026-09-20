@@ -66,6 +66,12 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const activeRef = useRef(false)
+  // Epochen-Zähler gegen das Start/Stopp-Rennen: `startListening` ist async
+  // (wartet auf die Mikro-Freigabe). Läuft in dieser Wartezeit ein Stopp oder ein
+  // zweiter Start (React-StrictMode mountet im Dev doppelt), wird die Epoche
+  // erhöht — der veraltete Start-Vorgang erkennt das nach dem `await` und bricht
+  // sich selbst ab. So bleibt immer genau EINE lebende Erkennung übrig.
+  const epochRef = useRef(0)
   const [status, setStatus] = useState<VoiceStatus>('off')
   const [error, setError] = useState<string | null>(null)
 
@@ -85,6 +91,8 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
       return
     }
 
+    // Diesen Start-Vorgang als den aktuellen markieren.
+    const myEpoch = ++epochRef.current
     activeRef.current = true
     setStatus('starting')
     setError(null)
@@ -100,9 +108,9 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
       // Nicht abbrechen — evtl. reicht die schon erteilte Kamera+Mikro-Freigabe.
     }
 
-    // Falls zwischenzeitlich deaktiviert wurde, nicht mehr starten.
-    if (!activeRef.current) {
-      setStatus('off')
+    // Falls zwischenzeitlich deaktiviert oder von einem neueren Start überholt
+    // (StrictMode-Doppelmount): diesen veralteten Vorgang lautlos abbrechen.
+    if (!activeRef.current || epochRef.current !== myEpoch) {
       return
     }
 
@@ -199,17 +207,24 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
   }, [])
 
   const stopListening = useCallback(() => {
+    // Epoche erhöhen → ein noch laufender async-Start bricht sich nach dem `await`
+    // selbst ab (siehe Epochen-Guard oben), statt eine tote Erkennung zu hinterlassen.
+    epochRef.current++
     activeRef.current = false
     recognitionRef.current?.stop()
     recognitionRef.current = null
     setStatus('off')
   }, [])
 
-  // Auto-stop when deactivated or unmounted (but never auto-start — needs user gesture)
+  // Freihändig: Solange `active`, hört die App von selbst zu — kein Tippen nötig.
+  // Der Epochen-Guard in `startListening` macht das trotz StrictMode-Doppelmount
+  // sicher (der erste, abgebrochene Start hinterlässt keine tote Erkennung mehr).
+  // Beim Deaktivieren/Unmount wird sauber gestoppt.
   useEffect(() => {
-    if (!active) stopListening()
+    if (active) startListening()
+    else stopListening()
     return () => stopListening()
-  }, [active, stopListening])
+  }, [active, startListening, stopListening])
 
   return { startListening, stopListening, isListening: () => activeRef.current, status, error }
 }
