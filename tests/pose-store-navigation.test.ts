@@ -75,11 +75,13 @@ describe('practiceAgain', () => {
     })
     usePoseStore.getState().practiceAgain()
     const s = usePoseStore.getState()
-    // Kalibrierung bleibt erhalten (#35) — nur Sitzung/Statistik werden geleert.
+    // Kalibrierung bleibt erhalten (#35). Da es keinen „Start"-Schritt mehr gibt
+    // (#58), läuft die neue Session sofort — die alte Statistik/Zonen sind aber
+    // zurückgesetzt.
     expect(s.masterPrint).toEqual(VIOLIN_PRINT)
     expect(s.calibratedShoulderWidth).toBe(0.42)
     expect(s.lastCalibrationAt).toBe(1234)
-    expect(s.sessionActive).toBe(false)
+    expect(s.sessionActive).toBe(true)
     expect(s.lastSessionStats).toBeNull()
     expect(s.tensionScore).toBe(0)
     expect(s.sessionZones).toEqual({ flow: 0, bewusst: 0, achtung: 0, limit: 0 })

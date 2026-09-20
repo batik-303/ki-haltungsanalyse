@@ -33,19 +33,9 @@ describe('computeCalibrationView', () => {
     })
   })
 
-  describe('Erfolg (success)', () => {
-    it('bestätigt gespeicherte Haltung, grüner Haken, CTA „Session starten"', () => {
-      const view = computeCalibrationView({ kind: 'success' })
-      expect(view.title).toBe('Haltung gespeichert')
-      expect(view.glyph).toBe('✓')
-      expect(view.tone).toBe('success')
-      expect(view.progress).toBe(1)
-      expect(view.cta).toBe('Session starten')
-      expect(view.ctaIcon).toBe('▶')
-      expect(view.ctaAction).toBe('start')
-      expect(view.ctaBusy).toBe(false)
-    })
-  })
+  // Ein Erfolgs-Zustand mit „Session starten"-CTA entfällt bewusst (T2 #58):
+  // eine gelungene Kalibrierung geht ohne Bestätigung direkt in die Analyse.
+  // Das Overlay kennt daher nur noch `counting` und `retry`.
 
   describe('Nochmal versuchen (retry) — kein Rot', () => {
     it('nutzt den Amber-Ton und die Wiederhol-CTA', () => {
@@ -84,10 +74,9 @@ describe('computeCalibrationView', () => {
   it('verwendet in keinem Zustand einen Rot-Ton', () => {
     const tones = [
       computeCalibrationView({ kind: 'counting', count: 2 }).tone,
-      computeCalibrationView({ kind: 'success' }).tone,
       computeCalibrationView({ kind: 'retry', reason: 'no_hand' }).tone,
     ]
     expect(tones).not.toContain('error')
-    expect(new Set(tones)).toEqual(new Set(['sapphire', 'success', 'amber']))
+    expect(new Set(tones)).toEqual(new Set(['sapphire', 'amber']))
   })
 })

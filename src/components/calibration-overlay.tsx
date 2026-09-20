@@ -16,6 +16,8 @@ import { computeCalibrationView, type CalibrationPhase, type CalibrationTone } f
  */
 
 // Glas-Farben über dem dunklen Kamerabild (literal, analog zu den Canvas-Indikatoren).
+// `success` bleibt im geteilten Ton-Typ (Bereitschafts-Tor #36); das Overlay
+// selbst zeigt seit #58 nur noch sapphire (Countdown) und amber (Nochmal versuchen).
 const SAPPHIRE = '#2196F3'
 const SUCCESS = '#2ecc71'
 const AMBER = '#ffb800'
@@ -33,20 +35,16 @@ interface CalibrationOverlayProps {
   phase: CalibrationPhase
   /** Beschriftung des aktiven Fokus-Modus für die Status-Pill (z. B. „🎻 Geige"). */
   modeLabel: string
-  /** CTA „Session starten" (Erfolg). */
-  onStart: () => void
   /** CTA „Erneut kalibrieren" (Nochmal versuchen). */
   onRecalibrate: () => void
 }
 
-export function CalibrationOverlay({ phase, modeLabel, onStart, onRecalibrate }: CalibrationOverlayProps) {
+export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: CalibrationOverlayProps) {
   const view = computeCalibrationView(phase)
   const arc = ARC_COLOR[view.tone]
-  const isSuccess = view.tone === 'success'
 
   const handleCta = () => {
-    if (view.ctaAction === 'start') onStart()
-    else if (view.ctaAction === 'recalibrate') onRecalibrate()
+    if (view.ctaAction === 'recalibrate') onRecalibrate()
   }
 
   return (
@@ -81,11 +79,9 @@ export function CalibrationOverlay({ phase, modeLabel, onStart, onRecalibrate }:
           disabled={view.ctaBusy}
           className="inline-flex h-[52px] min-w-[220px] items-center justify-center gap-2.5 rounded-2xl px-6 font-headline text-base font-bold transition-[background,opacity] active:scale-[0.98] disabled:cursor-default disabled:opacity-70"
           style={{
-            background: isSuccess ? PRIMARY : AMBER,
-            color: isSuccess ? '#ffffff' : AMBER_FG,
-            boxShadow: isSuccess
-              ? '0 8px 24px rgba(0,43,73,0.35)'
-              : '0 8px 24px rgba(255,184,0,0.4)',
+            background: AMBER,
+            color: AMBER_FG,
+            boxShadow: '0 8px 24px rgba(255,184,0,0.4)',
           }}
         >
           <span className="text-lg leading-none">{view.ctaIcon}</span>

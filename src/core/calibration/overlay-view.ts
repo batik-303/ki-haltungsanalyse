@@ -12,17 +12,26 @@
 /** Warum ein Kalibrier-Versuch nicht gespeichert werden konnte. */
 export type CalibrationFailureReason = 'no_pose' | 'no_hand' | 'no_posture'
 
-/** Zustände, die das Overlay tragen muss. `idle` = Overlay ausgeblendet. */
+/**
+ * Zustände, die das Overlay tragen muss. `idle` = Overlay ausgeblendet.
+ *
+ * Kein `success`-Zustand mehr (#58): eine gelungene Kalibrierung geht ohne
+ * Bestätigung direkt in die laufende Analyse über — das Overlay verschwindet.
+ */
 export type CalibrationPhase =
   | { kind: 'counting'; count: number }
-  | { kind: 'success' }
   | { kind: 'retry'; reason?: CalibrationFailureReason }
 
-/** Semantischer Ton — die Komponente mappt ihn auf die literalen Glas-Farben. */
+/**
+ * Semantischer Ton — die Komponente mappt ihn auf die literalen Glas-Farben.
+ * Geteilt mit dem Bereitschafts-Tor (#36), das `success` für den grünen
+ * „passt / los geht's"-Zustand nutzt; das Kalibrier-Overlay selbst zeigt seit
+ * #58 nur noch `sapphire` (Countdown) und `amber` (Nochmal versuchen).
+ */
 export type CalibrationTone = 'sapphire' | 'success' | 'amber'
 
 /** Was die CTA auslöst — oder `none`, solange der Countdown läuft. */
-export type CalibrationCtaAction = 'start' | 'recalibrate' | 'none'
+export type CalibrationCtaAction = 'recalibrate' | 'none'
 
 export interface CalibrationView {
   title: string
@@ -55,18 +64,6 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
         ctaIcon: '↻',
         ctaAction: 'none',
         ctaBusy: true,
-      }
-    case 'success':
-      return {
-        title: 'Haltung gespeichert',
-        hint: 'Los geht’s — bereit für die Session',
-        glyph: '✓',
-        tone: 'success',
-        progress: 1,
-        cta: 'Session starten',
-        ctaIcon: '▶',
-        ctaAction: 'start',
-        ctaBusy: false,
       }
     case 'retry':
       return {

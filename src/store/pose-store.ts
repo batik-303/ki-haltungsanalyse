@@ -111,7 +111,6 @@ export interface PoseState {
   toggleDebugLandmarks: () => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
   recalibrate: () => void
-  startSession: () => void
   updateFrame: (data: FrameUpdate) => void
   endSession: (stats: SessionStats | null) => void
   reset: () => void
@@ -228,33 +227,39 @@ export const usePoseStore = create<PoseState>((set, get) => ({
 
   // Session-Eintritt (#35): eine vorhandene Kalibrierung bleibt erhalten, damit
   // Schüler über die Übungswoche zwischen den Stunden weiterüben, ohne bei jedem
-  // Eintritt neu zu kalibrieren. Bei erhaltener Kalibrierung landet die Session
-  // direkt im „bereit"-Zustand (selectSessionPhase → 'ready-to-start'). Der
-  // einzige bewusste Verwerf-Punkt ist `recalibrate` (plus `setFocusMode`).
-  goToSession: () => set({
-    appScreen: 'session',
-    isCalibrating: false,
-    distanceOk: false,
-    readinessPhase: 'idle',
-    readinessArmed: false,
-    readinessTimedOut: false,
-    tensionScore: 0,
-    smoothedDeviation: 0,
-    rawDeviation: 0,
-    currentLayer: 'flow',
-    currentLayerInfo: DEFAULT_LAYER_INFO,
-    sessionActive: false,
-    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
-    returnGlowTimer: 0,
-    lastBendForward: true,
-    wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
-    wristAnalysisPath: null,
-    driftDirection: 1,
-    lastSessionStats: null,
-    flowStreak: 0,
-    maxFlowStreak: 0,
-  }),
+  // Eintritt neu zu kalibrieren. Da es keinen „Start"-Schritt mehr gibt (#58),
+  // läuft die Analyse bei erhaltener Kalibrierung **sofort** weiter
+  // (sessionActive + sessionStart → Phase 'tracking'); ohne Kalibrierung startet
+  // die Session erst mit dem Kalibrieren. Der einzige bewusste Verwerf-Punkt
+  // bleibt `recalibrate` (plus `setFocusMode`).
+  goToSession: () => {
+    const keepCalibration = get().masterPrint !== null
+    set({
+      appScreen: 'session',
+      isCalibrating: false,
+      distanceOk: false,
+      readinessPhase: 'idle',
+      readinessArmed: false,
+      readinessTimedOut: false,
+      tensionScore: 0,
+      smoothedDeviation: 0,
+      rawDeviation: 0,
+      currentLayer: 'flow',
+      currentLayerInfo: DEFAULT_LAYER_INFO,
+      sessionActive: keepCalibration,
+      sessionStart: keepCalibration ? performance.now() : 0,
+      sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+      returnGlowTimer: 0,
+      lastBendForward: true,
+      wristRailAngleDeg: 0,
+      wristRailIsBlue: true,
+      wristAnalysisPath: null,
+      driftDirection: 1,
+      lastSessionStats: null,
+      flowStreak: 0,
+      maxFlowStreak: 0,
+    })
+  },
 
   // V1-Flow: Home ist die Auswahlbühne, der CTA startet direkt die Session
   // (kein Setup-Zwischenschritt). Setzt das Instrument und übernimmt den
@@ -303,31 +308,36 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   // Instrument, focusMode, sensitivity, viewMode UND die Kalibrierung bleiben
   // erhalten (#35) — nur der Analyse-/Sitzungs-/Statistikzustand wird zurück-
   // gesetzt. Führt direkt in die `session` (setup wurde mit #26 aus dem V1-Flow
-  // genommen); mit erhaltener Kalibrierung landet man sofort im „bereit"-Zustand.
-  practiceAgain: () => set({
-    appScreen: 'session',
-    isCalibrating: false,
-    distanceOk: false,
-    readinessPhase: 'idle',
-    readinessArmed: false,
-    readinessTimedOut: false,
-    tensionScore: 0,
-    smoothedDeviation: 0,
-    rawDeviation: 0,
-    currentLayer: 'flow',
-    currentLayerInfo: DEFAULT_LAYER_INFO,
-    sessionActive: false,
-    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
-    returnGlowTimer: 0,
-    lastBendForward: true,
-    wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
-    wristAnalysisPath: null,
-    driftDirection: 1,
-    lastSessionStats: null,
-    flowStreak: 0,
-    maxFlowStreak: 0,
-  }),
+  // genommen); da es keinen „Start"-Schritt mehr gibt (#58), läuft die neue
+  // Session mit erhaltener Kalibrierung sofort (Phase 'tracking').
+  practiceAgain: () => {
+    const keepCalibration = get().masterPrint !== null
+    set({
+      appScreen: 'session',
+      isCalibrating: false,
+      distanceOk: false,
+      readinessPhase: 'idle',
+      readinessArmed: false,
+      readinessTimedOut: false,
+      tensionScore: 0,
+      smoothedDeviation: 0,
+      rawDeviation: 0,
+      currentLayer: 'flow',
+      currentLayerInfo: DEFAULT_LAYER_INFO,
+      sessionActive: keepCalibration,
+      sessionStart: keepCalibration ? performance.now() : 0,
+      sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
+      returnGlowTimer: 0,
+      lastBendForward: true,
+      wristRailAngleDeg: 0,
+      wristRailIsBlue: true,
+      wristAnalysisPath: null,
+      driftDirection: 1,
+      lastSessionStats: null,
+      flowStreak: 0,
+      maxFlowStreak: 0,
+    })
+  },
 
   // Actions
   setFocusMode: (mode) => set({
@@ -367,6 +377,11 @@ export const usePoseStore = create<PoseState>((set, get) => ({
 
   toggleDebugLandmarks: () => set((s) => ({ debugLandmarks: !s.debugLandmarks })),
 
+  // Kalibrierung geht direkt in die Analyse über (#58): mit dem Speichern der
+  // Haltung läuft die Session **sofort** (sessionActive + sessionStart) —
+  // selectSessionPhase liefert direkt `tracking`. Es gibt keinen bewussten
+  // „Start"-Schritt mehr. Der Session-Tracker (rAF-Loop-Ref) wird passend dazu
+  // im Kalibrier-Erfolgszweig des Hooks gestartet (Triple-State-System).
   calibrate: (masterPrint, shoulderWidth) => set({
     masterPrint,
     calibratedShoulderWidth: shoulderWidth,
@@ -378,7 +393,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     tensionScore: 0,
     smoothedDeviation: 0,
     rawDeviation: 0,
-    sessionActive: false,
+    sessionActive: true,
+    sessionStart: performance.now(),
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     lastSessionStats: null,
     returnGlowTimer: 0,
@@ -419,13 +435,6 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     wristRailIsBlue: true,
     wristAnalysisPath: null,
     driftDirection: 1,
-  }),
-
-  startSession: () => set({
-    sessionActive: true,
-    sessionStart: performance.now(),
-    sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
-    lastSessionStats: null,
   }),
 
   updateFrame: (data) => set({

@@ -1,13 +1,15 @@
 import type { PoseState } from './pose-store'
 
 // ── Session phase (derived from existing state) ──
-export type SessionPhase = 'positioning' | 'ready-to-calibrate' | 'calibrating' | 'ready-to-start' | 'tracking'
+// Die Kalibrierung geht direkt in die Analyse über (#58): sobald ein
+// MasterPrint existiert, läuft die Session sofort — es gibt keinen bewussten
+// „Start"-Schritt und damit keine Zwischen-Phase `ready-to-start` mehr.
+export type SessionPhase = 'positioning' | 'ready-to-calibrate' | 'calibrating' | 'tracking'
 
 export function selectSessionPhase(state: PoseState): SessionPhase {
   if (state.isCalibrating) return 'calibrating'
   if (!state.masterPrint && !state.distanceOk) return 'positioning'
   if (!state.masterPrint && state.distanceOk) return 'ready-to-calibrate'
-  if (state.masterPrint && !state.sessionActive) return 'ready-to-start'
   return 'tracking'
 }
 
@@ -17,7 +19,6 @@ export function selectPhaseHint(state: PoseState): string {
     case 'positioning': return 'Positioniere dich vor der Kamera'
     case 'ready-to-calibrate': return "Sage 'Kalibrieren' wenn bereit"
     case 'calibrating': return 'Kalibrierung läuft...'
-    case 'ready-to-start': return "Sage 'Start' um die Session zu starten"
     case 'tracking': return "Sage 'Stop' zum Beenden"
   }
 }
