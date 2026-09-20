@@ -260,18 +260,7 @@ export function SessionScreen() {
 
       {/* HUD: Home-Abbruch + Mode badge — top left */}
       <div className="hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10">
-        <button
-          onClick={handleAbort}
-          aria-label="Hauptmenü"
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-            'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
-            'hover:bg-background/60 hover:text-foreground active:scale-95',
-          )}
-        >
-          <Home className="size-4" />
-          Home
-        </button>
+        <ExitButton onClick={handleAbort} withLabel />
         <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
           {MODE_LABELS[focusMode] ?? focusMode}
         </Badge>
@@ -323,16 +312,7 @@ export function SessionScreen() {
       {/* Top bar: Home + Mode badge */}
       <div className="sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2">
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleAbort}
-            aria-label="Hauptmenü"
-            className={cn(
-              'flex items-center justify-center min-h-[36px] min-w-[36px] rounded-lg transition-all',
-              'bg-background/40 backdrop-blur border border-border/50 text-foreground/80 active:scale-95',
-            )}
-          >
-            <Home className="size-4" />
-          </button>
+          <ExitButton onClick={handleAbort} />
           <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
             {MODE_LABELS[focusMode] ?? focusMode}
           </Badge>
@@ -389,6 +369,40 @@ export function SessionScreen() {
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Ausstiegs-Affordanz im Session-HUD (CONTEXT.md → „Home").
+ *
+ * Bewusst **diskret**: ein Klick verwirft die Sitzung *ohne* Auswertung und
+ * löscht die Kalibrierung (Verwerf-Punkt 3) — der Knopf darf nicht einladen.
+ * Deshalb kein Accent, kein Sapphire und keine Marke: der Ankerpunkt ist in
+ * Analyse und Flow bereits auf dem Canvas zu sehen, ein zweiter im HUD läse
+ * sich als Haltungssignal.
+ *
+ * Diskret heißt aber nicht unfertig — der Knopf trägt ein volles Touch-Ziel,
+ * sichtbaren Tastaturfokus und eine deutsche Beschriftung.
+ *
+ * `withLabel` zeigt zusätzlich den Text (Desktop/Tablet); auf dem Telefon
+ * bleibt das Icon allein, der Name steht im `aria-label`.
+ */
+function ExitButton({ onClick, withLabel }: { onClick: () => void; withLabel?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Hauptmenü"
+      className={cn(
+        'inline-flex min-h-[44px] items-center justify-center rounded-lg transition-all',
+        'bg-background/40 backdrop-blur border border-border/50 text-foreground/80',
+        'hover:bg-background/60 hover:text-foreground active:scale-95',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+        withLabel ? 'gap-1.5 px-3.5 text-[13px] font-medium' : 'min-w-[44px]',
+      )}
+    >
+      <Home className="size-4" />
+      {withLabel && 'Hauptmenü'}
+    </button>
   )
 }
 
