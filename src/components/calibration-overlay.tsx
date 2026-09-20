@@ -12,23 +12,28 @@ import { computeCalibrationView, type CalibrationPhase, type CalibrationTone } f
  * Rein präsentational: Phase/Countdown kommen als Props aus `session-screen.tsx`,
  * die Ansichtslogik aus der reinen Funktion `computeCalibrationView`. Kein
  * Store-Zugriff, kein imperatives DOM mehr (löst die alte `updateCalibrationUI`
- * ab). Farben sind literale Glas-Töne über dem dunklen Kamerabild, konsistent
- * mit den #25-Tokens (sapphire-Ring, Amber, Tiefsee-Blau).
+ * ab). Signalfarben sind literale Glas-Töne über dem dunklen Kamerabild
+ * (sapphire-Countdown, Tiefsee-Blau); der CTA zieht seine Farbe dagegen aus
+ * den Accent-Token, damit er überall in der App identisch aussieht.
  */
 
-// Glas-Farben über dem dunklen Kamerabild (literal, analog zu den Canvas-Indikatoren).
+// Signal-Farben über dem dunklen Kamerabild (literal, analog zu den Canvas-Indikatoren).
 // `success` bleibt im geteilten Ton-Typ (Bereitschafts-Tor #36); das Overlay
-// selbst zeigt seit #58 nur noch sapphire (Countdown) und amber (Nochmal versuchen).
+// selbst zeigt seit #58 nur noch sapphire (Countdown) und accent (Nochmal versuchen).
 const SAPPHIRE = '#2196F3'
 const SUCCESS = '#2ecc71'
-const AMBER = '#ffb800'
-const AMBER_FG = '#3d2c00'
 const PRIMARY = '#002b49'
+
+// Der CTA und das Wiederhol-Zeichen tragen den Marken-Accent aus den Token —
+// nicht die Warn-Amber #ffb800. Amber ist der Ton der Haltungs-Warnung; ein
+// Bedienknopf darin liest sich wie ein Haltungssignal (#29, CONTEXT.md).
+const ACCENT = 'var(--ui-accent)'
+const ACCENT_FG = 'var(--ui-accent-foreground)'
 
 const ARC_COLOR: Record<CalibrationTone, string> = {
   sapphire: SAPPHIRE,
   success: SUCCESS,
-  amber: AMBER,
+  accent: ACCENT,
 }
 
 interface CalibrationOverlayProps {
@@ -51,7 +56,7 @@ export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: Calibrat
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center">
       {/* Status-Pill oben */}
       <div className="absolute top-[clamp(12px,3vh,24px)] left-1/2 -translate-x-1/2">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 font-label text-[13px] shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 font-label text-[15px] shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
           <span
             className="h-2 w-2 rounded-full"
             style={{ background: SAPPHIRE, boxShadow: `0 0 0 3px ${SAPPHIRE}33` }}
@@ -66,7 +71,12 @@ export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: Calibrat
         <CountdownGlyph glyph={view.glyph} color={arc} />
         <div style={{ textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
           <div className="font-headline text-2xl font-extrabold text-white sm:text-[26px]">{view.title}</div>
-          <div className="mt-1.5 font-sans text-[15px] text-white/85">{view.hint}</div>
+          {/* Breite begrenzt: der Hinweis bricht um, statt am Bildrand abgeschnitten
+              zu werden. Volle Deckkraft — über bewegtem Kamerabild trägt eine
+              abgesenkte Deckkraft nicht. */}
+          <div className="mx-auto mt-2 max-w-[24ch] font-sans text-[17px] leading-snug text-white">
+            {view.hint}
+          </div>
         </div>
       </div>
 
@@ -77,15 +87,15 @@ export function CalibrationOverlay({ phase, modeLabel, onRecalibrate }: Calibrat
           disabled={view.ctaBusy}
           className="inline-flex h-[52px] min-w-[220px] items-center justify-center gap-2.5 rounded-2xl px-6 font-headline text-base font-bold transition-[background,opacity] active:scale-[0.98] disabled:cursor-default disabled:opacity-70"
           style={{
-            background: AMBER,
-            color: AMBER_FG,
-            boxShadow: '0 8px 24px rgba(255,184,0,0.4)',
+            background: ACCENT,
+            color: ACCENT_FG,
+            boxShadow: '0 8px 24px rgba(176,122,36,0.45)',
           }}
         >
           <span className="text-lg leading-none">{view.ctaIcon}</span>
           {view.cta}
         </button>
-        <div className="flex items-center gap-1.5 font-label text-[13px] text-white/85">
+        <div className="flex items-center gap-1.5 font-label text-[15px] text-white">
           <span>🎤 Oder sag</span>
           <span className="font-semibold">„bereit“</span>
         </div>

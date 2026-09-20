@@ -44,7 +44,7 @@ describe('computeReadinessView', () => {
   it('nutzt in keinem Zustand einen Rot-/Fehler-Ton', () => {
     const phases = ['idle', 'waiting', 'armed'] as const
     const tones = phases.map((phase) => computeReadinessView({ phase, timedOut: false }).tone)
-    expect(tones).not.toContain('amber')
+    expect(tones).not.toContain('accent')
     expect(new Set(tones)).toEqual(new Set(['sapphire', 'success']))
   })
 })

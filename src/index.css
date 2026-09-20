@@ -53,8 +53,13 @@
   --ui-primary-foreground: #ffffff;
   --ui-secondary: #1e3a5f;
   --ui-secondary-foreground: #ccdde8;
-  --ui-accent: #DAA520;
-  --ui-accent-foreground: #ffffff;
+  /* Ein Gold über die ganze App (#29): derselbe Geigenholz-Ton wie im hellen
+     Chrome. Der dunkle Teilbaum hatte bis dahin ein eigenes, helleres Gold —
+     der CTA sah dadurch je nach Screen anders aus, und weißer Text darauf
+     blieb unter WCAG AA. Ring und Schlagschatten am Knopf tragen die Präsenz
+     über dem Kamerabild, nicht ein aufgehellter Ton. */
+  --ui-accent: #B07A24;
+  --ui-accent-foreground: #2b1a00;
   --ui-accent-soft: #2c3a24;
   --ui-destructive: #4a575f;
   --ui-destructive-foreground: #ffffff;
