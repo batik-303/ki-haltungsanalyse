@@ -303,42 +303,35 @@ export function SessionScreen() {
         </div>
       )}
 
-      {/* HUD: Voice hint / mic activation — bottom right */}
-      {!calState && (
+      {/* HUD: Mikrofon-Hinweis — im Tracking unten rechts */}
+      {!calState && phase === 'tracking' && (
         <div className={cn(
           "hidden sm:block absolute bottom-[clamp(16px,4vh,80px)] right-[clamp(8px,2vh,16px)] z-10 transition-opacity duration-700",
           hudFaded && "opacity-20"
         )}>
-          <button
-            onClick={handleToggleMic}
-            className={cn(
-              'px-4 py-2 rounded-lg text-xs font-medium transition-all',
-              'backdrop-blur text-white active:scale-95',
-              micActive
-                ? 'bg-background/75 border border-white/25 text-white hover:bg-background/85'
-                : 'bg-sapphire/80 hover:bg-sapphire',
-            )}
-          >
-            {micActive ? `🎤 ${hint}` : '🎤 Aus'}
-          </button>
+          <MicButton active={micActive} hint={hint} onClick={handleToggleMic} />
         </div>
       )}
 
-      {/* HUD: Fallback buttons — bottom center */}
-      {!calState && (
+      {/* HUD: Einstieg — zentrierter Stapel: Gold-Knopf oben, Sprach-Hinweis darunter */}
+      {!calState && phase === 'ready-to-calibrate' && (
+        <div className={cn(
+          "hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10 transition-opacity duration-300",
+          hudFaded && "opacity-20"
+        )}>
+          <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
+          <MicButton active={micActive} hint={hint} onClick={handleToggleMic} />
+        </div>
+      )}
+
+      {/* HUD: Tracking-Steuerung — bottom center */}
+      {!calState && phase === 'tracking' && (
         <div className={cn(
           "hidden sm:flex absolute bottom-[clamp(8px,2vh,16px)] left-1/2 -translate-x-1/2 z-10 gap-3 transition-opacity duration-300",
           hudFaded && "opacity-20"
         )}>
-          {phase === 'ready-to-calibrate' && (
-            <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
-          )}
-          {phase === 'tracking' && (
-            <>
-              <FallbackButton onClick={handleStop}>Stop</FallbackButton>
-              <FallbackButton onClick={handleRecalibrate}>Neu kalibrieren</FallbackButton>
-            </>
-          )}
+          <FallbackButton onClick={handleStop}>Stop</FallbackButton>
+          <FallbackButton onClick={handleRecalibrate}>Neu kalibrieren</FallbackButton>
         </div>
       )}
 
@@ -441,6 +434,23 @@ function PhoneButton({ onClick, children, primary }: { onClick: () => void; chil
       )}
     >
       {children}
+    </button>
+  )
+}
+
+function MicButton({ active, hint, onClick }: { active: boolean; hint: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-4 py-2 rounded-lg text-xs font-medium transition-all',
+        'backdrop-blur text-white active:scale-95',
+        active
+          ? 'bg-background/75 border border-white/25 text-white hover:bg-background/85'
+          : 'bg-sapphire/80 hover:bg-sapphire',
+      )}
+    >
+      {active ? `🎤 ${hint}` : '🎤 Aus'}
     </button>
   )
 }
