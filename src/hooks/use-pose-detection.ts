@@ -293,8 +293,10 @@ export function usePoseDetection(
         const distStatus = checkDistance(shoulderWidth)
         const distOk = distStatus === 'good'
 
-        if (store.distanceOk !== distOk) {
-          usePoseStore.setState({ distanceOk: distOk })
+        // Boolean fürs Gate **und** Richtung fürs Positionier-Feedback (Punkt 2):
+        // die Richtung „näher"/„zurück" war schon da, wurde aber nie sichtbar.
+        if (store.distanceOk !== distOk || store.distanceStatus !== distStatus) {
+          usePoseStore.setState({ distanceOk: distOk, distanceStatus: distStatus })
         }
 
         // ── Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59) ──
@@ -621,8 +623,8 @@ export function usePoseDetection(
         // No body detected
         wristPrevPosRef.current = null
         wristSlideShieldRef.current = 0
-        if (store.distanceOk) {
-          usePoseStore.setState({ distanceOk: false })
+        if (store.distanceOk || store.distanceStatus !== 'no-body') {
+          usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })
         }
         // Auslöse-Tor weiterführen, solange noch nicht kalibriert (#59). Ohne
         // Körper gilt der Abstand als nicht ok → ein bewusster Auslöser wartet

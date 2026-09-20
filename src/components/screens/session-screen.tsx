@@ -6,6 +6,7 @@ import { useVoiceCommands, type VoiceCommandMap } from '@/hooks/use-voice-contro
 import { CalibrationOverlay } from '@/components/calibration-overlay'
 import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
+import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
 import { selectSessionPhase, selectPhaseHint, selectSessionDuration, selectStatusColor, selectHudFaded } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
@@ -237,6 +238,9 @@ export function SessionScreen() {
 
       {/* Distanz-Rand-Führung „Randglühen" (vor Kalibrierung) — hinter dem Overlay aus */}
       {!calState && <DistanceGlow />}
+
+      {/* Distanz-Richtungshinweis („näher"/„zurück") vor der Kalibrierung (Punkt 2) */}
+      {!calState && <DistanceHint />}
 
       {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
       {!calState && <ReadinessHint />}
