@@ -4,6 +4,7 @@ import { drawSilhouette } from './silhouette'
 import { drawDebugLandmarks } from './debug-landmarks'
 import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-landmarks'
 import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
+import { resolveWristAnchor } from '../core/analysis/wrist-anchor'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -29,7 +30,7 @@ const ADAPTIVE_BASELINE_ALPHA = 0.02
 // lightweight EMA to eliminate residual pixel-level jitter in the overlay.
 let anchorPosSmoothed: { x: number; y: number } | null = null
 let lastMasterPrintId: string | null = null
-const ANCHOR_POS_ALPHA = 0.25
+const ANCHOR_POS_ALPHA = 0.6
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -145,8 +146,6 @@ export function renderFrame(
     const wrist = landmarks[15]
     const index = landmarks[19]
     if (!elbow || !wrist || !index) return
-    const wx = wrist.x * width, wy = wrist.y * height
-    const ix = index.x * width, iy = index.y * height
 
     // Debug: forearm + hand vec + arc + angle text + palm-normal + ±sign.
     if (state.debugLandmarks && handLandmarks && handLandmarks.length >= 18) {
@@ -160,30 +159,15 @@ export function renderFrame(
     }
 
     if (masterPrint && !isCalibrating) {
-      // Anchor target = HandLandmark 0 only (precise wrist joint). When the
-      // hand briefly disappears, the anchor freezes at its last hand-derived
-      // position instead of popping to pose-15 (~60px below the real joint).
+      // Anker-Quelle = ausschließlich HandLandmark 0 (präziser Handgelenks-
+      // knorren). Reine Positions-Logik (#79): Init exakt auf Hand-0, danach
+      // EMA; bei Handverlust einfrieren; KEIN Pose-15-Seed. Solange nie eine
+      // Hand-0 gesehen wurde, bleibt der Anker aus (Grau-Zustand: #74).
       const handAnchor = handLandmarks?.[0]
-      if (handAnchor) {
-        const fwx = handAnchor.x * width
-        const fwy = handAnchor.y * height
-        if (!anchorPosSmoothed) {
-          anchorPosSmoothed = { x: fwx, y: fwy }
-        } else {
-          anchorPosSmoothed = {
-            x: anchorPosSmoothed.x * (1 - ANCHOR_POS_ALPHA) + fwx * ANCHOR_POS_ALPHA,
-            y: anchorPosSmoothed.y * (1 - ANCHOR_POS_ALPHA) + fwy * ANCHOR_POS_ALPHA,
-          }
-        }
-      }
-      // If hand missing AND we never had one (first frames after calibration),
-      // seed from the filtered pose wrist so the anchor still appears.
-      if (!anchorPosSmoothed) {
-        const fc = state.filteredWristCoords
-        anchorPosSmoothed = { x: fc?.wx ?? wx, y: fc?.wy ?? wy }
-      }
-      const anchorX = anchorPosSmoothed.x
-      const anchorY = anchorPosSmoothed.y
+      const hand0px = handAnchor
+        ? { x: handAnchor.x * width, y: handAnchor.y * height }
+        : null
+      anchorPosSmoothed = resolveWristAnchor(anchorPosSmoothed, hand0px, ANCHOR_POS_ALPHA).pos
 
       // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
       const nowPerf = performance.now()
@@ -266,7 +250,11 @@ export function renderFrame(
           ctx.stroke()
           ctx.globalAlpha = 1
         }
-      } else {
+      } else if (anchorPosSmoothed) {
+        // Anker nur zeichnen, wenn je eine Hand-0 gesehen wurde (sonst kein
+        // Anker — Grau-Zustand: #74). Kein Pose-15-Fallback mehr.
+        const anchorX = anchorPosSmoothed.x
+        const anchorY = anchorPosSmoothed.y
         // Anchor color: blue (correct) / yellow (deviation)
         const anchorColor = wristRailIsBlue ? undefined : '#F5C842'
 
@@ -309,20 +297,8 @@ export function renderFrame(
         ctx.fillText(foreConf < 0.5 ? '⚠ Kamera seitlich' : '◉', warnX, warnY)
         ctx.globalAlpha = 1
       }
-    } else if (!isCalibrating && !isFlow) {
-      // Preview (analyse only) — show wrist→index line preview
-      ctx.beginPath()
-      ctx.moveTo(wx, wy)
-      ctx.lineTo(ix, iy)
-      ctx.strokeStyle = '#2e86c1'
-      ctx.lineWidth = 2
-      ctx.globalAlpha = 0.4
-      ctx.stroke()
-      ctx.globalAlpha = 1
-
-      const pulseR = 12 + Math.sin(now / 400) * 2
-      drawSapphireAnchor(ctx, wx, wy, pulseR, now)
     }
+    // Vor Kalibrierung: kein Anker, keine Vorschau-Linie im Wrist-Mode (#79).
   }
 
   // ── VIOLIN MODE ──
