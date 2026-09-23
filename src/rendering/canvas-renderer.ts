@@ -31,6 +31,11 @@ const ADAPTIVE_BASELINE_ALPHA = 0.02
 let anchorPosSmoothed: { x: number; y: number } | null = null
 let lastMasterPrintId: string | null = null
 const ANCHOR_POS_ALPHA = 0.6
+// Nachlauf beim Lagenwechsel (Nutzer-Feedback): Glättung wird bei schneller
+// Handbewegung reaktiver — bis ANCHOR_POS_MAX_ALPHA, voll ab ANCHOR_POS_SPEED_REF
+// Pixel Bewegungs-Distanz pro Frame. Im Stillstand bleibt es bei ANCHOR_POS_ALPHA.
+const ANCHOR_POS_MAX_ALPHA = 0.9
+const ANCHOR_POS_SPEED_REF = 40
 
 /**
  * Main render dispatch. Called every frame from the detection loop.
@@ -167,7 +172,10 @@ export function renderFrame(
       const hand0px = handAnchor
         ? { x: handAnchor.x * width, y: handAnchor.y * height }
         : null
-      anchorPosSmoothed = resolveWristAnchor(anchorPosSmoothed, hand0px, ANCHOR_POS_ALPHA).pos
+      anchorPosSmoothed = resolveWristAnchor(
+        anchorPosSmoothed, hand0px,
+        ANCHOR_POS_ALPHA, ANCHOR_POS_MAX_ALPHA, ANCHOR_POS_SPEED_REF,
+      ).pos
 
       // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
       const nowPerf = performance.now()
