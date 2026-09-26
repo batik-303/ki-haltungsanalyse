@@ -68,7 +68,7 @@ Entschieden in #73, gebaut in #79 (PR #80).
 
 ## 4. Sichtbarkeit — warum „grau" selbst gebaut werden muss
 
-Ergebnis von #74 (Research-Notiz `docs/research/mediapipe-hand-visibility.md` auf Branch `research/mediapipe-hand-visibility`, nicht in `main`).
+Ergebnis von #74. Ausführlich mit Primärquellen: [`docs/research/mediapipe-hand-visibility.md`](research/mediapipe-hand-visibility.md).
 
 - Der HandLandmarker liefert pro Punkt **nur x, y, z**, **kein** `visibility`/`presence` (anders als Pose). Das Hand-Modell gibt nur 3 Werte je Punkt aus. Deshalb der Cast `as unknown as Landmark[]` in `pickLeftHand`; `hand[0].visibility` ist `undefined` und darf **nicht** als Signal genutzt werden.
 - `minHandDetectionConfidence` / `minHandPresenceConfidence` / `minTrackingConfidence` sind **Eingabe-Schwellen**. Man sieht ihre Wirkung nur daran, dass die Hand aus dem Ergebnis verschwindet.
@@ -125,5 +125,5 @@ Diagnose in #78. Begriff **Knick**: siehe `CONTEXT.md`. Entscheidung: ADR `docs/
 - [ ] **z-Nullpunkte mischen**: Unterarm-Vektor aus Pose-Ellbogen und Hand-Handgelenk hat eine bedeutungslose z-Komponente. Für den neuen Knick eine konsistente Quelle wählen, z. B. Unterarm-Richtung aus Pose (13→15, beide gleiches z-System, besser `worldLandmarks`) und Handebene aus Handpunkten, verglichen als **Richtungen**, nicht als gemischte Punkte (#82)
 - [ ] Rauschen der Hand-z-Werte am echten Spielmaterial prüfen; ggf. Fallback auf Pose-World (#82)
 - [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
-- [ ] Research-Notiz `mediapipe-hand-visibility.md` aus dem Research-Branch nach `main` holen
+- [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)
 - [ ] Schwellen/Zeitkonstanten der Farbe auf der neuen Messgröße festlegen (#75)
