@@ -114,10 +114,10 @@ f = Unterarm-Richtung, n = Handflächen-Normale
 
 | Pfad | Unterarm `f` | Handebene `n` | Funktion |
 |---|---|---|---|
-| Hand | Pose 13 → 15 aus `worldLandmarks` (sonst Bildkoordinaten mit `aspect`) | `computePalmNormal(hand, aspect)`: Hand 0→5 × 0→17 | `computeHandKnick` |
-| Pose-Fallback | Pose 13 → 15 | Pose 15→19 × 15→17 (grobe Handebene) | `computePoseKnick` |
+| Hand | Pose 13 → 15 in **Bildkoordinaten** mit `aspect` | `computePalmNormal(hand, aspect)`: Hand 0→5 × 0→17 | `computeHandKnick` |
+| Pose-Fallback | Pose 13 → 15 aus `worldLandmarks` (sonst Bild mit `aspect`) | Pose 15→19 × 15→17 (grobe Handebene), gleiche Quelle | `computePoseKnick` |
 
-`f` und `n` sind jeweils **Differenzen innerhalb eines Systems**, deshalb fallen die verschiedenen z-Nullpunkte (Hüftmitte vs. Handgelenk) heraus. Die Richtungen aus Pose-Welt (Meter) und Hand-Bild (normiert) sind vergleichbar, weil beide Achsen an der Kamera ausgerichtet sind. Für normierte Bildkoordinaten werden x **und z** mit `aspect = W/H` skaliert (z liegt laut Doku im Maßstab von x).
+`f` und `n` sind jeweils **Differenzen innerhalb eines Systems**, deshalb fallen die verschiedenen z-Nullpunkte (Hüftmitte vs. Handgelenk) heraus. Im Hand-Pfad kommen beide Richtungen bewusst aus **Bildkoordinaten**: Pose-Bild und Hand-Bild haben dieselbe Konvention (x/y normiert, z im Maßstab von x). Pose-`worldLandmarks` (Meter) hier zu mischen, würde zwei verschiedene z-Maßstäbe vermengen; schon ein Maßstabsfehler bei z bricht die Drehinvarianz. Für normierte Bildkoordinaten werden x **und z** mit `aspect = W/H` skaliert.
 
 ### Ablauf pro Frame (`use-pose-detection.ts`, Wrist-Zweig)
 
@@ -131,7 +131,7 @@ Entfallen: `calib2DAngle`, `calib2DAngleFallback`, `computeZBoost` samt z-Filter
 
 ### Abnahme-Test
 
-`tests/wrist/angle-orientation-drift.test.ts`: starre Arm+Hand mit 20°/40°/55° Flexion, gedreht um die Unterarm-Längsachse, die senkrechte Bildachse und eine schräge Achse (θ = 0…90°). Zusicherung `maxDrift <= 10°` (tatsächlich ≈ 0°). Außerdem: seitliches Abknicken ignoriert, z-Nullpunkt-Versatz egal, Seitenverhältnis korrigiert. Kontrolle: die alte 2D-Messung driftet > 10°. Baseline-Gleichheit Kalibrierung ↔ Laufzeit: `tests/wrist/knick-baseline.test.ts`.
+`tests/wrist/angle-orientation-drift.test.ts`: starre Arm+Hand mit 20°/40°/55° Flexion, gedreht um die Unterarm-Längsachse, die senkrechte Bildachse und eine schräge Achse (θ = 0…90°). Zusicherung `maxDrift <= 10°` (tatsächlich ≈ 0°). Außerdem: seitliches Abknicken ignoriert, z-Nullpunkt-Versatz egal, Seitenverhältnis korrigiert. Kontrolle: die alte 2D-Messung driftet > 10°. Baseline-Gleichheit Kalibrierung ↔ Laufzeit sowie Drehtest für `computeHandKnick` mit MediaPipe-typischer Normierung (x/W, y/H, z/W, verschiedene z-Nullpunkte): `tests/wrist/knick-baseline.test.ts`.
 
 ---
 
@@ -142,7 +142,8 @@ Entfallen: `calib2DAngle`, `calib2DAngleFallback`, `computeZBoost` samt z-Filter
 - [x] Ursache Dauergelb (#78) → 2D-Bildwinkel nicht rotationsinvariant + Nur-steigen-Sperre
 - [x] **z-Nullpunkte mischen** beim Knick: Unterarm aus Pose 13→15 (`worldLandmarks`), Handebene aus Handpunkten, verglichen als Richtungen (#82)
 - [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf das Vorzeichen von `knick − calibKnick` umstellen (#76, periphere Kipprichtung)
-- [ ] Rauschen der Hand-z-Werte am echten Spielmaterial prüfen (Geigen-Gegen-Check #82); ggf. Hand-Pfad ganz auf Pose-World-Fallback (`computePoseKnick`)
+- [ ] Rauschen der Hand-z-Werte und Maßstab Pose-Bild-z ↔ Hand-Bild-z am echten Spielmaterial prüfen (Geigen-Gegen-Check #82); ggf. HandLandmarker-`worldLandmarks` + Pose-`worldLandmarks` oder Hand-Pfad ganz auf `computePoseKnick`
+- [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter (#74)
 - [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
 - [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)
 - [ ] Schwellen/Zeitkonstanten der Farbe auf der neuen Messgröße festlegen (#75)

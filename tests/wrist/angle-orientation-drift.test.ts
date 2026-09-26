@@ -5,13 +5,11 @@ import {
   computeKnickAngle,
   computePalmNormal,
 } from '../../src/core/analysis/wrist-analyzer'
-import type { Landmark } from '../../src/core/types'
+import type { Landmark, Vec3 } from '../../src/core/types'
 
 // Abnahme-Test #82 / ADR 0002: Der Knick darf sich nicht ändern, wenn nur der
 // Arm vor der Kamera gedreht wird (Lagenwechsel). Die alte 2D-Messung
 // `computeCollinearityAngle2D` driftet dabei (Charakterisierung, Diagnose #78).
-
-type Vec3 = { x: number; y: number; z: number }
 
 function lm(p: Vec3): Landmark {
   return { x: p.x, y: p.y, z: p.z, visibility: 1 }

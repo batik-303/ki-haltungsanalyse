@@ -74,7 +74,7 @@ export function createMasterPrint(
         calibArmLength2D: computeArmLength2D(poseElbow, poseWrist),
         // Knick-Baseline in derselben Größe wie die Laufzeit (ADR 0002):
         // rotationsinvarianter Winkel Unterarm ↔ Handebene.
-        calibKnick: computeHandKnick(landmarks, options.worldLandmarks, handLandmarks, aspect),
+        calibKnick: computeHandKnick(landmarks, handLandmarks, aspect),
         flexBendDirFallback: computeBendDirection2D(elbowFB, wristFB, mcpFB),
         calibKnickFallback: computePoseKnick(landmarks, options.worldLandmarks, aspect),
       } satisfies WristMasterPrint

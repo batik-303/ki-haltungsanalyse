@@ -45,20 +45,47 @@ hand[17] = lm(0.5, 0.45, 0.02)
 const aspect = 16 / 9
 
 describe('computeHandKnick', () => {
-  it('Unterarm aus Pose-worldLandmarks, Handebene aus Handpunkten', () => {
-    const expected = computeKnickAngle(
-      computeForearmDirection(world[13]!, world[15]!),
-      computePalmNormal(hand, aspect),
-    )
-    expect(computeHandKnick(pose, world, hand, aspect)).toBeCloseTo(expected, 9)
-  })
-
-  it('ohne worldLandmarks: Unterarm aus Pose-Bildkoordinaten mit Seitenverhältnis', () => {
+  it('Unterarm und Handebene beide aus Bildkoordinaten (gleiche z-Konvention)', () => {
     const expected = computeKnickAngle(
       computeForearmDirection(pose[13]!, pose[15]!, aspect),
       computePalmNormal(hand, aspect),
     )
-    expect(computeHandKnick(pose, undefined, hand, aspect)).toBeCloseTo(expected, 9)
+    expect(computeHandKnick(pose, hand, aspect)).toBeCloseTo(expected, 9)
+  })
+
+  it('bleibt bei Armdrehung stabil trotz verschiedener z-Nullpunkte von Pose und Hand', () => {
+    // Starre Arm+Hand (40° Flexion) in Pixeln, gedreht um die Unterarm-Längsachse,
+    // dann wie MediaPipe normiert: x/W, y/H, z/W; Pose-z um die Hüftmitte,
+    // Hand-z um das Handgelenk verschoben.
+    const W = 1280, H = 720
+    const rad = (d: number) => (d * Math.PI) / 180
+    const flex = rad(40)
+    const rigPx = (theta: number) => {
+      const c = Math.cos(rad(theta)), s = Math.sin(rad(theta))
+      const rot = (x: number, y: number, z: number) => ({ x, y: y * c - z * s, z: y * s + z * c })
+      const flexed = (x: number, y: number) => rot(x * Math.cos(flex), y, -x * Math.sin(flex))
+      return {
+        elbow: rot(-300, 0, 0),
+        wrist: rot(0, 0, 0),
+        hand: { 0: rot(0, 0, 0), 5: flexed(96, -30), 9: flexed(100, 0), 17: flexed(84, 30) } as Record<number, { x: number; y: number; z: number }>,
+      }
+    }
+    const measure = (theta: number) => {
+      const r = rigPx(theta)
+      const toImg = (p: { x: number; y: number; z: number }, zOff: number) =>
+        lm((p.x + 640) / W, (p.y + 360) / H, p.z / W + zOff)
+      const poseImg = filled(33)
+      poseImg[13] = toImg(r.elbow, -0.4)
+      poseImg[15] = toImg(r.wrist, -0.4)
+      const handImg = filled(21)
+      for (const i of [0, 5, 9, 17]) handImg[i] = toImg(r.hand[i]!, -r.wrist.z / W)
+      return computeHandKnick(poseImg, handImg, W / H)
+    }
+    const ref = measure(0)
+    for (let theta = 0; theta <= 90; theta += 5) {
+      expect(Math.abs(measure(theta) - ref)).toBeLessThanOrEqual(10)
+    }
+    expect(Math.abs(ref)).toBeCloseTo(40, 6)
   })
 })
 
@@ -84,7 +111,7 @@ describe('createMasterPrint — Knick-Baseline', () => {
   it('speichert calibKnick und calibKnickFallback mit den Laufzeit-Funktionen', () => {
     const mp = createMasterPrint('wrist', pose, { handLandmarks: hand, aspect, worldLandmarks: world })
     if (mp?.mode !== 'wrist') throw new Error('erwartet WristMasterPrint')
-    expect(mp.calibKnick).toBeCloseTo(computeHandKnick(pose, world, hand, aspect), 9)
+    expect(mp.calibKnick).toBeCloseTo(computeHandKnick(pose, hand, aspect), 9)
     expect(mp.calibKnickFallback).toBeCloseTo(computePoseKnick(pose, world, aspect), 9)
   })
 

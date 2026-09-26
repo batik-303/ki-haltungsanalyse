@@ -400,7 +400,7 @@ export function createWristRailTimer(ladder: number[] = [3, 5, 10, 15]) {
  * Full wrist analysis for a single frame.
  * Uses plane-projected Flexion/Extension angle with MCP approximation.
  * Radial/Ulnar deviation is ignored.
- * @deprecated Use computeCollinearityAngle2D() for primary measurement.
+ * @deprecated Die Laufzeit misst den Knick mit computeHandKnick()/computePoseKnick().
  */
 export function analyzeWrist(
   elbow: Landmark,
@@ -495,20 +495,18 @@ export function computeKnickAngle(forearmDir: Vec3, palmNormal: Vec3): number {
 }
 
 /**
- * Knick im Hand-Pfad: Unterarm aus Pose 13 → 15 (worldLandmarks, sonst
- * Bildkoordinaten), Handebene aus den HandLandmarker-Punkten. Gemeinsamer
- * Code-Pfad für Kalibrierung (`createMasterPrint`) und Laufzeit.
+ * Knick im Hand-Pfad: Unterarm aus Pose 13 → 15, Handebene aus den
+ * HandLandmarker-Punkten — beide in normierten Bildkoordinaten, damit x/y/z
+ * dieselbe Konvention haben (z im Maßstab von x). Pose-`worldLandmarks`
+ * (Meter) mit Hand-Bildkoordinaten zu mischen, würde die z-Maßstäbe
+ * vermengen und die Drehinvarianz brechen. Gemeinsamer Code-Pfad für
+ * Kalibrierung (`createMasterPrint`) und Laufzeit.
  */
-export function computeHandKnick(
-  pose: Landmark[],
-  world: Landmark[] | undefined,
-  hand: Landmark[],
-  aspect: number = 1,
-): number {
-  const forearm = world
-    ? computeForearmDirection(world[13]!, world[15]!)
-    : computeForearmDirection(pose[13]!, pose[15]!, aspect)
-  return computeKnickAngle(forearm, computePalmNormal(hand, aspect))
+export function computeHandKnick(pose: Landmark[], hand: Landmark[], aspect: number = 1): number {
+  return computeKnickAngle(
+    computeForearmDirection(pose[13]!, pose[15]!, aspect),
+    computePalmNormal(hand, aspect),
+  )
 }
 
 /**

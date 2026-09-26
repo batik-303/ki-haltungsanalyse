@@ -76,8 +76,6 @@ export function usePoseDetection(
   // One-Euro filters for wrist render coordinates (ex, ey, wx, wy, ix, iy)
   const wristFiltersRef = useRef(createWristRenderFilters())
 
-  // One-Euro filters for z-values used in 3D angle analysis
-
   // Rail direction smoothing state (2D normalized vector)
   const railDirRef = useRef<{ x: number; y: number } | null>(null)
   // Rail 5-second challenge timer
@@ -338,10 +336,10 @@ export function usePoseDetection(
             const pinky = landmarks[17]!
             const index = landmarks[19]!
 
-            // Per-frame path selection. Hand path uses HandLandmarker for
-            // precise MCP + palm-normal sign; pose-fallback uses pose-derived
-            // MCP and old 2D-cross sign, with their own calibration baselines
-            // (also seeded at calibration time when the hand was visible).
+            // Analysepfad pro Frame: Der Hand-Pfad misst den Knick gegen die
+            // HandLandmarker-Handebene, der Pose-Fallback gegen die grobe
+            // Pose-Handebene (15/19/17). Jeder Pfad hat seine eigene, bei
+            // „Haltung speichern" gesetzte Baseline.
             const hand = handLandmarksRef.current
             const path = selectAnalysisPath(hand)
             const prevPath = lastAnalysisPathRef.current
@@ -368,7 +366,7 @@ export function usePoseDetection(
             const armLen2D = computeArmLength2D(elbow, wrist)
             const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
 
-            // ── Path-dispatched Knick + bend sign ──
+            // ── Knick + Beuge-Vorzeichen je Analysepfad ──
             let knick: number
             let baselineKnick: number
             let bendSign: number
@@ -377,7 +375,7 @@ export function usePoseDetection(
 
             if (path === 'hand' && hand) {
               const handWrist = hand[0]!
-              knick = computeHandKnick(landmarks, worldLandmarks, hand, aspect)
+              knick = computeHandKnick(landmarks, hand, aspect)
               baselineKnick = store.masterPrint.calibKnick
               bendSign = computePalmBendSign(elbow, hand)
               refBendSign = store.masterPrint.flexBendDir
