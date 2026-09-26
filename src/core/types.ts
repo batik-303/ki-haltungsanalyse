@@ -94,13 +94,13 @@ export interface WristMasterPrint {
   mode: 'wrist'
   flexAngle: number           // Projected flexion/extension angle at calibration
   flexBendDir: number         // Hand-path bend sign (palm-normal · forearm) at calibration
-  calibArmLength2D: number    // 2D elbow-wrist distance at calibration (normalized)
-  calib2DAngle?: number       // Hand-path 2D collinearity angle baseline
+  calibArmLength2D: number    // 2D-Unterarmlänge bei der Kalibrierung (normiert, mit aspect)
+  calibKnick: number          // Knick-Baseline Hand-Pfad (2D-Winkel in Grad, ADR 0003)
   // Pose-only fallback baselines — computed at calibration so runtime can
   // switch to the fallback path without a baseline mismatch when the hand
   // briefly disappears.
   flexBendDirFallback?: number
-  calib2DAngleFallback?: number
+  calibKnickFallback: number  // Knick-Baseline Pose-Fallback (2D-Winkel in Grad)
 }
 
 export interface ViolinMasterPrint {

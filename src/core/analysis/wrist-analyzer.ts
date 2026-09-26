@@ -87,8 +87,8 @@ export function computeMCP(pinky: Landmark, index: Landmark): Landmark {
  * Compute 2D distance between elbow and wrist (normalized coordinates).
  * Used to detect foreshortening when arm points toward camera.
  */
-export function computeArmLength2D(elbow: Landmark, wrist: Landmark): number {
-  const dx = elbow.x - wrist.x
+export function computeArmLength2D(elbow: Landmark, wrist: Landmark, aspect: number = 1): number {
+  const dx = (elbow.x - wrist.x) * aspect
   const dy = elbow.y - wrist.y
   return Math.sqrt(dx * dx + dy * dy)
 }
@@ -279,6 +279,9 @@ export function computeWristTensionTarget(
  * Measure wrist bend as the 2D angle at the wrist in the triangle
  * Elbow→Wrist→MCP using only screen-space x,y coordinates (no z).
  * Returns deviation in degrees: 0° = perfectly straight, 90° = right angle.
+ *
+ * Rohwert des Knicks; die Laufzeit korrigiert ihn mit `computeCorrectedKnick`
+ * um die Verkürzung des Unterarms (ADR 0003).
  */
 export function computeCollinearityAngle2D(
   elbow: Landmark,
@@ -305,6 +308,25 @@ export function computeCollinearityAngle2D(
 }
 
 /**
+ * Knick aus dem 2D-Bildwinkel, korrigiert um die Verkürzung des Unterarms
+ * (ADR 0003). `forearmLengthRatio` = aktuelle 2D-Unterarmlänge / kalibrierte
+ * 2D-Unterarmlänge ≈ cos α, α = Neigung des Unterarms aus der Bildebene
+ * gegenüber der Kalibrierung. Annahme: die Hand macht die Neigung mit. Dann
+ *   cos(Knick) = cos(Winkel2D) · cos²α + sin²α
+ * Ohne Verkürzung (Verhältnis ≥ 1) bleibt der 2D-Winkel unverändert; die
+ * Korrektur senkt den Wert nur, sie erhöht ihn nie. Keine geschätzte Tiefe
+ * (z) — die rauscht und lässt den Anker im Stillstand springen.
+ * Grenze: Drehung um die Unterarm-Längsachse verkürzt nichts und bleibt
+ * unkorrigiert.
+ */
+export function computeCorrectedKnick(angle2DDeg: number, forearmLengthRatio: number): number {
+  const r = Math.min(1, Math.max(0, forearmLengthRatio))
+  const cos2 = r * r
+  const cosKnick = Math.cos((angle2DDeg * Math.PI) / 180) * cos2 + (1 - cos2)
+  return Math.acos(Math.min(1, Math.max(-1, cosKnick))) * (180 / Math.PI)
+}
+
+/**
  * Determine 2D bend direction sign via 2D cross product.
  * Positive = one side (e.g. toward scroll), negative = other (toward neck).
  */
@@ -320,28 +342,6 @@ export function computeBendDirection2D(
   const by = mcp.y - wrist.y
   // 2D cross product (z-component of 3D cross)
   return ax * by - ay * bx
-}
-
-/**
- * Apply z-boost when 2D angle is below threshold but filtered z-delta
- * between MCP and wrist indicates a depth-direction bend.
- * Uses a linear ramp instead of binary threshold to avoid flicker.
- * Returns the effective angleDiff (may be boosted).
- */
-export function computeZBoost(
-  angleDiff2D: number,
-  zMcp: number,
-  zWrist: number,
-  threshold = 0.02,
-  boostDeg = 4,
-): number {
-  if (angleDiff2D >= 3) return angleDiff2D
-  const zDelta = Math.abs(zMcp - zWrist)
-  if (zDelta <= threshold) return angleDiff2D
-  // Linear ramp: threshold → threshold×3 maps to 0..boostDeg
-  const ramp = Math.min(1, (zDelta - threshold) / (threshold * 2))
-  const zContribution = boostDeg * ramp
-  return Math.max(angleDiff2D, zContribution)
 }
 
 /**
@@ -418,7 +418,7 @@ export function createWristRailTimer(ladder: number[] = [3, 5, 10, 15]) {
  * Full wrist analysis for a single frame.
  * Uses plane-projected Flexion/Extension angle with MCP approximation.
  * Radial/Ulnar deviation is ignored.
- * @deprecated Use computeCollinearityAngle2D() for primary measurement.
+ * @deprecated Die Laufzeit misst den Knick mit computeCollinearityAngle2D() + computeCorrectedKnick().
  */
 export function analyzeWrist(
   elbow: Landmark,

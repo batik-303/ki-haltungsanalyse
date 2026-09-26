@@ -1,8 +1,10 @@
 ---
-Status: accepted
+Status: superseded by 0003
 ---
 
 # Knick-Messung rotationsinvariant im Bezugssystem der Hand statt als 2D-Bildwinkel
+
+> **Abgelöst durch ADR 0003** (26.09.2026): Beim Geigen-Test sprang der Anker schon im Stillstand, sehr wahrscheinlich, weil die geschätzten z-Werte zu stark rauschen (einzige neue Zutat gegenüber der ruhigen 2D-Messung; nicht gemessen). Der Knick wird jetzt als 2D-Winkel mit Verkürzungs-Korrektur gemessen.
 
 Der **Knick** (siehe `CONTEXT.md`) wird nicht mehr als 2D-Winkel im Kamerabild gemessen (`computeCollinearityAngle2D`), sondern im **Bezugssystem der Hand**: 3D-Unterarm-Richtung gegen die Handebene (Handflächen-Normale aus den HandLandmarker-Punkten). Gewertet wird nur die **Beuge-/Streck-Achse**. Die Kalibrier-Baseline wird in **derselben Größe** gespeichert. Die „nur-steigen"-Sperre bei geringer Foreshortening-Konfidenz entfällt; schlechte Sicht zeigt der Anker als **grau**.
 

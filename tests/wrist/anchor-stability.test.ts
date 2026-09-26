@@ -23,7 +23,8 @@ describe('Wrist-Ankerpunkt Stabilität', () => {
     flexAngle: 0,
     flexBendDir: 1,
     calibArmLength2D: 1,
-    calib2DAngle: 0,
+    calibKnick: 0,
+    calibKnickFallback: 0,
   }
 
   it('bleibt bei konstantem Input stabil', () => {
