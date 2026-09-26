@@ -31,6 +31,7 @@ MediaPipe schätzt z aus einem einzigen Kamerabild. Die Handebene wird aus drei 
 
 - **Abnahme** (`tests/wrist/angle-orientation-drift.test.ts`): Gute Haltung (5°) bleibt bei Armdrehung um sechs Achsen bis 80° unter 8°, also blau. Der reine 2D-Winkel steigt dabei bis ≈ 29°. Ein echter Knick in der Bildebene (20°/40°/55°) wird ohne Drehung exakt erkannt und durch Drehung höchstens ≈ 2,2° überhöht.
 - **Grenze**: Dreht sich der Arm um die **eigene Längsachse**, wird er im Bild nicht kürzer. Dann gibt es nichts zu korrigieren; ein echter Knick kann kleiner erscheinen (Richtung blau, nicht gelb). Ohne Tiefe nicht lösbar.
+- **Grenze Vorzeichen**: Der Bildwinkel hat kein Vorzeichen. Ist die gespeicherte Haltung schon gebeugt (z. B. 10°) und knickt die Hand durch die Gerade hindurch in die Gegenrichtung (−10°), misst sich derselbe Betrag, die Abweichung ist 0. Geschützt durch einen Charakterisierungstest in `tests/wrist/knick-tracker.test.ts`; Fix-Kandidat: Vorzeichen per 2D-Kreuzprodukt (`computeBendDirection2D`).
 - Die Korrektur **senkt** den Wert nur, sie erhöht ihn nie. Falsches Gelb durch Armdrehung wird dadurch kleiner. Der Preis: Ein echter Knick bei stark verkürztem Unterarm wird schwächer gemeldet.
 - `calibArmLength2D` wird jetzt mit Seitenverhältnis gemessen (sonst verfälscht die Bildbreite das Längenverhältnis je nach Armrichtung).
 - `calibKnick`/`calibKnickFallback` in der `MasterPrint` ersetzen `calib2DAngle`/`calib2DAngleFallback`.

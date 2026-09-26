@@ -112,7 +112,10 @@ Knick    = computeCorrectedKnick(Winkel2D, r)
 - **Grenze**: Drehung um die **Unterarm-Längsachse** verkürzt den Arm nicht und bleibt unkorrigiert. Ein echter Knick kann dann kleiner erscheinen (Richtung blau, nicht gelb).
 - `computeArmLength2D` misst jetzt mit `aspect`, sonst hinge das Verhältnis von der Armrichtung im Bild ab.
 
-### Ablauf pro Frame (`use-pose-detection.ts`, Wrist-Zweig)
+### Ablauf pro Frame (`createKnickTracker`, `src/core/analysis/knick-tracker.ts`)
+
+Der Hook `use-pose-detection.ts` ruft pro Frame nur `knickTrackerRef.current.update(...)` auf. Der ganze Ablauf ist eine reine Funktion und damit testbar:
+
 
 1. **Knick** je Pfad: Hand-Pfad mit `hand[0]`/`hand[9]`, Pose-Fallback mit Pose-`worldLandmarks` 13/15/MCP(17,19). Beide mit demselben `r` aus Pose-Bildkoordinaten.
 2. **Baseline**: `|Knick − calibKnick|` bzw. `|Knick − calibKnickFallback|`, gespeichert bei „Haltung speichern" (`master-print.ts`, dort r = 1).
@@ -124,6 +127,7 @@ Knick    = computeCorrectedKnick(Winkel2D, r)
 
 - `tests/wrist/angle-orientation-drift.test.ts`: gute Haltung (5°) bei Armdrehung um sechs Achsen bis 80° bleibt ≤ 8° (reiner 2D-Winkel: bis ≈ 29°). Echter Knick 20°/40°/55° in der Bildebene exakt erkannt, durch Drehung höchstens ≈ 2,2° überhöht. Grenze Längsachse als Charakterisierung.
 - `tests/wrist/knick-baseline.test.ts`: Baselines in derselben Größe wie die Laufzeit.
+- `tests/wrist/knick-tracker.test.ts`: ganzer Ablauf von „Haltung speichern" bis Farbe, entsprechend dem Geigen-Test: Stillstand mit Pixelzittern 10 s blau; z-Werte ändern nichts; Armdrehung bis 70° bei guter Haltung blau; 20° Knick gelb und zurück blau; stark verkürzter Unterarm hält kein Gelb fest; Pfadwechsel begrenzt auf 3°. Grenze Vorzeichen als Charakterisierung. Mutationsprobe: Wiedereinbau der Nur-steigen-Sperre oder eines z-Einflusses macht je einen Test rot.
 
 ---
 
@@ -134,7 +138,8 @@ Knick    = computeCorrectedKnick(Winkel2D, r)
 - [x] Ursache Dauergelb (#78) → 2D-Bildwinkel nicht rotationsinvariant + Nur-steigen-Sperre
 - [x] **z-Nullpunkte mischen** beim Knick: erledigt, der Knick nutzt kein z mehr (#82, ADR 0003)
 - [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf ein z-freies Vorzeichen umstellen, z. B. `computeBendDirection2D` (#76, periphere Kipprichtung)
-- [ ] Geigen-Gegen-Check der Verkürzungs-Korrektur: Stillstand ruhig, Lagenwechsel blau, bewusster Knick gelb (#82)
+- [x] Geigen-Gegen-Check der Verkürzungs-Korrektur: „funktioniert schon ganz gut" (Nutzerin, 26.09.2026) (#82)
+- [ ] Vorzeichen des Knicks: Knick durch die Gerade in Gegenrichtung wird nicht erkannt (ADR 0003, Grenze Vorzeichen)
 - [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74)
 - [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
 - [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)
