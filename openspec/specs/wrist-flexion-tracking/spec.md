@@ -34,11 +34,11 @@ The system SHALL define the flexion plane as: `normal = normalize(forearm × [0,
 - **THEN** angleDiff = |currentFlexAngle - masterPrint.flexAngle|
 
 ### Requirement: Calibration stores flex-only angle
-The WristMasterPrint SHALL store the 2D collinearity angle at calibration time in addition to existing fields. The stored `flexAngle` remains for backward compatibility.
+The WristMasterPrint SHALL store the knick baselines in the same unit as the runtime measurement. At calibration r = 1, so the baseline equals the 2D collinearity angle. The stored `flexAngle` remains for backward compatibility.
 
 #### Scenario: Wrist calibration capture
 - **WHEN** the user holds the correct wrist position and calibration triggers
-- **THEN** the system stores `flexAngle`, `flexBendDir`, `calibArmLength2D`, and `calib2DAngle` in the MasterPrint
+- **THEN** the system stores `flexAngle`, `flexBendDir`, `calibArmLength2D` (aspect-corrected), `calibKnick` (2D angle pose elbow → hand wrist → hand middle MCP, aspect-corrected) and `calibKnickFallback` (2D angle from pose world landmarks, else image landmarks) in the MasterPrint
 
 ### Requirement: One-Euro filter on MCP
 The system SHALL apply One-Euro filtering to the computed MCP position to reduce jitter.
@@ -62,21 +62,6 @@ The system SHALL measure wrist bend as the 2D angle at the wrist point in the sc
 - **WHEN** the hand moves toward the neck (partial depth movement)
 - **THEN** the 2D angle deviation SHALL capture the lateral component of the movement
 
-### Requirement: Z-boost for neck-direction detection
-The system SHALL apply a z-boost when the 2D angle is below 3° but the filtered z-delta between MCP and wrist exceeds a configurable threshold (Z_THRESHOLD).
-
-#### Scenario: Neck-direction bend with small 2D footprint
-- **WHEN** the 2D angleDiff is less than 3° AND the absolute z-delta (|z_mcp - z_wrist|) exceeds Z_THRESHOLD
-- **THEN** the effective angleDiff SHALL be raised to at least Z_BOOST_DEGREES
-
-#### Scenario: Z-boost does not amplify visible bends
-- **WHEN** the 2D angleDiff already exceeds 3°
-- **THEN** the z-boost SHALL NOT modify the angleDiff
-
-#### Scenario: Z-values use strong filtering
-- **WHEN** z-values are used for the boost signal
-- **THEN** they SHALL be passed through One-Euro filters with beta ≤ 0.003
-
 ### Requirement: Forearm direction vector smoothing
 The system SHALL apply temporal smoothing (lerp with α=0.15) to the normalized forearm direction vector (Elbow→Wrist) to prevent rail orientation flicker. Additionally, the slide-shield SHALL activate at a velocity threshold of 0.30 (reduced from 0.45), remain active for 0.35 seconds (extended from 0.22s), and apply a damping factor of 0.50 (increased from 0.35) during the shield period.
 
@@ -92,3 +77,26 @@ The system SHALL apply temporal smoothing (lerp with α=0.15) to the normalized 
 - **WHEN** the player performs a vertical position shift (Lagenwechsel) at velocity 0.35
 - **THEN** the slide-shield SHALL activate and suppress tension feedback for 0.35 seconds
 - **AND** the effective tension during the shield SHALL be damped by factor 0.50
+
+### Requirement: Foreshortening correction of the knick
+The system SHALL correct the 2D collinearity angle for forearm foreshortening: `r = forearmLength2D / calibArmLength2D` (both aspect-corrected, pose 13 → 15) and `knick = acos(cos(angle2D) · r² + (1 − r²))`, with `r` clamped to [0, 1]. The correction MUST NOT use estimated depth (z) and MUST NOT increase the value above `angle2D`. It is implemented as `computeCorrectedKnick` and applied per frame by `createKnickTracker` (ADR 0003).
+
+#### Scenario: No foreshortening
+- **WHEN** the current 2D forearm length equals or exceeds the calibrated length (r ≥ 1)
+- **THEN** the knick SHALL equal the 2D collinearity angle
+
+#### Scenario: Forearm half as long
+- **WHEN** r = 0.5 and the 2D angle is 90°
+- **THEN** the knick SHALL be acos(0.75) ≈ 41.4°
+
+#### Scenario: Small length noise at rest
+- **WHEN** r fluctuates by 2 % around 1 and the 2D angle is 10°
+- **THEN** the knick SHALL change by less than 0.5°
+
+#### Scenario: Known limit — rotation about the forearm long axis
+- **WHEN** the arm rotates only about its own long axis (no 2D shortening)
+- **THEN** the knick SHALL equal the uncorrected 2D angle, so a real knick may appear smaller (towards blue, not a false yellow)
+
+#### Scenario: Known limit — no sign
+- **WHEN** the calibrated posture is already bent (e.g. 10°) and the hand bends through the straight line to the same magnitude on the other side
+- **THEN** the deviation SHALL be 0 (documented limit, tracked in #85)
