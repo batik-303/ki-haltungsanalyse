@@ -4,7 +4,7 @@ Dieses Dokument erklärt, **wie** der Wrist-Modus MediaPipe nutzt: welche Modell
 
 **Stehende Regel** (Wegfindungs-Karte #71): Jede Ticket-Sitzung im Wrist-Modus ergänzt hier die MediaPipe-Technik, die sie berührt, mit Datei:Zeile-Verweisen, und hakt die Liste „Offene technische Punkte" ab.
 
-Stand: `main` nach PR #80/#81 (26.09.2026), §2 und §5 aktualisiert mit #82. Zeilennummern beziehen sich auf diesen Stand.
+Stand: `main` nach PR #80/#81 (26.09.2026), §2 und §5 aktualisiert mit #82 (ADR 0003). Zeilennummern beziehen sich auf diesen Stand.
 
 ---
 
@@ -46,8 +46,8 @@ MediaPipe liefert **drei verschiedene** Koordinatensysteme. Wer sie mischt, beko
 Quelle: offizielle MediaPipe-Doku (Hands/Pose „Output"). Wichtige Folgen:
 
 1. **x und y sind unterschiedlich normiert** (Breite vs. Höhe). Für Winkel im Bild muss x mit dem Seitenverhältnis `aspect = W/H` skaliert werden. Das macht `computeCollinearityAngle2D` (`src/core/analysis/wrist-analyzer.ts:283`).
-2. **Die z-Werte von Pose und Hand haben verschiedene Nullpunkte.** Ein Vektor „Pose-Ellbogen → Hand-Handgelenk" hat damit eine z-Komponente ohne echte Bedeutung (Hand-z ≈ 0 minus Ellbogen-Tiefe relativ zur Hüfte). Das tun weiterhin `computePalmBendSign` und `computeForearmLength3D` (Bend-Lock, nur **Vorzeichen** bzw. Toleranz-Maßstab). Für den **Knick-Betrag** ist es seit #82 gelöst: Unterarm und Handebene werden als **Richtungen** aus je einem System verglichen (siehe §5).
-3. Die z-Werte sind **Schätzungen** aus einem einzigen Kamerabild, keine gemessene Tiefe. Sie rauschen stärker als x/y.
+2. **Die z-Werte von Pose und Hand haben verschiedene Nullpunkte.** Ein Vektor „Pose-Ellbogen → Hand-Handgelenk" hat damit eine z-Komponente ohne echte Bedeutung (Hand-z ≈ 0 minus Ellbogen-Tiefe relativ zur Hüfte). Das tun weiterhin `computePalmBendSign` und `computeForearmLength3D` (Bend-Lock, nur **Vorzeichen** bzw. Toleranz-Maßstab). Der **Knick** nutzt seit #82 gar kein z mehr (siehe §5).
+3. Die z-Werte sind **Schätzungen** aus einem einzigen Kamerabild, keine gemessene Tiefe. Sie rauschen stärker als x/y. Beim Geigen-Test von #82 sprang eine z-basierte Knick-Messung schon im Stillstand (§5).
 
 ---
 
@@ -86,52 +86,44 @@ Dazu asymmetrische Zeit-Hysterese: grau erst nach ~250–300 ms, zurück nach ~1
 
 ---
 
-## 5. Der Knick — Messung im Bezugssystem der Hand (#82)
+## 5. Der Knick — 2D-Winkel mit Verkürzungs-Korrektur (#82)
 
-Diagnose in #78. Begriff **Knick**: siehe `CONTEXT.md`. Entscheidung: ADR `docs/adr/0002-knick-rotationsinvariant-statt-2d.md`. Umgesetzt in #82.
+Diagnose in #78. Begriff **Knick**: siehe `CONTEXT.md`. Entscheidung: ADR `docs/adr/0003-knick-2d-mit-verkuerzungs-korrektur.md` (löst ADR 0002 ab).
 
-### Warum die alte 2D-Messung beim Spielen dauerhaft gelb wurde
+### Vorgeschichte in drei Schritten
 
-- Früher: `computeCollinearityAngle2D(poseElbow13, hand[0], hand[9], aspect)`, also der **2D-Bildwinkel** im Dreieck Ellbogen → Handgelenk → Mittelfinger-Grundgelenk, minus Skalar-Baseline `calib2DAngle`.
-- Ein **2D-projizierter Winkel ist nicht invariant**, wenn sich der Arm aus der Bildebene dreht (Lagenwechsel). Gemessen an einer starren Arm+Hand, nur gedreht (θ = 0…90°): echte Flexion 20° → 0…26°; 40° → 180…40°; 55° → 180…111…55°. Die Videos zeigten 98–132°.
-- Die Skalar-Baseline gleicht das nicht aus; die „nur-steigen"-Sperre bei `foreConf < 0.7` hielt den hochgelaufenen Wert zusätzlich fest.
-- `computeCollinearityAngle2D` bleibt nur noch als Vergleich im Drift-Test (`@deprecated`).
+1. **Reiner 2D-Winkel** (bis #82): `computeCollinearityAngle2D(poseElbow13, hand[0], hand[9], aspect)` minus Baseline. Im Stillstand ruhig. Beim Lagenwechsel dauerhaft gelb: Dreht sich der Arm aus der Bildebene, läuft der projizierte Winkel weg (Modell: echte 5° → bis ≈ 29° im Bild; Videos zeigten 98–132°). Die „nur-steigen"-Sperre bei `foreConf < 0.7` hielt den hohen Wert fest.
+2. **3D im Bezugssystem der Hand** (ADR 0002, erster Versuch in #82): Knick = asin(Unterarm · Handflächen-Normale) aus den z-Werten. Im synthetischen Test exakt drehinvariant. Beim Geigen-Test sprang der Anker aber **schon im Stillstand**, bei jeder Kameraperspektive. Einzige neue Zutat war z. Geometrie: Die Handebene kommt aus drei Punkten mit ca. 0,06 Bildbreite Abstand; ein z-Fehler von 0,01 Bildbreite kippt sie um ≈ 9,5° (Farbschwelle: 8°). Verworfen.
+3. **2D + Verkürzungs-Korrektur** (ADR 0003, heute): siehe unten.
 
-### Neue Messung (`src/core/analysis/wrist-analyzer.ts`)
-
-**Idee**: Bei gerader Hand liegt der Unterarm in der Handebene. Beugen/Strecken kippt die Handebene um ihre Querachse. Der Knick ist daher der **Winkel zwischen Unterarm-Richtung und Handebene**:
+### Messung (`src/core/analysis/wrist-analyzer.ts`)
 
 ```
-knick = asin( (f · n) / (|f| · |n|) )     // Grad, vorzeichenbehaftet
-f = Unterarm-Richtung, n = Handflächen-Normale
+Winkel2D = computeCollinearityAngle2D(Ellbogen, Handgelenk, Mittelfinger-MCP, aspect)
+r        = computeArmLength2D(Pose 13, Pose 15, aspect) / calibArmLength2D   (≈ cos α)
+Knick    = computeCorrectedKnick(Winkel2D, r)
+         = acos( cos(Winkel2D) · r² + (1 − r²) )
 ```
 
-- **Rotationsinvariant**: Dreht sich der ganze Arm vor der Kamera, drehen sich `f` und `n` gemeinsam. Ein Skalarprodukt ändert sich dabei nicht.
-- **Nur Beuge-/Streck-Achse**: Seitliches Abknicken (radial/ulnar) dreht die Hand um ihre eigene Normale; `n` bleibt gleich, der Knick auch.
-- **Vorzeichen**: Beugung und Streckung haben entgegengesetzte Vorzeichen. Welches positiv ist, hängt an der Händigkeit; durch die Baseline-Differenz egal.
-
-**Koordinatensysteme — nie mischen** (§2):
-
-| Pfad | Unterarm `f` | Handebene `n` | Funktion |
-|---|---|---|---|
-| Hand | Pose 13 → 15 in **Bildkoordinaten** mit `aspect` | `computePalmNormal(hand, aspect)`: Hand 0→5 × 0→17 | `computeHandKnick` |
-| Pose-Fallback | Pose 13 → 15 aus `worldLandmarks` (sonst Bild mit `aspect`) | Pose 15→19 × 15→17 (grobe Handebene), gleiche Quelle | `computePoseKnick` |
-
-`f` und `n` sind jeweils **Differenzen innerhalb eines Systems**, deshalb fallen die verschiedenen z-Nullpunkte (Hüftmitte vs. Handgelenk) heraus. Im Hand-Pfad kommen beide Richtungen bewusst aus **Bildkoordinaten**: Pose-Bild und Hand-Bild haben dieselbe Konvention (x/y normiert, z im Maßstab von x). Pose-`worldLandmarks` (Meter) hier zu mischen, würde zwei verschiedene z-Maßstäbe vermengen; schon ein Maßstabsfehler bei z bricht die Drehinvarianz. Für normierte Bildkoordinaten werden x **und z** mit `aspect = W/H` skaliert.
+- **Idee**: Wird der Unterarm im Bild kürzer, hat er sich um α aus der Bildebene geneigt. Macht die Hand diese Neigung mit, ist das die Formel für den echten Winkel. Nur x/y, **kein z**.
+- **r ≥ 1** (keine Verkürzung): Knick = Winkel2D, also genau die im Stillstand ruhige alte Messung.
+- **Rauschen**: Längenrauschen wirkt quadratisch; 2 % → < 0,5° bei 10°.
+- **Nur senken**: Die Korrektur verkleinert den Wert, sie vergrößert ihn nie.
+- **Grenze**: Drehung um die **Unterarm-Längsachse** verkürzt den Arm nicht und bleibt unkorrigiert. Ein echter Knick kann dann kleiner erscheinen (Richtung blau, nicht gelb).
+- `computeArmLength2D` misst jetzt mit `aspect`, sonst hinge das Verhältnis von der Armrichtung im Bild ab.
 
 ### Ablauf pro Frame (`use-pose-detection.ts`, Wrist-Zweig)
 
-1. **Knick** je Pfad: `computeHandKnick` bzw. `computePoseKnick`.
-2. **Baseline**: `|knick − calibKnick|` (Hand) bzw. `|knick − calibKnickFallback|` (Pose). Beide werden bei „Haltung speichern" in `createMasterPrint` mit **denselben** Funktionen gespeichert (`src/core/calibration/master-print.ts`).
+1. **Knick** je Pfad: Hand-Pfad mit `hand[0]`/`hand[9]`, Pose-Fallback mit Pose-`worldLandmarks` 13/15/MCP(17,19). Beide mit demselben `r` aus Pose-Bildkoordinaten.
+2. **Baseline**: `|Knick − calibKnick|` bzw. `|Knick − calibKnickFallback|`, gespeichert bei „Haltung speichern" (`master-print.ts`, dort r = 1).
 3. **Pfadwechsel**: erster Frame nach Wechsel Hand ↔ Pose max. ±3° Sprung (unverändert).
-4. **Glättung**: EMA 0,25. **Keine** Nur-steigen-Sperre mehr; schlechte Sicht soll grau zeigen (#74), nicht festgehaltenes Gelb.
+4. **Glättung**: EMA 0,25. Keine Nur-steigen-Sperre, kein Z-Boost mehr.
 5. **Farbe**: `createWristRailColor` unverändert (blau → gelb bei > 8° für 8 Frames, gelb → blau bei < 5° für 4 Frames). Schwellen auf der neuen Größe: #75.
 
-Entfallen: `calib2DAngle`, `calib2DAngleFallback`, `computeZBoost` samt z-Filtern (der Z-Boost glich nur die Tiefenblindheit der 2D-Messung aus und war selbst orientierungsabhängig).
+### Abnahme-Tests
 
-### Abnahme-Test
-
-`tests/wrist/angle-orientation-drift.test.ts`: starre Arm+Hand mit 20°/40°/55° Flexion, gedreht um die Unterarm-Längsachse, die senkrechte Bildachse und eine schräge Achse (θ = 0…90°). Zusicherung `maxDrift <= 10°` (tatsächlich ≈ 0°). Außerdem: seitliches Abknicken ignoriert, z-Nullpunkt-Versatz egal, Seitenverhältnis korrigiert. Kontrolle: die alte 2D-Messung driftet > 10°. Baseline-Gleichheit Kalibrierung ↔ Laufzeit sowie Drehtest für `computeHandKnick` mit MediaPipe-typischer Normierung (x/W, y/H, z/W, verschiedene z-Nullpunkte): `tests/wrist/knick-baseline.test.ts`.
+- `tests/wrist/angle-orientation-drift.test.ts`: gute Haltung (5°) bei Armdrehung um sechs Achsen bis 80° bleibt ≤ 8° (reiner 2D-Winkel: bis ≈ 29°). Echter Knick 20°/40°/55° in der Bildebene exakt erkannt, durch Drehung höchstens ≈ 2,2° überhöht. Grenze Längsachse als Charakterisierung.
+- `tests/wrist/knick-baseline.test.ts`: Baselines in derselben Größe wie die Laufzeit.
 
 ---
 
@@ -140,10 +132,10 @@ Entfallen: `calib2DAngle`, `calib2DAngleFallback`, `computeZBoost` samt z-Filter
 - [x] Anker-Quelle `handLandmarks[0]`, kein Pose-15-Seed (#73 → #79, PR #80)
 - [x] Liefert der HandLandmarker Sichtbarkeit pro Punkt? → Nein (#74)
 - [x] Ursache Dauergelb (#78) → 2D-Bildwinkel nicht rotationsinvariant + Nur-steigen-Sperre
-- [x] **z-Nullpunkte mischen** beim Knick: Unterarm aus Pose 13→15 (`worldLandmarks`), Handebene aus Handpunkten, verglichen als Richtungen (#82)
-- [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf das Vorzeichen von `knick − calibKnick` umstellen (#76, periphere Kipprichtung)
-- [ ] Rauschen der Hand-z-Werte und Maßstab Pose-Bild-z ↔ Hand-Bild-z am echten Spielmaterial prüfen (Geigen-Gegen-Check #82); ggf. HandLandmarker-`worldLandmarks` + Pose-`worldLandmarks` oder Hand-Pfad ganz auf `computePoseKnick`
-- [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter (#74)
+- [x] **z-Nullpunkte mischen** beim Knick: erledigt, der Knick nutzt kein z mehr (#82, ADR 0003)
+- [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf ein z-freies Vorzeichen umstellen, z. B. `computeBendDirection2D` (#76, periphere Kipprichtung)
+- [ ] Geigen-Gegen-Check der Verkürzungs-Korrektur: Stillstand ruhig, Lagenwechsel blau, bewusster Knick gelb (#82)
+- [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74)
 - [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
 - [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)
 - [ ] Schwellen/Zeitkonstanten der Farbe auf der neuen Messgröße festlegen (#75)

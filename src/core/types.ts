@@ -48,13 +48,6 @@ export interface Landmark {
   visibility: number
 }
 
-// Richtungsvektor in 3D (z. B. Unterarm-Richtung, Handflächen-Normale).
-export interface Vec3 {
-  x: number
-  y: number
-  z: number
-}
-
 // MediaPipe landmark indices used by the system
 export const LANDMARKS = {
   LEFT_EAR: 7,
@@ -101,13 +94,13 @@ export interface WristMasterPrint {
   mode: 'wrist'
   flexAngle: number           // Projected flexion/extension angle at calibration
   flexBendDir: number         // Hand-path bend sign (palm-normal · forearm) at calibration
-  calibArmLength2D: number    // 2D elbow-wrist distance at calibration (normalized)
-  calibKnick: number          // Knick-Baseline Hand-Pfad (Grad, vorzeichenbehaftet, ADR 0002)
+  calibArmLength2D: number    // 2D-Unterarmlänge bei der Kalibrierung (normiert, mit aspect)
+  calibKnick: number          // Knick-Baseline Hand-Pfad (2D-Winkel in Grad, ADR 0003)
   // Pose-only fallback baselines — computed at calibration so runtime can
   // switch to the fallback path without a baseline mismatch when the hand
   // briefly disappears.
   flexBendDirFallback?: number
-  calibKnickFallback: number  // Knick-Baseline Pose-Fallback (Grad)
+  calibKnickFallback: number  // Knick-Baseline Pose-Fallback (2D-Winkel in Grad)
 }
 
 export interface ViolinMasterPrint {

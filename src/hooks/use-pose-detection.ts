@@ -1,4 +1,4 @@
-import { createWristRepairStatus, createWristRailColor, computeHandKnick, computePoseKnick, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeCorrectedKnick, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
@@ -336,10 +336,10 @@ export function usePoseDetection(
             const pinky = landmarks[17]!
             const index = landmarks[19]!
 
-            // Analysepfad pro Frame: Der Hand-Pfad misst den Knick gegen die
-            // HandLandmarker-Handebene, der Pose-Fallback gegen die grobe
-            // Pose-Handebene (15/19/17). Jeder Pfad hat seine eigene, bei
-            // „Haltung speichern" gesetzte Baseline.
+            // Analysepfad pro Frame: Der Hand-Pfad misst den 2D-Winkel mit dem
+            // präzisen HandLandmarker-Mittelfinger-Grundgelenk, der Pose-Fallback
+            // mit dem groben Pose-Punkt (17/19). Jeder Pfad hat seine eigene,
+            // bei „Haltung speichern" gesetzte Baseline.
             const hand = handLandmarksRef.current
             const path = selectAnalysisPath(hand)
             const prevPath = lastAnalysisPathRef.current
@@ -363,8 +363,11 @@ export function usePoseDetection(
             const slideShieldFactor = wristSlideShieldRef.current > 0 ? WRIST_SLIDE_DAMPING : 1
 
             // Foreshortening detection: compare current 2D arm length vs calibrated
-            const armLen2D = computeArmLength2D(elbow, wrist)
-            const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
+            const armLen2D = computeArmLength2D(elbow, wrist, aspect)
+            const calibArmLen = store.masterPrint.calibArmLength2D
+            const foreConf = computeForeshorteningConfidence(armLen2D, calibArmLen)
+            // Verkürzung gegenüber der Kalibrierung ≈ cos(Neigung aus der Bildebene)
+            const forearmLengthRatio = calibArmLen > 0 ? armLen2D / calibArmLen : 1
 
             // ── Knick + Beuge-Vorzeichen je Analysepfad ──
             let knick: number
@@ -375,7 +378,7 @@ export function usePoseDetection(
 
             if (path === 'hand' && hand) {
               const handWrist = hand[0]!
-              knick = computeHandKnick(landmarks, hand, aspect)
+              knick = computeCorrectedKnick(computeCollinearityAngle2D(elbow, handWrist, hand[9]!, aspect), forearmLengthRatio)
               baselineKnick = store.masterPrint.calibKnick
               bendSign = computePalmBendSign(elbow, hand)
               refBendSign = store.masterPrint.flexBendDir
@@ -388,15 +391,15 @@ export function usePoseDetection(
               const mcpFB = worldLandmarks
                 ? computeMCP(worldLandmarks[17]!, worldLandmarks[19]!)
                 : computeMCP(pinky, index)
-              knick = computePoseKnick(landmarks, worldLandmarks, aspect)
+              knick = computeCorrectedKnick(computeCollinearityAngle2D(elbowFB, wristFB, mcpFB), forearmLengthRatio)
               baselineKnick = store.masterPrint.calibKnickFallback
               bendSign = computeBendDirection2D(elbowFB, wristFB, mcpFB)
               refBendSign = store.masterPrint.flexBendDirFallback ?? store.masterPrint.flexBendDir
               forearmLen = computeForearmLength3D(elbowFB, wristFB)
             }
 
-            // Knick relativ zur gespeicherten Haltung (ADR 0002). Die 3D-Messung
-            // sieht auch Beugung in die Tiefe — der frühere Z-Boost entfällt.
+            // Knick relativ zur gespeicherten Haltung (ADR 0003). Ohne geschätzte
+            // Tiefe — der frühere Z-Boost entfällt, weil er auf z beruhte.
             const knickDiff = Math.abs(knick - baselineKnick)
             const t = now / 1000
 

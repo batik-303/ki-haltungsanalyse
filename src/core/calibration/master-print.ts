@@ -10,9 +10,8 @@ import { computeEarShoulderDistance } from '../analysis/shoulder-analyzer'
 import {
   computeFlexionExtensionAngle,
   computeArmLength2D,
+  computeCollinearityAngle2D,
   computePalmBendSign,
-  computeHandKnick,
-  computePoseKnick,
   computeBendDirection2D,
   computeMCP,
 } from '../analysis/wrist-analyzer'
@@ -71,12 +70,13 @@ export function createMasterPrint(
         flexBendDir: computePalmBendSign(poseElbow, handLandmarks),
         // Foreshortening confidence keeps using pose-only arm length —
         // HandLandmarker doesn't help with arm-pointing-at-camera detection.
-        calibArmLength2D: computeArmLength2D(poseElbow, poseWrist),
-        // Knick-Baseline in derselben Größe wie die Laufzeit (ADR 0002):
-        // rotationsinvarianter Winkel Unterarm ↔ Handebene.
-        calibKnick: computeHandKnick(landmarks, handLandmarks, aspect),
+        calibArmLength2D: computeArmLength2D(poseElbow, poseWrist, aspect),
+        // Knick-Baseline in derselben Größe wie die Laufzeit (ADR 0003): bei
+        // der Kalibrierung ist das Längenverhältnis 1, der korrigierte Knick
+        // also gleich dem 2D-Winkel.
+        calibKnick: computeCollinearityAngle2D(poseElbow, handWrist, handMiddleMCP, aspect),
         flexBendDirFallback: computeBendDirection2D(elbowFB, wristFB, mcpFB),
-        calibKnickFallback: computePoseKnick(landmarks, options.worldLandmarks, aspect),
+        calibKnickFallback: computeCollinearityAngle2D(elbowFB, wristFB, mcpFB),
       } satisfies WristMasterPrint
     }
     case 'violin': {
