@@ -68,7 +68,7 @@ export function createWristRailColor(
   }
 }
 
-import type { Landmark, WristMasterPrint, SensitivityPreset } from '../types'
+import type { Landmark, Vec3, WristMasterPrint, SensitivityPreset } from '../types'
 
 /**
  * Compute MCP-Joint approximation as midpoint of LEFT_PINKY (17) and LEFT_INDEX (19).
@@ -279,6 +279,10 @@ export function computeWristTensionTarget(
  * Measure wrist bend as the 2D angle at the wrist in the triangle
  * Elbow→Wrist→MCP using only screen-space x,y coordinates (no z).
  * Returns deviation in degrees: 0° = perfectly straight, 90° = right angle.
+ *
+ * @deprecated Nicht rotationsinvariant (Diagnose #78, ADR 0002) — die
+ * Laufzeit misst den Knick mit `computeHandKnick`/`computePoseKnick`. Bleibt
+ * nur als Vergleich im Drift-Test `tests/wrist/angle-orientation-drift.test.ts`.
  */
 export function computeCollinearityAngle2D(
   elbow: Landmark,
@@ -320,28 +324,6 @@ export function computeBendDirection2D(
   const by = mcp.y - wrist.y
   // 2D cross product (z-component of 3D cross)
   return ax * by - ay * bx
-}
-
-/**
- * Apply z-boost when 2D angle is below threshold but filtered z-delta
- * between MCP and wrist indicates a depth-direction bend.
- * Uses a linear ramp instead of binary threshold to avoid flicker.
- * Returns the effective angleDiff (may be boosted).
- */
-export function computeZBoost(
-  angleDiff2D: number,
-  zMcp: number,
-  zWrist: number,
-  threshold = 0.02,
-  boostDeg = 4,
-): number {
-  if (angleDiff2D >= 3) return angleDiff2D
-  const zDelta = Math.abs(zMcp - zWrist)
-  if (zDelta <= threshold) return angleDiff2D
-  // Linear ramp: threshold → threshold×3 maps to 0..boostDeg
-  const ramp = Math.min(1, (zDelta - threshold) / (threshold * 2))
-  const zContribution = boostDeg * ramp
-  return Math.max(angleDiff2D, zContribution)
 }
 
 /**
@@ -449,22 +431,102 @@ export function analyzeWrist(
  * The vector is perpendicular to the palm plane. Direction (which side of
  * the palm it points to) depends on hand chirality and is consistent for
  * the violinist's left hand (anatomical 'Left' from HandLandmarker).
+ *
+ * `aspect` (W/H) macht normierte Bildkoordinaten isotrop: x und z liegen im
+ * Maßstab der Bildbreite, y im Maßstab der Höhe. Für Meter-Koordinaten
+ * (worldLandmarks) bleibt `aspect = 1`.
  */
-export function computePalmNormal(handLandmarks: Landmark[]): { x: number; y: number; z: number } {
-  const wrist = handLandmarks[0]!
-  const indexMCP = handLandmarks[5]!
-  const pinkyMCP = handLandmarks[17]!
-  const ax = indexMCP.x - wrist.x
-  const ay = indexMCP.y - wrist.y
-  const az = indexMCP.z - wrist.z
-  const bx = pinkyMCP.x - wrist.x
-  const by = pinkyMCP.y - wrist.y
-  const bz = pinkyMCP.z - wrist.z
+export function computePalmNormal(handLandmarks: Landmark[], aspect: number = 1): Vec3 {
+  return computePlaneNormal(handLandmarks[0]!, handLandmarks[5]!, handLandmarks[17]!, aspect)
+}
+
+/**
+ * Normale der Ebene durch Handgelenk, Zeigefinger- und Kleinfinger-Punkt.
+ * Alle drei Punkte müssen aus **einem** Koordinatensystem stammen
+ * (Hand-Landmarks oder Pose 15/19/17 für den Pose-Fallback).
+ */
+export function computePlaneNormal(wrist: Landmark, index: Landmark, pinky: Landmark, aspect: number = 1): Vec3 {
+  const ax = (index.x - wrist.x) * aspect
+  const ay = index.y - wrist.y
+  const az = (index.z - wrist.z) * aspect
+  const bx = (pinky.x - wrist.x) * aspect
+  const by = pinky.y - wrist.y
+  const bz = (pinky.z - wrist.z) * aspect
   return {
     x: ay * bz - az * by,
     y: az * bx - ax * bz,
     z: ax * by - ay * bx,
   }
+}
+
+// ── Knick (rotationsinvariant, ADR 0002) ───────────────────────────
+
+/**
+ * Unterarm-Richtung Ellbogen → Handgelenk aus **einem** Koordinatensystem
+ * (Pose 13 → 15; bevorzugt worldLandmarks). Nie Pose-Ellbogen mit
+ * Hand-Handgelenk mischen: die z-Nullpunkte unterscheiden sich
+ * (Hüftmitte vs. Handgelenk).
+ */
+export function computeForearmDirection(elbow: Landmark, wrist: Landmark, aspect: number = 1): Vec3 {
+  return {
+    x: (wrist.x - elbow.x) * aspect,
+    y: wrist.y - elbow.y,
+    z: (wrist.z - elbow.z) * aspect,
+  }
+}
+
+/**
+ * Knick in Grad: Winkel zwischen Unterarm-Richtung und Handebene,
+ * vorzeichenbehaftet (Beugung vs. Streckung, Zuordnung je nach Händigkeit).
+ *
+ * Bei gerader Hand liegt der Unterarm in der Handebene (0°). Beugen/Strecken
+ * kippt die Handebene um die Querachse → Winkel wächst. Seitliches Abknicken
+ * (radial/ulnar) dreht die Hand um ihre eigene Normale → Winkel bleibt 0.
+ * Beide Eingaben sind Richtungen; ein Skalarprodukt ändert sich bei einer
+ * gemeinsamen Drehung nicht → unabhängig von der Armdrehung vor der Kamera.
+ */
+export function computeKnickAngle(forearmDir: Vec3, palmNormal: Vec3): number {
+  const magF = Math.hypot(forearmDir.x, forearmDir.y, forearmDir.z)
+  const magN = Math.hypot(palmNormal.x, palmNormal.y, palmNormal.z)
+  if (magF === 0 || magN === 0) return 0
+  const dot = forearmDir.x * palmNormal.x + forearmDir.y * palmNormal.y + forearmDir.z * palmNormal.z
+  const sin = Math.min(1, Math.max(-1, dot / (magF * magN)))
+  return Math.asin(sin) * (180 / Math.PI)
+}
+
+/**
+ * Knick im Hand-Pfad: Unterarm aus Pose 13 → 15 (worldLandmarks, sonst
+ * Bildkoordinaten), Handebene aus den HandLandmarker-Punkten. Gemeinsamer
+ * Code-Pfad für Kalibrierung (`createMasterPrint`) und Laufzeit.
+ */
+export function computeHandKnick(
+  pose: Landmark[],
+  world: Landmark[] | undefined,
+  hand: Landmark[],
+  aspect: number = 1,
+): number {
+  const forearm = world
+    ? computeForearmDirection(world[13]!, world[15]!)
+    : computeForearmDirection(pose[13]!, pose[15]!, aspect)
+  return computeKnickAngle(forearm, computePalmNormal(hand, aspect))
+}
+
+/**
+ * Knick im Pose-Fallback (Hand kurz nicht erkannt): Unterarm und grobe
+ * Handebene (Handgelenk 15, Zeigefinger 19, Kleinfinger 17) aus demselben
+ * Pose-System — worldLandmarks, sonst Bildkoordinaten.
+ */
+export function computePoseKnick(
+  pose: Landmark[],
+  world: Landmark[] | undefined,
+  aspect: number = 1,
+): number {
+  const src = world ?? pose
+  const a = world ? 1 : aspect
+  return computeKnickAngle(
+    computeForearmDirection(src[13]!, src[15]!, a),
+    computePlaneNormal(src[15]!, src[19]!, src[17]!, a),
+  )
 }
 
 /**

@@ -1,4 +1,4 @@
-import { createWristRepairStatus, createWristRailColor, computeCollinearityAngle2D, computeZBoost, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeHandKnick, computePoseKnick, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
@@ -42,16 +42,6 @@ function createWristRenderFilters() {
   }
 }
 
-// Stronger smoothing for z-values (noisier than x/y from MediaPipe)
-// beta=0.003 provides proven stability for wrist angle detection
-function createWristZFilters() {
-  return {
-    elbowZ: createOneEuroFilter(0.3, 0.001, 1.0),
-    wristZ: createOneEuroFilter(0.3, 0.001, 1.0),
-    indexZ: createOneEuroFilter(0.3, 0.001, 1.0),
-  }
-}
-
 const WRIST_SLIDE_SPEED_THRESHOLD = 0.45
 const WRIST_SLIDE_SHIELD_SECONDS = 0.22
 const WRIST_SLIDE_DAMPING = 0.35
@@ -87,7 +77,6 @@ export function usePoseDetection(
   const wristFiltersRef = useRef(createWristRenderFilters())
 
   // One-Euro filters for z-values used in 3D angle analysis
-  const wristZFiltersRef = useRef(createWristZFilters())
 
   // Rail direction smoothing state (2D normalized vector)
   const railDirRef = useRef<{ x: number; y: number } | null>(null)
@@ -112,7 +101,6 @@ export function usePoseDetection(
     wristPrevPosRef.current = null
     wristSlideShieldRef.current = 0
     wristFiltersRef.current = createWristRenderFilters()
-    wristZFiltersRef.current = createWristZFilters()
     railDirRef.current = null
     railTimerRef.current = createWristRailTimer()
     wristRailColorRef.current = createWristRailColor()
@@ -380,18 +368,17 @@ export function usePoseDetection(
             const armLen2D = computeArmLength2D(elbow, wrist)
             const foreConf = computeForeshorteningConfidence(armLen2D, store.masterPrint.calibArmLength2D)
 
-            // ── Path-dispatched raw angle + bend sign ──
-            let angleDiff2D: number
-            let baselineAngle: number
+            // ── Path-dispatched Knick + bend sign ──
+            let knick: number
+            let baselineKnick: number
             let bendSign: number
             let refBendSign: number
             let forearmLen: number
 
             if (path === 'hand' && hand) {
               const handWrist = hand[0]!
-              const handMiddleMCP = hand[9]!
-              angleDiff2D = computeCollinearityAngle2D(elbow, handWrist, handMiddleMCP, aspect)
-              baselineAngle = store.masterPrint.calib2DAngle ?? 0
+              knick = computeHandKnick(landmarks, worldLandmarks, hand, aspect)
+              baselineKnick = store.masterPrint.calibKnick
               bendSign = computePalmBendSign(elbow, hand)
               refBendSign = store.masterPrint.flexBendDir
               forearmLen = computeForearmLength3D(elbow, handWrist)
@@ -403,23 +390,17 @@ export function usePoseDetection(
               const mcpFB = worldLandmarks
                 ? computeMCP(worldLandmarks[17]!, worldLandmarks[19]!)
                 : computeMCP(pinky, index)
-              angleDiff2D = computeCollinearityAngle2D(elbowFB, wristFB, mcpFB)
-              baselineAngle = store.masterPrint.calib2DAngleFallback ?? store.masterPrint.calib2DAngle ?? 0
+              knick = computePoseKnick(landmarks, worldLandmarks, aspect)
+              baselineKnick = store.masterPrint.calibKnickFallback
               bendSign = computeBendDirection2D(elbowFB, wristFB, mcpFB)
               refBendSign = store.masterPrint.flexBendDirFallback ?? store.masterPrint.flexBendDir
               forearmLen = computeForearmLength3D(elbowFB, wristFB)
             }
 
-            const baselineCorrected = Math.abs(angleDiff2D - baselineAngle)
-
-            // ── Z-boost: depth-direction nudge using world-space pose Z. ──
-            const wristW = worldLandmarks?.[15] ?? wrist
-            const indexW = worldLandmarks?.[19] ?? index
+            // Knick relativ zur gespeicherten Haltung (ADR 0002). Die 3D-Messung
+            // sieht auch Beugung in die Tiefe — der frühere Z-Boost entfällt.
+            const knickDiff = Math.abs(knick - baselineKnick)
             const t = now / 1000
-            const zf = wristZFiltersRef.current
-            const zWristF = zf.wristZ(wristW.z, t)
-            const zIndexF = zf.indexZ(indexW.z, t)
-            const rawZBoostedUnclamped = computeZBoost(baselineCorrected, zIndexF, zWristF)
 
             // Path-transition clamp: cap per-frame change to ≤ 3° on the
             // first frame after a path switch. Keeps the EMA continuous
@@ -427,23 +408,14 @@ export function usePoseDetection(
             // instead of jumping when the two paths disagree.
             const PATH_SWITCH_MAX_DELTA_DEG = 3
             const prevEffective = angleDiffEmaRef.current
-            const rawZBoosted = justSwitchedPath
-              ? Math.max(prevEffective - PATH_SWITCH_MAX_DELTA_DEG, Math.min(prevEffective + PATH_SWITCH_MAX_DELTA_DEG, rawZBoostedUnclamped))
-              : rawZBoostedUnclamped
+            const clampedKnickDiff = justSwitchedPath
+              ? Math.max(prevEffective - PATH_SWITCH_MAX_DELTA_DEG, Math.min(prevEffective + PATH_SWITCH_MAX_DELTA_DEG, knickDiff))
+              : knickDiff
 
             // ── EMA post-smoothing (alpha=0.25, ~100ms time constant at 30fps) ──
-            // When foreshortening confidence is low, hold the angle (don't let it drop)
-            // so the peripheral doesn't falsely show "correct" when the camera can't see the bend.
-            const rawSmoothed = angleDiffEmaRef.current * 0.75 + rawZBoosted * 0.25
-            if (foreConf >= 0.7) {
-              // High confidence: track freely
-              angleDiffEmaRef.current = rawSmoothed
-            } else {
-              // Low confidence: only allow angle to increase, not decrease
-              // Slow decay (0.995 per frame ≈ 3° drop over 1 second at 30fps)
-              const held = angleDiffEmaRef.current * 0.995
-              angleDiffEmaRef.current = Math.max(rawSmoothed, held)
-            }
+            // Keine „nur-steigen"-Sperre mehr bei geringer foreConf (#82):
+            // schlechte Sicht wird als grau gezeigt (#74), nicht als festgehaltenes Gelb.
+            angleDiffEmaRef.current = angleDiffEmaRef.current * 0.75 + clampedKnickDiff * 0.25
             const effectiveAngleDiff = angleDiffEmaRef.current
 
             // ── Sticky-blue rail color with grace buffer ──
