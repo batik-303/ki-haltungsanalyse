@@ -26,7 +26,9 @@ export interface KnickFrameResult {
   justSwitchedPath: boolean
   /** 2D-Unterarmlänge (mit aspect) — auch für die Foreshortening-Konfidenz. */
   armLength2D: number
-  /** Geglättete Knick-Abweichung von der gespeicherten Haltung in Grad. */
+  /** Ungeglättete Knick-Abweichung dieses Frames — Eingang der Anker-Farbe (#88). */
+  knickDiff: number
+  /** Geglättete Knick-Abweichung von der gespeicherten Haltung in Grad (Anzeige). */
   effectiveKnickDiff: number
   /** Seite der Abweichung relativ zur gespeicherten Haltung (ungeglättet), 0 = unbekannt. */
   knickSide: KnickSide
@@ -97,7 +99,7 @@ export function createKnickTracker() {
       : knickDiff
     ema = ema * (1 - KNICK_EMA_ALPHA) + clamped * KNICK_EMA_ALPHA
 
-    return { path, justSwitchedPath, armLength2D, effectiveKnickDiff: ema, knickSide }
+    return { path, justSwitchedPath, armLength2D, knickDiff, effectiveKnickDiff: ema, knickSide }
   }
 
   function reset() {

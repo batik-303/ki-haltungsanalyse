@@ -35,6 +35,6 @@ MediaPipe schätzt z aus einem einzigen Kamerabild. Die Handebene wird aus drei 
 - Die Korrektur **senkt** den Wert nur, sie erhöht ihn nie. Falsches Gelb durch Armdrehung wird dadurch kleiner. Der Preis: Ein echter Knick bei stark verkürztem Unterarm wird schwächer gemeldet.
 - `calibArmLength2D` wird jetzt mit Seitenverhältnis gemessen (sonst verfälscht die Bildbreite das Längenverhältnis je nach Armrichtung).
 - `calibKnick`/`calibKnickFallback` in der `MasterPrint` ersetzen `calib2DAngle`/`calib2DAngleFallback`.
-- Farb-Schwellen und Zeitkonstanten (#75) werden auf dieser Größe festgelegt.
+- Farb-Schwellen und Zeitkonstanten (#75) werden auf dieser Größe festgelegt; gebaut in #88 (ein Zustand blau/gelb/grau, `src/core/analysis/anchor-color.ts`).
 
-Herkunft: Wegfindungs-Karte #71, Diagnose #78, Umsetzung und Geigen-Test #82.
+Herkunft: Wegfindungs-Karte #71, Diagnose #78, Umsetzung und Geigen-Test #82; Vorzeichen-Versuch #85 (verworfen).

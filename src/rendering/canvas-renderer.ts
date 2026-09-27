@@ -5,14 +5,17 @@ import { drawDebugLandmarks } from './debug-landmarks'
 import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-landmarks'
 import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
 import { resolveWristAnchor } from '../core/analysis/wrist-anchor'
+import { createAnchorColorFade, type AnchorColor } from '../core/analysis/anchor-color'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW } from './wrist-side-view'
+import { drawWristSideView, resetWristSideViewSmoothing } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
 
 // Module-level glow state for wrist feedback (persists across frames)
-let lastWristRepaired = false
+let lastAnchorColor: AnchorColor = 'blue'
+// Binärer Farbwechsel mit ca. 0,2 s Überblenden (#88)
+let anchorColorFade = createAnchorColorFade()
 let repairGoldenGlow = 0
 let repairGoldenDecay = 0
 // Debounce: minimum time between repair glow pulses (ms)
@@ -48,13 +51,15 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg, wristKnickSide } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, railSuccessGlow, wristAnchorColor, wristRailAngleDeg, wristKnickSide } = state
   const isFlow = viewMode === 'flow'
 
   // Reset smoothed positions when calibration changes
   const masterPrintId = masterPrint ? `${masterPrint.mode}-${state.lastCalibrationAt ?? 0}` : null
   if (masterPrintId !== lastMasterPrintId) {
     anchorPosSmoothed = null
+    anchorColorFade = createAnchorColorFade()
+    lastAnchorColor = 'blue'
     lastMasterPrintId = masterPrintId
     resetWristSideViewSmoothing()
   }
@@ -171,10 +176,10 @@ export function renderFrame(
         ANCHOR_POS_ALPHA, ANCHOR_POS_MAX_ALPHA, ANCHOR_POS_SPEED_REF,
       ).pos
 
-      // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
+      // Korrektur-Belohnung: Glühen im Moment gelb → blau (nicht grau → blau,
+      // das ist keine Korrektur, nur wieder Sicht).
       const nowPerf = performance.now()
-      const isBlueNow = wristRailIsBlue ?? false
-      if (!lastWristRepaired && isBlueNow && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
+      if (lastAnchorColor === 'yellow' && wristAnchorColor === 'blue' && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
         repairGoldenGlow = 1.0
         repairGoldenDecay = nowPerf
         lastRepairPulseAt = nowPerf
@@ -184,18 +189,21 @@ export function renderFrame(
         const elapsed = nowPerf - repairGoldenDecay
         repairGoldenGlow = Math.max(0, 1 - elapsed / 800)
       }
-      lastWristRepaired = isBlueNow
+      lastAnchorColor = wristAnchorColor
 
       if (!isFlow) {
         // Periphere Leiste (#94): senkrecht am linken Bildschirmrand, Laptop und Handy.
-        drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide)
+        drawWristSideView(ctx, width, height, now, wristAnchorColor, wristRailAngleDeg, wristKnickSide)
       }
 
       // Anchor + glow in both modes (positioned at wrist in analyse, centered in flow)
+      // Anker-Farbe blau/gelb/grau mit kurzem Überblenden (#88)
+      const fade = anchorColorFade.update(wristAnchorColor, now)
       if (isFlow) {
         const flowX = width - 50
         const coreR = 13 + Math.sin(now / 600) * 1
-        drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak)
+        if (fade.progress < 1) drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak, fade.from)
+        drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak, fade.to, fade.progress)
         drawReturnGlow(ctx, flowX, height / 2, coreR, returnGlowTimer, false)
         // Blue flash: correction reward glow
         const rsg = repairGoldenGlow
@@ -222,11 +230,9 @@ export function renderFrame(
         // Anker — Grau-Zustand: #74). Kein Pose-15-Fallback mehr.
         const anchorX = anchorPosSmoothed.x
         const anchorY = anchorPosSmoothed.y
-        // Anchor color: blue (correct) / yellow (deviation)
-        const anchorColor = wristRailIsBlue ? undefined : WRIST_YELLOW
-
         const coreR = 11 + Math.sin(now / 600) * 1
-        drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, anchorColor)
+        if (fade.progress < 1) drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, fade.from)
+        drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, fade.to, fade.progress)
         drawReturnGlow(ctx, anchorX, anchorY, coreR, returnGlowTimer, false)
         // Blue flash: correction reward glow
         const rsg = repairGoldenGlow
