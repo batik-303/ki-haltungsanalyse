@@ -3,6 +3,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
+import { createSlideShield } from '../core/analysis/slide-shield'
 import type { Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
@@ -42,10 +43,6 @@ function createWristRenderFilters() {
   }
 }
 
-const WRIST_SLIDE_SPEED_THRESHOLD = 0.45
-const WRIST_SLIDE_SHIELD_SECONDS = 0.22
-const WRIST_SLIDE_DAMPING = 0.35
-
 export function usePoseDetection(
   videoRef: React.RefObject<HTMLVideoElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -69,8 +66,7 @@ export function usePoseDetection(
   const bendForwardRef = useRef(true)
   // Wrist repair status closure (Deadzone/Hysterese)
   const wristRepairStatusRef = useRef(createWristRepairStatus(10, 200))
-  const wristPrevPosRef = useRef<{ x: number; y: number } | null>(null)
-  const wristSlideShieldRef = useRef(0)
+  const slideShieldRef = useRef(createSlideShield())
   let wristRepairStatus: any = undefined
 
   // One-Euro filters for wrist render coordinates (ex, ey, wx, wy, ix, iy)
@@ -96,8 +92,7 @@ export function usePoseDetection(
     violinRef.current.reset()
     tensionRef.current = 0
     bendForwardRef.current = true
-    wristPrevPosRef.current = null
-    wristSlideShieldRef.current = 0
+    slideShieldRef.current.reset()
     wristFiltersRef.current = createWristRenderFilters()
     railDirRef.current = null
     railTimerRef.current = createWristRailTimer()
@@ -342,21 +337,8 @@ export function usePoseDetection(
             const hand = handLandmarksRef.current
             const worldLandmarks = results.worldLandmarks?.[0] as Landmark[] | undefined
 
-            // Symmetric position-shift shield: damp sensitivity briefly during fast slides.
-            const prevWrist = wristPrevPosRef.current
-            if (prevWrist && dt > 0) {
-              const dx = wrist.x - prevWrist.x
-              const dy = wrist.y - prevWrist.y
-              const wristSpeed = Math.sqrt(dx * dx + dy * dy) / dt
-              if (wristSpeed > WRIST_SLIDE_SPEED_THRESHOLD) {
-                wristSlideShieldRef.current = WRIST_SLIDE_SHIELD_SECONDS
-              }
-            }
-            wristPrevPosRef.current = { x: wrist.x, y: wrist.y }
-            if (wristSlideShieldRef.current > 0) {
-              wristSlideShieldRef.current = Math.max(0, wristSlideShieldRef.current - dt)
-            }
-            const slideShieldFactor = wristSlideShieldRef.current > 0 ? WRIST_SLIDE_DAMPING : 1
+            // Rutsch-Schutz: bei Lagenwechsel/Vibrato Knick kurz gedämpft.
+            const slideShieldFactor = slideShieldRef.current.update(wrist, dt)
 
             const knickResult = knickTrackerRef.current.update({
               pose: landmarks,
@@ -569,8 +551,7 @@ export function usePoseDetection(
         renderFrame(ctx, canvas.width, canvas.height, now, landmarks, dt, handLandmarksRef.current)
       } else {
         // No body detected
-        wristPrevPosRef.current = null
-        wristSlideShieldRef.current = 0
+        slideShieldRef.current.reset()
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })
         }
