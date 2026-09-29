@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createKnickTracker } from '../../src/core/analysis/knick-tracker'
+import { createSlideShield } from '../../src/core/analysis/slide-shield'
 import { computeSignedKnick2D, createWristRailColor } from '../../src/core/analysis/wrist-analyzer'
 import { createMasterPrint } from '../../src/core/calibration/master-print'
 import type { Landmark, WristMasterPrint } from '../../src/core/types'
@@ -43,6 +44,7 @@ interface Pose {
   knickDeg: number // Knick gegenüber der gespeicherten Haltung, in der Bildebene
   armTurn?: { axis: P; deg: number } // Drehung des ganzen Arms vor der Kamera
   calibDeg?: number // natürliche Beugung der gespeicherten Haltung (Standard CALIB_KNICK)
+  shift?: { x: number; y: number } // Verschiebung des ganzen Arms im Bild (Rutschen)
 }
 
 interface Frame {
@@ -72,7 +74,8 @@ function makeFrame(p: Pose, opts: { noise?: () => number; zNoise?: () => number;
   }
   const toLm = (q: P): Landmark => {
     const r = turn(q)
-    return { x: CENTER.x + r.x + n(), y: CENTER.y + r.y + n(), z: r.z + zn(), visibility: 1 }
+    const sx = p.shift?.x ?? 0, sy = p.shift?.y ?? 0
+    return { x: CENTER.x + r.x + sx + n(), y: CENTER.y + r.y + sy + n(), z: r.z + zn(), visibility: 1 }
   }
   const filler: Landmark = { x: 0.5, y: 0.5, z: 0, visibility: 1 }
   const pose = Array.from({ length: 33 }, () => filler)
@@ -258,4 +261,78 @@ describe('createKnickTracker — Pfadwechsel Hand ↔ Pose', () => {
     expect(first.justSwitchedPath).toBe(false)
     expect(first.effectiveKnickDiff).toBeCloseTo(0, 6)
   })
+})
+
+// ── Vergleich alt ↔ neu (#91): nichts, was vorher gut war, wird schlechter ──
+// „Alt" = gespeicherte Haltung ohne Seite (calibKnickSide 0) — rechnet exakt
+// wie main vor #91. Farbe wie in der Laufzeit: mit Rutsch-Schutz.
+
+/** Wie `play`, aber mit Rutsch-Schutz auf dem Pose-Handgelenk (30 fps). */
+function playShielded(frames: Frame[], masterPrint: WristMasterPrint) {
+  const tracker = createKnickTracker()
+  const shield = createSlideShield()
+  const color = createWristRailColor()
+  return frames.map((f) => {
+    const factor = shield.update(f.pose[15]!, 1 / 30)
+    const r = tracker.update({ pose: f.pose, world: f.world, hand: f.hand, aspect: 1, masterPrint })
+    return { deviation: r.effectiveKnickDiff, blue: color(r.effectiveKnickDiff * factor) }
+  })
+}
+
+function oldAndNew(calibDeg: number) {
+  const neu = calibrate(calibDeg)
+  return { alt: { ...neu, calibKnickSide: 0 as const }, neu }
+}
+
+describe('Knick-Seite (#91) — Seite der gespeicherten Haltung misst wie vorher', () => {
+  it('Knick weiter in die gespeicherte Beugung: gleiche Abweichung wie ohne Seite', () => {
+    const { alt, neu } = oldAndNew(10)
+    for (const knickDeg of [-6, 3, 8, 20]) {
+      const frames = repeat(60, () => makeFrame({ knickDeg }))
+      expect(play(frames, neu).at(-1)!.deviation).toBeCloseTo(play(frames, alt).at(-1)!.deviation, 9)
+    }
+    expect(play(repeat(60, () => makeFrame({ knickDeg: 8 })), neu).at(-1)!.deviation).toBeCloseTo(8, 1)
+  })
+})
+
+describe('Knick-Seite (#91) — Vibrato und Lagenwechsel bleiben blau', () => {
+  const HZ = 6 // Vibrato-Frequenz
+  // Vibrato: Hand schaukelt, Handgelenk wandert leicht mit. Pendel ±6° um die
+  // gespeicherte Haltung — bei kleiner Beugung also durch die Gerade hindurch.
+  const vibrato = (calibDeg: number, wristAmp: number) =>
+    repeat(300, (i) => {
+      const ph = Math.sin((2 * Math.PI * HZ * i) / 30 + 0.3)
+      return makeFrame({ knickDeg: 6 * ph, calibDeg, shift: { x: wristAmp * ph, y: 0 } })
+    })
+  // Lagenwechsel: Arm rutscht 0,08 Bildbreite in 0,4 s hin und zurück, dabei
+  // ±4° Knick-Schwankung und leichte Armdrehung.
+  const shifts = (calibDeg: number) =>
+    repeat(300, (i) => {
+      const t = (i % 60) / 60 // alle 2 s ein Wechsel
+      const move = t < 0.2 ? Math.sin((Math.PI * t) / 0.2) : 0
+      return makeFrame({
+        knickDeg: 4 * Math.sin(2 * Math.PI * t * 3),
+        calibDeg,
+        shift: { x: 0.08 * move, y: 0.02 * move },
+        armTurn: { axis: Y, deg: 15 * move },
+      })
+    })
+
+  for (const calibDeg of [0, 3, 6]) {
+    it(`Vibrato mit Handgelenk-Bewegung, gespeichert ${calibDeg}°: blau wie vorher`, () => {
+      const { alt, neu } = oldAndNew(calibDeg)
+      expect(playShielded(vibrato(calibDeg, 0.01), alt).every((o) => o.blue)).toBe(true)
+      expect(playShielded(vibrato(calibDeg, 0.01), neu).every((o) => o.blue)).toBe(true)
+    })
+    it(`Vibrato fast ohne Handgelenk-Bewegung (kein Rutsch-Schutz), gespeichert ${calibDeg}°: blau wie vorher`, () => {
+      const { alt, neu } = oldAndNew(calibDeg)
+      expect(playShielded(vibrato(calibDeg, 0.001), alt).every((o) => o.blue)).toBe(true)
+      expect(playShielded(vibrato(calibDeg, 0.001), neu).every((o) => o.blue)).toBe(true)
+    })
+    it(`Lagenwechsel, gespeichert ${calibDeg}°: blau wie vorher`, () => {
+      const { alt, neu } = oldAndNew(calibDeg)
+      expect(playShielded(shifts(calibDeg), alt).every((o) => o.blue)).toBe(true)
+      expect(playShielded(shifts(calibDeg), neu).every((o) => o.blue)).toBe(true)
+    })
+  }
 })
