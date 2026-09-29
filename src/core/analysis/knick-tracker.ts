@@ -5,6 +5,7 @@ import {
   computeCollinearityAngle2D,
   computeCorrectedKnick,
   computeMCP,
+  computeSignedKnick2D,
 } from './wrist-analyzer'
 
 // Höchster Sprung im ersten Frame nach einem Pfadwechsel Hand ↔ Pose.
@@ -45,9 +46,15 @@ export function measureKnickDeviation(input: KnickFrameInput, path: AnalysisPath
   const forearmLengthRatio = calib > 0 ? armLength2D / calib : 1
 
   if (path === 'hand' && hand) {
-    const angle2D = computeCollinearityAngle2D(elbow, hand[0]!, hand[9]!, aspect)
-    const knick = computeCorrectedKnick(angle2D, forearmLengthRatio)
-    return { knickDiff: Math.abs(knick - masterPrint.calibKnick), armLength2D }
+    const signed2D = computeSignedKnick2D(elbow, hand[0]!, hand[9]!, aspect)
+    const knick = computeCorrectedKnick(Math.abs(signed2D), forearmLengthRatio)
+    // Seite (#91): Liegt der Knick auf der anderen Seite der Geraden als die
+    // gespeicherte Haltung, addieren sich beide Beträge. Pose-Fallback bleibt
+    // ohne Seite (grobe Punkte, Seite zu unsicher).
+    const side = Math.sign(signed2D)
+    const otherSide = side !== 0 && masterPrint.calibKnickSide !== 0 && side !== masterPrint.calibKnickSide
+    const knickDiff = otherSide ? knick + masterPrint.calibKnick : Math.abs(knick - masterPrint.calibKnick)
+    return { knickDiff, armLength2D }
   }
 
   // Pose-Fallback: worldLandmarks, sonst Bildkoordinaten — exakt wie die

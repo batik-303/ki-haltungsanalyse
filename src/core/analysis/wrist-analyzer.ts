@@ -345,6 +345,22 @@ export function computeBendDirection2D(
 }
 
 /**
+ * Knick-Bildwinkel mit Seite (#91): Betrag aus `computeCollinearityAngle2D`,
+ * Seite aus dem 2D-Kreuzprodukt. Beide aus denselben x/y-Punkten, kein z —
+ * die Null der Seite liegt damit genau bei „gerade". Die Seite ist nur
+ * relativ zur Kalibrierung sinnvoll (CSS-Spiegelung, Händigkeit).
+ */
+export function computeSignedKnick2D(
+  elbow: Landmark,
+  wrist: Landmark,
+  mcp: Landmark,
+  aspect: number = 1,
+): number {
+  const angle = computeCollinearityAngle2D(elbow, wrist, mcp, aspect)
+  return Math.sign(computeBendDirection2D(elbow, wrist, mcp, aspect)) * angle
+}
+
+/**
  * Lerp + normalize a 2D direction vector for temporal smoothing.
  * Prevents rail flicker from frame-to-frame landmark jitter.
  */

@@ -19,6 +19,8 @@ interface UseCalibrationOptions {
   videoRef: React.RefObject<HTMLVideoElement | null>
   canvasRef?: React.RefObject<HTMLCanvasElement | null>
   handLandmarkerRef?: React.RefObject<HandLandmarker | null>
+  /** Knick mit Seite aus den Countdown-Frames (#91), gefüllt von usePoseDetection. */
+  calibKnickSamplesRef?: React.RefObject<number[]>
   landmarkerRef?: React.RefObject<PoseLandmarker | null>
   onCalibrated?: () => void
 }
@@ -26,7 +28,7 @@ interface UseCalibrationOptions {
 /**
  * Hook for managing calibration flows (standard 3s, timer 10s).
  */
-export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, onCalibrated }: UseCalibrationOptions) {
+export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated }: UseCalibrationOptions) {
   const countdownRef = useRef<number | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -78,6 +80,7 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, onCalib
       handLandmarks,
       aspect,
       worldLandmarks,
+      knickSamples: calibKnickSamplesRef?.current ?? undefined,
     })
     if (!masterPrint) return { success: false, reason: 'no_hand' }
 
@@ -86,7 +89,7 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, onCalib
     store.calibrate(masterPrint, shoulderWidth)
     onCalibrated?.()
     return { success: true }
-  }, [videoRef, canvasRef, handLandmarkerRef, onCalibrated])
+  }, [videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated])
 
   const startCountdown = useCallback((
     seconds: number,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createKnickTracker } from '../../src/core/analysis/knick-tracker'
-import { createWristRailColor } from '../../src/core/analysis/wrist-analyzer'
+import { computeSignedKnick2D, createWristRailColor } from '../../src/core/analysis/wrist-analyzer'
 import { createMasterPrint } from '../../src/core/calibration/master-print'
 import type { Landmark, WristMasterPrint } from '../../src/core/types'
 
@@ -42,6 +42,7 @@ const Z = { x: 0, y: 0, z: 1 }
 interface Pose {
   knickDeg: number // Knick gegenüber der gespeicherten Haltung, in der Bildebene
   armTurn?: { axis: P; deg: number } // Drehung des ganzen Arms vor der Kamera
+  calibDeg?: number // natürliche Beugung der gespeicherten Haltung (Standard CALIB_KNICK)
 }
 
 interface Frame {
@@ -61,7 +62,7 @@ function makeFrame(p: Pose, opts: { noise?: () => number; zNoise?: () => number;
   const n = opts.noise ?? (() => 0)
   const zn = opts.zNoise ?? (() => 0)
   const turn = (q: P) => (p.armTurn ? rotate(q, p.armTurn.axis, p.armTurn.deg) : q)
-  const mcpDir = rotate({ x: 0.085, y: 0, z: 0 }, Z, CALIB_KNICK + p.knickDeg)
+  const mcpDir = rotate({ x: 0.085, y: 0, z: 0 }, Z, (p.calibDeg ?? CALIB_KNICK) + p.knickDeg)
   const local: Record<string, P> = {
     elbow: { x: -0.25, y: 0, z: 0 },
     wrist: { x: 0, y: 0, z: 0 },
@@ -88,8 +89,8 @@ function makeFrame(p: Pose, opts: { noise?: () => number; zNoise?: () => number;
   return { pose, world, hand: opts.withHand === false ? null : hand }
 }
 
-function calibrate(): WristMasterPrint {
-  const f = makeFrame({ knickDeg: 0 })
+function calibrate(calibDeg = CALIB_KNICK): WristMasterPrint {
+  const f = makeFrame({ knickDeg: 0, calibDeg })
   const mp = createMasterPrint('wrist', f.pose, { handLandmarks: f.hand, aspect: 1, worldLandmarks: f.world })
   if (mp?.mode !== 'wrist') throw new Error('Kalibrierung fehlgeschlagen')
   return mp
@@ -126,6 +127,58 @@ describe('createKnickTracker — Stillstand', () => {
   })
 })
 
+describe('createKnickTracker — Seite nah an der Geraden (#91, Lehre aus #85)', () => {
+  for (const calibDeg of [0, 2, 4, 6]) {
+    it(`gespeicherte Haltung ${calibDeg}°: Stillstand mit starkem Zittern bleibt 10 s blau`, () => {
+      const r = rng(10 + calibDeg)
+      const jitter = () => (r() - 0.5) * 0.01 // ±0,5 % Bildbreite
+      const mp = calibrate(calibDeg)
+      const out = play(repeat(300, () => makeFrame({ knickDeg: 0, calibDeg }, { noise: jitter })), mp)
+      expect(out.every((o) => o.blue)).toBe(true)
+    })
+  }
+})
+
+describe('createKnickTracker — gemittelte Kalibrierung (#91)', () => {
+  // Ausreißer genau im Erfassungs-Frame: in Wahrheit 4° gebeugt, gemessen −5°
+  // (andere Seite). Aus einem einzigen Frame verschiebt das die Null
+  // dauerhaft. Vermutete Ursache für Dauer-Gelb in #85.
+  const calibDeg = 4
+  const r = rng(42)
+  const jitter = () => (r() - 0.5) * 0.006
+  const samples = repeat(30, () => makeFrame({ knickDeg: 0, calibDeg }, { noise: jitter })).map((f) =>
+    computeSignedKnick2D(f.pose[13]!, f.hand![0]!, f.hand![9]!, 1),
+  )
+  const outlier = makeFrame({ knickDeg: -9, calibDeg })
+  const mp = createMasterPrint('wrist', outlier.pose, {
+    handLandmarks: outlier.hand,
+    aspect: 1,
+    worldLandmarks: outlier.world,
+    knickSamples: samples,
+  })
+  if (mp?.mode !== 'wrist') throw new Error('Kalibrierung fehlgeschlagen')
+
+  it('Seite und Beugung der gespeicherten Haltung kommen aus dem Mittel der Countdown-Frames', () => {
+    expect(mp.calibKnickSide).toBe(1)
+    expect(Math.abs(mp.calibKnick - calibDeg)).toBeLessThan(1.5)
+  })
+
+  it('Stillstand nach „Haltung speichern" bleibt trotz Ausreißer 10 s blau', () => {
+    const out = play(repeat(300, () => makeFrame({ knickDeg: 0, calibDeg }, { noise: jitter })), mp)
+    expect(out.every((o) => o.blue)).toBe(true)
+  })
+
+  it('nah an der Geraden gespeichert (< 2°): Seite unbekannt, Messung wie bisher ohne Seite', () => {
+    const near = repeat(30, () => makeFrame({ knickDeg: 0, calibDeg: 0.5 })).map((f) =>
+      computeSignedKnick2D(f.pose[13]!, f.hand![0]!, f.hand![9]!, 1),
+    )
+    const f = makeFrame({ knickDeg: 0, calibDeg: 0.5 })
+    const nearMp = createMasterPrint('wrist', f.pose, { handLandmarks: f.hand, aspect: 1, worldLandmarks: f.world, knickSamples: near })
+    if (nearMp?.mode !== 'wrist') throw new Error('Kalibrierung fehlgeschlagen')
+    expect(nearMp.calibKnickSide).toBe(0)
+  })
+})
+
 describe('createKnickTracker — Armdrehung (Lagenwechsel)', () => {
   for (const [name, axis] of [['senkrechte Achse', Y], ['schräge Achse', { x: 1, y: 1, z: 0.5 }]] as const) {
     it(`gute Haltung bleibt blau, wenn sich der Arm um die ${name} bis 70° hin und zurück dreht`, () => {
@@ -154,11 +207,12 @@ describe('createKnickTracker — bewusster Knick', () => {
     expect(out.at(-1)!.blue).toBe(false)
   })
 
-  it('Grenze: Knick durch die Gerade hindurch in Gegenrichtung wird nicht erkannt (Winkel ohne Vorzeichen)', () => {
-    // Gespeicherte Haltung 10° gebeugt, dann 20° in Gegenrichtung → −10° →
-    // gleicher Bildwinkel 10° → Abweichung 0. Bekannte Grenze, siehe ADR 0003.
+  it('erkennt den Knick durch die Gerade hindurch in Gegenrichtung (#91)', () => {
+    // Gespeicherte Haltung 10° gebeugt, dann 20° in Gegenrichtung → −10°.
+    // Gleicher Bildwinkel wie gespeichert, aber die Seite ist eine andere.
     const out = play(repeat(60, () => makeFrame({ knickDeg: -20 })))
-    expect(out.at(-1)!.deviation).toBeCloseTo(0, 6)
+    expect(out.at(-1)!.deviation).toBeCloseTo(20, 1)
+    expect(out.at(-1)!.blue).toBe(false)
   })
 })
 
