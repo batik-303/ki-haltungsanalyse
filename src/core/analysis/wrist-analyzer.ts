@@ -42,9 +42,15 @@ export function createWristRailColor(
   let isBlue = true
   let counter = 0
 
-  return function update(angleDeg: number, graceBufferDeg = 0): boolean {
+  /**
+   * @param slideDamping Rutsch-Schutz-Faktor (1 = kein Rutschen). Er dämpft nur
+   *   den Weg nach Gelb: Rutschen hält Blau, macht aber nie Blau — sonst
+   *   pendelt der Anker bei Korrektur-Rucken einer noch geknickten Hand
+   *   (Geigen-Test 29.09.).
+   */
+  return function update(angleDeg: number, graceBufferDeg = 0, slideDamping = 1): boolean {
     if (isBlue) {
-      if (angleDeg > blueToYellowDeg + graceBufferDeg) {
+      if (angleDeg * slideDamping > blueToYellowDeg + graceBufferDeg) {
         counter++
         if (counter >= blueToYellowFrames) {
           isBlue = false

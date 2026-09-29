@@ -267,7 +267,7 @@ describe('createKnickTracker — Pfadwechsel Hand ↔ Pose', () => {
 // „Alt" = gespeicherte Haltung ohne Seite (calibKnickSide 0) — rechnet exakt
 // wie main vor #91. Farbe wie in der Laufzeit: mit Rutsch-Schutz.
 
-/** Wie `play`, aber mit Rutsch-Schutz auf dem Pose-Handgelenk (30 fps). */
+/** Wie `play`, aber mit Rutsch-Schutz auf dem Pose-Handgelenk (30 fps), verdrahtet wie im Hook. */
 function playShielded(frames: Frame[], masterPrint: WristMasterPrint) {
   const tracker = createKnickTracker()
   const shield = createSlideShield()
@@ -275,7 +275,7 @@ function playShielded(frames: Frame[], masterPrint: WristMasterPrint) {
   return frames.map((f) => {
     const factor = shield.update(f.pose[15]!, 1 / 30)
     const r = tracker.update({ pose: f.pose, world: f.world, hand: f.hand, aspect: 1, masterPrint })
-    return { deviation: r.effectiveKnickDiff, blue: color(r.effectiveKnickDiff * factor) }
+    return { deviation: r.effectiveKnickDiff, blue: color(r.effectiveKnickDiff, 0, factor) }
   })
 }
 
@@ -335,4 +335,33 @@ describe('Knick-Seite (#91) — Vibrato und Lagenwechsel bleiben blau', () => {
       expect(playShielded(shifts(calibDeg), neu).every((o) => o.blue)).toBe(true)
     })
   }
+})
+
+describe('Rutsch-Schutz — Korrektur pendelt nicht (Geigen-Test 29.09.)', () => {
+  it('kleine Rucke beim Korrigieren, Hand noch geknickt (≥ 10°): bleibt ruhig gelb', () => {
+    const mp = calibrate(6)
+    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 6 }))
+    let x = 0
+    for (let k = 0; k < 150; k++) {
+      if (k % 30 < 5) x += 0.3 / 30 // alle 1 s ein kurzer Ruck, schneller als die Rutsch-Schwelle
+      frames.push(makeFrame({ knickDeg: Math.max(10, 15 - k * 0.1), calibDeg: 6, shift: { x, y: 0 } }))
+    }
+    const out = playShielded(frames, mp).slice(45)
+    expect(out.every((o) => !o.blue)).toBe(true)
+  })
+
+  it('echte Korrektur mit Bewegung zurück in die Haltung wird blau und bleibt blau', () => {
+    const mp = calibrate(6)
+    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 6 }))
+    let x = 0
+    for (let k = 0; k < 150; k++) {
+      if (k < 10) x += 0.3 / 30
+      frames.push(makeFrame({ knickDeg: Math.max(0, 15 - k * 1.5), calibDeg: 6, shift: { x, y: 0 } }))
+    }
+    const out = playShielded(frames, mp).slice(45)
+    const firstBlue = out.findIndex((o) => o.blue)
+    expect(firstBlue).toBeGreaterThanOrEqual(0)
+    expect(firstBlue).toBeLessThan(20) // < 0,7 s nach Beginn der Korrektur
+    expect(out.slice(firstBlue).every((o) => o.blue)).toBe(true)
+  })
 })

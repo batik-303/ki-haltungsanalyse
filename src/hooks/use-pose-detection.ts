@@ -394,10 +394,10 @@ export function usePoseDetection(
             const effectiveAngleDiff = knickResult.effectiveKnickDiff
 
             // ── Sticky-blue rail color with grace buffer ──
-            // Apply slide shield to color decision: during fast movement (vibrato/shift), don't turn yellow
+            // Rutsch-Schutz in der Farbe: hält Blau bei Vibrato/Lagenwechsel,
+            // macht aber nie Blau (sonst Pendeln bei Korrektur-Rucken).
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            const colorAngle = slideShieldFactor < 1 ? effectiveAngleDiff * slideShieldFactor : effectiveAngleDiff
-            wristRailIsBlue = wristRailColorRef.current(colorAngle, graceBuffer)
+            wristRailIsBlue = wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor)
             wristRailAngleDeg = effectiveAngleDiff
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display

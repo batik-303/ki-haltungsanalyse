@@ -97,4 +97,31 @@ describe('createWristRailColor', () => {
     expect(callN(railColor, 6, 10)).toBe(false)  // hysteresis band → stays yellow
     expect(callN(railColor, 3, 4)).toBe(true)    // below 5° for 4 frames → blue
   })
+
+  describe('Rutsch-Schutz (Dämpfung als 3. Argument)', () => {
+    it('hält Blau, solange das Handgelenk rutscht (Lagenwechsel, Vibrato)', () => {
+      const railColor = createWristRailColor(8, 5)
+      let blue = true
+      for (let i = 0; i < 20; i++) blue = railColor(12, 0, 0.35)
+      expect(blue).toBe(true)
+    })
+
+    it('macht nicht blau: Korrektur-Ruck bei noch geknickter Hand bleibt gelb', () => {
+      // Geigen-Test 29.09.: nach dem Korrigieren pendelte der Anker blau/gelb,
+      // weil jeder kleine Ruck den Knick gedämpft unter die Blau-Schwelle zog.
+      const railColor = createWristRailColor(8, 5)
+      expect(callN(railColor, 12, 8)).toBe(false)
+      let blue = false
+      for (let i = 0; i < 20; i++) blue = railColor(12, 0, 0.35)
+      expect(blue).toBe(false)
+    })
+
+    it('echte Korrektur wird während des Rutschens sofort blau', () => {
+      const railColor = createWristRailColor(8, 5)
+      expect(callN(railColor, 12, 8)).toBe(false)
+      let blue = false
+      for (let i = 0; i < 4; i++) blue = railColor(3, 0, 0.35)
+      expect(blue).toBe(true)
+    })
+  })
 })
