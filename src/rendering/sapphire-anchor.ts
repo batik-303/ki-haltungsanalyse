@@ -1,20 +1,7 @@
-import type { AnchorColor } from '../core/analysis/anchor-color'
-
-// Paletten je Anker-Farbe (#88): blau = Saphir, gelb = Amber #ffb800 (Glossar
-// „gold"), grau = Kamera sieht das Handgelenk nicht sicher.
-const PALETTES: Record<AnchorColor, { glow0: string; glow1: string; glow2: string; ring: string; body: [string, string, string, string]; edge: string }> = {
-  blue: { glow0: 'rgba(33,150,243,0.25)', glow1: 'rgba(21,101,192,0.08)', glow2: 'rgba(21,101,192,0)',
-    ring: '100,181,246', body: ['#64B5F6', '#2196F3', '#1565C0', '#0D47A1'], edge: 'rgba(227,242,253,0.6)' },
-  yellow: { glow0: 'rgba(255,184,0,0.25)', glow1: 'rgba(204,140,0,0.08)', glow2: 'rgba(204,140,0,0)',
-    ring: '255,184,0', body: ['#FFE08A', '#FFB800', '#D99A00', '#A87600'], edge: 'rgba(255,248,220,0.6)' },
-  grey: { glow0: 'rgba(158,158,158,0.18)', glow1: 'rgba(117,117,117,0.06)', glow2: 'rgba(117,117,117,0)',
-    ring: '158,158,158', body: ['#E0E0E0', '#9E9E9E', '#757575', '#545454'], edge: 'rgba(245,245,245,0.5)' },
-}
-
 /**
  * Render a sapphire-styled anchor point with glow, gradients, and ⚓ symbol.
  * When streakSeconds > 0, glow intensifies and pulse radius grows (capped at 60s).
- * `tone` färbt den Anker (blau/gelb/grau), `opacity` dient dem Überblenden.
+ * When colorOverride is provided, the anchor is tinted with that color instead of sapphire blue.
  */
 export function drawSapphireAnchor(
   ctx: CanvasRenderingContext2D,
@@ -23,12 +10,19 @@ export function drawSapphireAnchor(
   r: number,
   now: number,
   streakSeconds = 0,
-  tone: AnchorColor = 'blue',
-  opacity = 1,
+  colorOverride?: string,
 ) {
-  if (opacity <= 0) return
   const pulse = Math.sin(now / 500) * 0.15 + 0.85
-  const colors = PALETTES[tone]
+
+  // Color palette: default sapphire blue, or override
+  const colors = colorOverride === '#F5C842'
+    ? { glow0: 'rgba(245,200,66,0.25)', glow1: 'rgba(200,160,40,0.08)', glow2: 'rgba(200,160,40,0)',
+        ring: '245,200,66', body: ['#FDE68A', '#F5C842', '#D4A017', '#B8860B'], edge: 'rgba(255,248,220,0.6)' }
+    : colorOverride === '#9B59B6'
+    ? { glow0: 'rgba(155,89,182,0.25)', glow1: 'rgba(120,60,150,0.08)', glow2: 'rgba(120,60,150,0)',
+        ring: '155,89,182', body: ['#D2B4DE', '#9B59B6', '#7D3C98', '#6C3483'], edge: 'rgba(235,220,245,0.6)' }
+    : { glow0: 'rgba(33,150,243,0.25)', glow1: 'rgba(21,101,192,0.08)', glow2: 'rgba(21,101,192,0)',
+        ring: '100,181,246', body: ['#64B5F6', '#2196F3', '#1565C0', '#0D47A1'], edge: 'rgba(227,242,253,0.6)' }
 
   // Streak-based glow scaling (0..1, capped at 60s)
   const streakFactor = Math.min(1, streakSeconds / 60)
@@ -39,12 +33,12 @@ export function drawSapphireAnchor(
   grad3.addColorStop(0, colors.glow0)
   grad3.addColorStop(0.5, colors.glow1)
   grad3.addColorStop(1, colors.glow2)
-  ctx.globalAlpha = pulse * (0.85 + streakFactor * 0.15) * opacity
+  ctx.globalAlpha = pulse * (0.85 + streakFactor * 0.15)
   ctx.beginPath()
   ctx.arc(x, y, glowR, 0, Math.PI * 2)
   ctx.fillStyle = grad3
   ctx.fill()
-  ctx.globalAlpha = opacity
+  ctx.globalAlpha = 1
 
   // Middle glow ring (brighter with streak)
   ctx.beginPath()
@@ -89,7 +83,6 @@ export function drawSapphireAnchor(
   ctx.textBaseline = 'middle'
   ctx.fillText('⚓', x, y)
   ctx.textBaseline = 'alphabetic'
-  ctx.globalAlpha = 1
 
   // Streak readout (small, below anchor)
   if (streakSeconds > 0) {

@@ -84,7 +84,7 @@ const ROTATION_AXES: P[] = [
   { x: 1, y: 0, z: 1 },
 ]
 const THETAS = Array.from({ length: 17 }, (_, i) => i * 5) // 0…80°
-const COLOR_THRESHOLD_DEG = 8 // blau → gelb (createAnchorColorState, #88)
+const COLOR_THRESHOLD_DEG = 8 // blau → gelb (createWristRailColor)
 
 function maxOver(measure: (rig: Rig) => number, flex: number): number {
   let worst = 0

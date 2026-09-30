@@ -79,7 +79,7 @@ export function createSessionTracker(focusMode: FocusMode) {
      * @param tensionScore - Current tension (0-100)
      * @param layer - Current classified layer
      * @param dt - Delta time in seconds since last frame
-     * @param repaired - Zählt als gute Haltung (Wrist: Anker blau, #88; grau zählt nicht)
+     * @param repaired - Aktueller Reparaturstatus (true = in Deadzone)
      * @param holdSuccess - Whether a hold milestone was just achieved this frame
      * @param currentMilestoneLevel - Current milestone level from hold timer
      */

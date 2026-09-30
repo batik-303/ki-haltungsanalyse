@@ -14,7 +14,7 @@ applyTo: "src/core/**/*.ts"
 - **Factory functions with closure state**: `createXAnalyzer()` returns `{ analyze, reset }` — mutable state lives in closure, not in objects/classes
 - **Discriminated Unions**: `MasterPrint`, `AnalyzerOutput` use `mode`/`kind` as discriminant — always narrow with `if (data.mode === 'violin')` before accessing mode-specific fields
 - **Pure computation functions**: `computeXxx()` prefix, no side effects, deterministic
-- **Constants**: `SCREAMING_SNAKE_CASE` for thresholds (e.g., `PATH_SWITCH_MAX_DELTA_DEG = 3`)
+- **Constants**: `SCREAMING_SNAKE_CASE` for thresholds (e.g., `WRIST_SLIDE_DAMPING = 0.35`)
 
 ## TypeScript Strictness
 - `noUncheckedIndexedAccess: true` — array indexing returns `T | undefined`, always guard
