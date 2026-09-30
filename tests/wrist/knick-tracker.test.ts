@@ -1,15 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { createKnickTracker } from '../../src/core/analysis/knick-tracker'
 import { createSlideShield } from '../../src/core/analysis/slide-shield'
-import { computeForeshorteningConfidence, computeSignedKnick2D } from '../../src/core/analysis/wrist-analyzer'
-import { createAnchorColorState } from '../../src/core/analysis/anchor-color'
-import { computeAnchorVisibility } from '../../src/core/analysis/anchor-visibility'
+import { computeSignedKnick2D, createWristRailColor } from '../../src/core/analysis/wrist-analyzer'
 import { createMasterPrint } from '../../src/core/calibration/master-print'
 import type { Landmark, WristMasterPrint } from '../../src/core/types'
 
 // Sichert den mit Geige abgenommenen Stand von #82 (ADR 0003) über den ganzen
 // Ablauf pro Frame: „Haltung speichern" → Knick-Messung → Pfadwechsel →
-// Glättung → Farbe (#88: ein Zustand blau/gelb/grau). Szenarien entsprechen dem Geigen-Test der Nutzerin:
+// Glättung → Farbe. Szenarien entsprechen dem Geigen-Test der Nutzerin:
 // Stillstand ruhig blau, Armdrehung (Lagenwechsel) blau, bewusster Knick gelb.
 
 type P = { x: number; y: number; z: number }
@@ -101,26 +99,13 @@ function calibrate(calibDeg = CALIB_KNICK): WristMasterPrint {
   return mp
 }
 
-const FRAME_MS = 1000 / 30
-
-/**
- * Spielt Frames ab (30 fps) und liefert pro Frame Knick-Abweichung und Farbe.
- * Die Farbe bekommt wie in der Laufzeit den ungeglätteten Knick (#88).
- * `slideFactor` liefert den Rutsch-Schutz je Frame (Standard: kein Rutschen).
- */
-function play(frames: Frame[], masterPrint = calibrate(), slideFactor: (f: Frame) => number = () => 1) {
+/** Spielt Frames ab und liefert pro Frame Knick-Abweichung und Farbe. */
+function play(frames: Frame[], masterPrint = calibrate()) {
   const tracker = createKnickTracker()
-  const color = createAnchorColorState()
-  return frames.map((f, i) => {
-    const slideDamping = slideFactor(f)
+  const color = createWristRailColor()
+  return frames.map((f) => {
     const r = tracker.update({ pose: f.pose, world: f.world, hand: f.hand, aspect: 1, masterPrint })
-    const visible = computeAnchorVisibility({
-      hand: f.hand,
-      handednessScore: 1,
-      foreshorteningConfidence: computeForeshorteningConfidence(r.armLength2D, masterPrint.calibArmLength2D),
-    })
-    const c = color.update({ knickDiff: r.knickDiff, visible, nowMs: i * FRAME_MS, slideDamping })
-    return { deviation: r.effectiveKnickDiff, color: c, blue: c === 'blue', path: r.path }
+    return { deviation: r.effectiveKnickDiff, blue: color(r.effectiveKnickDiff), path: r.path }
   })
 }
 
@@ -199,12 +184,10 @@ describe('createKnickTracker — gemittelte Kalibrierung (#91)', () => {
 
 describe('createKnickTracker — Armdrehung (Lagenwechsel)', () => {
   for (const [name, axis] of [['senkrechte Achse', Y], ['schräge Achse', { x: 1, y: 1, z: 0.5 }]] as const) {
-    it(`gute Haltung wird nie gelb, wenn sich der Arm um die ${name} bis 70° hin und zurück dreht`, () => {
+    it(`gute Haltung bleibt blau, wenn sich der Arm um die ${name} bis 70° hin und zurück dreht`, () => {
       const sweep = (i: number) => 70 * Math.sin((Math.PI * i) / 120) // 0 → 70° → 0 in 4 s
       const out = play(repeat(120, (i) => makeFrame({ knickDeg: 3, armTurn: { axis, deg: sweep(i) } })))
-      // Stark zur Kamera gedreht (Unterarm-Konfidenz < 0,5) darf grau werden (#74).
-      expect(out.some((o) => o.color === 'yellow')).toBe(false)
-      expect(out.at(-1)!.blue).toBe(true)
+      expect(out.every((o) => o.blue)).toBe(true)
     })
   }
 })
@@ -286,8 +269,14 @@ describe('createKnickTracker — Pfadwechsel Hand ↔ Pose', () => {
 
 /** Wie `play`, aber mit Rutsch-Schutz auf dem Pose-Handgelenk (30 fps), verdrahtet wie im Hook. */
 function playShielded(frames: Frame[], masterPrint: WristMasterPrint) {
+  const tracker = createKnickTracker()
   const shield = createSlideShield()
-  return play(frames, masterPrint, (f) => shield.update(f.pose[15]!, 1 / 30))
+  const color = createWristRailColor()
+  return frames.map((f) => {
+    const factor = shield.update(f.pose[15]!, 1 / 30)
+    const r = tracker.update({ pose: f.pose, world: f.world, hand: f.hand, aspect: 1, masterPrint })
+    return { deviation: r.effectiveKnickDiff, blue: color(r.effectiveKnickDiff, 0, factor) }
+  })
 }
 
 function oldAndNew(calibDeg: number) {
@@ -372,9 +361,7 @@ describe('Rutsch-Schutz — Korrektur pendelt nicht (Geigen-Test 29.09.)', () =>
     const out = playShielded(frames, mp).slice(45)
     const firstBlue = out.findIndex((o) => o.blue)
     expect(firstBlue).toBeGreaterThanOrEqual(0)
-    // Hand nach 10 Frames wieder gerade; dann wie #88: Mittelungsfenster + 150 ms.
-    const straightAt = 10
-    expect((firstBlue - straightAt) * FRAME_MS).toBeLessThanOrEqual(600)
+    expect(firstBlue).toBeLessThan(20) // < 0,7 s nach Beginn der Korrektur
     expect(out.slice(firstBlue).every((o) => o.blue)).toBe(true)
   })
 })
