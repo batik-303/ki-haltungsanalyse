@@ -1,13 +1,13 @@
-import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
-import type { Landmark } from '../core/types'
+import type { KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { updateBendLock, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
+import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
@@ -69,7 +69,6 @@ export function usePoseDetection(
   const violinRef = useRef(createViolinAnalyzer())
   const sessionRef = useRef(createSessionTracker('violin'))
   const tensionRef = useRef(0)
-  const bendForwardRef = useRef(true)
   // Wrist repair status closure (Deadzone/Hysterese)
   const wristRepairStatusRef = useRef(createWristRepairStatus(10, 200))
   const slideShieldRef = useRef(createSlideShield())
@@ -97,7 +96,6 @@ export function usePoseDetection(
     smootherRef.current.reset()
     violinRef.current.reset()
     tensionRef.current = 0
-    bendForwardRef.current = true
     slideShieldRef.current.reset()
     wristFiltersRef.current = createWristRenderFilters()
     railDirRef.current = null
@@ -324,7 +322,7 @@ export function usePoseDetection(
           let rawDev = 0
           let smoothedDev = 0
           let driftDir: number | undefined
-          let bendFwd: boolean | undefined
+          let wristKnickSide: KnickSide | undefined
           let filteredWristCoords: { ex: number; ey: number; wx: number; wy: number; ix: number; iy: number; mx: number; my: number } | undefined
           let wristForeConf: number | undefined
           let smoothedRailDir: { x: number; y: number } | undefined
@@ -367,29 +365,6 @@ export function usePoseDetection(
             // Foreshortening-Konfidenz: aktuelle vs. kalibrierte 2D-Unterarmlänge
             const foreConf = computeForeshorteningConfidence(knickResult.armLength2D, store.masterPrint.calibArmLength2D)
 
-            // ── Beuge-Vorzeichen je Analysepfad (Bend-Lock) ──
-            let bendSign: number
-            let refBendSign: number
-            let forearmLen: number
-
-            if (path === 'hand' && hand) {
-              const handWrist = hand[0]!
-              bendSign = computePalmBendSign(elbow, hand)
-              refBendSign = store.masterPrint.flexBendDir
-              forearmLen = computeForearmLength3D(elbow, handWrist)
-            } else {
-              // Pose-only fallback: world landmarks when available (isotropic
-              // meter units, no aspect correction needed), else image-space.
-              const elbowFB = worldLandmarks?.[13] ?? elbow
-              const wristFB = worldLandmarks?.[15] ?? wrist
-              const mcpFB = worldLandmarks
-                ? computeMCP(worldLandmarks[17]!, worldLandmarks[19]!)
-                : computeMCP(pinky, index)
-              bendSign = computeBendDirection2D(elbowFB, wristFB, mcpFB)
-              refBendSign = store.masterPrint.flexBendDirFallback ?? store.masterPrint.flexBendDir
-              forearmLen = computeForearmLength3D(elbowFB, wristFB)
-            }
-
             const t = now / 1000
             const effectiveAngleDiff = knickResult.effectiveKnickDiff
 
@@ -406,17 +381,8 @@ export function usePoseDetection(
             // Cap tension by foreshortening confidence — avoid false alarms
             tensionTarget = computeWristTensionTarget(effectiveAngleDiff, sensitivity) * foreConf * slideShieldFactor
 
-            // Bend lock: bendSign + refBendSign + forearmLen were resolved
-            // above per analysis path so this stays unaware of which path is
-            // active. Margin scales with forearm length (Issue 012).
-            bendFwd = updateBendLock(
-              effectiveAngleDiff,
-              bendSign,
-              refBendSign,
-              bendForwardRef.current,
-              forearmLen,
-            )
-            bendForwardRef.current = bendFwd
+            // Seite der Abweichung für die periphere Leiste (#94)
+            wristKnickSide = knickResult.knickSide
 
             // Pfad für die Debug-Anzeige (canvas-renderer liest ihn aus dem Store).
             lastAnalysisPathRef.current = path
@@ -541,7 +507,7 @@ export function usePoseDetection(
               rawDeviation: rawDev,
               layerInfo,
               returnGlowTimer: trackResult.glowTimer,
-              lastBendForward: bendFwd,
+              wristKnickSide,
               driftDirection: driftDir,
               filteredWristCoords,
               wristForeshorteningConfidence: wristForeConf,

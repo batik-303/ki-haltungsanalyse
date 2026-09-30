@@ -129,6 +129,33 @@ Der Hook `use-pose-detection.ts` ruft pro Frame nur `knickTrackerRef.current.upd
 - `tests/wrist/knick-baseline.test.ts`: Baselines in derselben Größe wie die Laufzeit.
 - `tests/wrist/knick-tracker.test.ts`: ganzer Ablauf von „Haltung speichern" bis Farbe, entsprechend dem Geigen-Test: Stillstand mit Pixelzittern 10 s blau; z-Werte ändern nichts; Armdrehung bis 70° bei guter Haltung blau; 20° Knick gelb und zurück blau; stark verkürzter Unterarm hält kein Gelb fest; Pfadwechsel begrenzt auf 3°. Knick durch die Gerade in Gegenrichtung wird gelb (#91); gemittelte Kalibrierung hält Stillstand trotz Ausreißer im Erfassungs-Frame blau. Mutationsprobe: Wiedereinbau der Nur-steigen-Sperre oder eines z-Einflusses macht je einen Test rot.
 
+## 6. Die periphere Leiste — Richtung aus der Knick-Seite (#94)
+
+Entscheidung in #76, gebaut in #94. Eine **senkrechte** Leiste am linken Bildschirmrand, auf Laptop **und** Handy (der waagerechte Handy-Balken `drawWristMobileBar` ist entfallen): unten der **Arm** (immer blau), in der Mitte der **Anker = Gelenk**, oben die **Hand**, die am Anker kippt.
+
+### Seite der Abweichung (`src/core/analysis/knick-tracker.ts:64`)
+
+`measureKnickDeviation` liefert neben dem Betrag `knickDiff` die **Seite** `knickSide` (+1 / −1 / 0). Rechnung: vorzeichenbehafteter Knick (Seite aus dem 2D-Kreuzprodukt, `computeSignedKnick2D`) minus vorzeichenbehaftete gespeicherte Haltung (`calibKnickSide · calibKnick`). Ist die gespeicherte Seite unbekannt (`calibKnickSide = 0`), zählt die Seite des aktuellen Knicks. Der Pose-Fallback liefert 0 (grobe Punkte, Seite zu unsicher). Der Hook reicht sie als Store-Feld `wristKnickSide` weiter (`src/hooks/use-pose-detection.ts:385`).
+
+Bis #94 kam die Kipprichtung aus dem Bend-Lock (`computePalmBendSign` → `lastBendForward`), der z von Pose und Hand mischt (§2). Er ist samt `updateBendLock` und `computeForearmLength3D` entfernt; `computePalmBendSign` bleibt nur noch für `flexBendDir` in der Kalibrierung und das Debug-Overlay.
+
+### Kippwinkel, ruhige Richtung, Belohnung (`createWristBarTilt`, `src/core/analysis/wrist-bar.ts:38`)
+
+- **Blau** → Kippwinkel 0: die gespeicherte Haltung ist „gerade" (kalibrierungsrelativ).
+- **Gelb** → Kippwinkel = `knickDiff × 1,5`, höchstens 40° (`:21`), geglättet mit ≈ 150 ms Zeitkonstante (vorzeichenbehaftet: ein Seitenwechsel schwenkt hinüber, statt zu springen).
+- **Ruhige Richtung** (`:31`): die Seite wechselt erst, wenn die andere Seite **300 ms ohne Unterbrechung** gemessen wird; Seite 0 zählt nicht und unterbricht nicht. So flackert der Strich nicht zwischen beiden Seiten. 300 ms < 500 ms bis Gelb → beim Gelbwerden zeigt die Hand schon zur richtigen Seite.
+- **Bildschirm-Richtung** (`:27`): Seite +1 = Hand dreht im **ungespiegelten** Kamerabild im Uhrzeigersinn. Der CSS-Spiegel macht daraus gegen den Uhrzeigersinn → die Hand der Leiste kippt nach **links**. Die Leiste dreht sich also wie die echte Hand im Spiegelbild. Ob Hals = links: live mit Geige abzunehmen; falls umgekehrt, `SIDE_TO_SCREEN` umdrehen.
+- **Belohnung** (`:33`): beim Wechsel gelb → blau leuchtet **nur der Anker** einmal 0,8 s (linear 1 → 0), danach Ruhe.
+
+### Zeichnen (`src/rendering/wrist-side-view.ts:56`)
+
+Gesamtlänge 50 % der Canvas-Höhe, Hand 36 %. Die Linienstärke rechnet in CSS-Pixel um (Canvas hat Videogröße, eingepasst per `object-contain`): Arm 16 px auf dem Handy, auf dem Laptop proportional bis 24 px. Auf dem gespiegelten Canvas ist „links auf dem Bildschirm" +x, daher `hx = cx − sin(tilt) · handLen` (`:82`). Der Zustand (`createWristBarTilt`) lebt modul-weit und wird mit `resetWristSideViewSmoothing` bei Kalibrier-Wechsel zurückgesetzt. Grau-Darstellung folgt mit #92.
+
+### Abnahme-Tests
+
+- `tests/wrist/knick-tracker.test.ts` („Seite der Abweichung"): gespeichert 10°, −10°, 0,5° → Lehnen zu beiden Seiten ergibt die jeweilige Seite; durch die Gerade hindurch zählt als Gegenseite; Pose-Fallback → 0.
+- `tests/wrist/wrist-bar.test.ts`: blau → gerade; gelb → ×1,5, max. 40°, sanft; Seite +1 links / −1 rechts; kurzes Flackern, 0,2 s Gegenseite und Seite 0 ändern die Richtung nicht, 1 s Gegenseite schon; Seitenwechsel ohne Sprung; Belohnung genau einmal pro Korrektur, nach 0,9 s Ruhe.
+
 ---
 
 ## Offene technische Punkte
@@ -137,7 +164,8 @@ Der Hook `use-pose-detection.ts` ruft pro Frame nur `knickTrackerRef.current.upd
 - [x] Liefert der HandLandmarker Sichtbarkeit pro Punkt? → Nein (#74)
 - [x] Ursache Dauergelb (#78) → 2D-Bildwinkel nicht rotationsinvariant + Nur-steigen-Sperre
 - [x] **z-Nullpunkte mischen** beim Knick: erledigt, der Knick nutzt kein z mehr (#82, ADR 0003)
-- [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf ein z-freies Vorzeichen umstellen, z. B. `computeBendDirection2D` (#76, periphere Kipprichtung)
+- [x] Bend-Lock mit gemischtem z für die Kipprichtung entfernt; die periphere Leiste nimmt die z-freie Knick-Seite (#94, §6)
+- [ ] Live-Abnahme Kipprichtung: Hals = links, Schnecke = rechts (`SIDE_TO_SCREEN`, #94)
 - [x] Geigen-Gegen-Check der Verkürzungs-Korrektur: „funktioniert schon ganz gut" (Nutzerin, 26.09.2026) (#82)
 - [x] Seite des Knicks: Knick durch die Gerade in Gegenrichtung wird erkannt (#91, ADR 0003)
 - [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74)

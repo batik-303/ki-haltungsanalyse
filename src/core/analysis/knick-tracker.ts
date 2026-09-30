@@ -1,4 +1,4 @@
-import type { Landmark, WristMasterPrint } from '../types'
+import type { KnickSide, Landmark, WristMasterPrint } from '../types'
 import { selectAnalysisPath, type AnalysisPath } from './analysis-path'
 import {
   computeArmLength2D,
@@ -28,6 +28,8 @@ export interface KnickFrameResult {
   armLength2D: number
   /** Geglättete Knick-Abweichung von der gespeicherten Haltung in Grad. */
   effectiveKnickDiff: number
+  /** Seite der Abweichung relativ zur gespeicherten Haltung (ungeglättet), 0 = unbekannt. */
+  knickSide: KnickSide
 }
 
 /**
@@ -36,7 +38,10 @@ export interface KnickFrameResult {
  * Nutzt **kein z** — geschätzte Tiefe rauscht und ließ den Anker im
  * Stillstand springen.
  */
-export function measureKnickDeviation(input: KnickFrameInput, path: AnalysisPath): { knickDiff: number; armLength2D: number } {
+export function measureKnickDeviation(
+  input: KnickFrameInput,
+  path: AnalysisPath,
+): { knickDiff: number; knickSide: KnickSide; armLength2D: number } {
   const { pose, world, hand, aspect, masterPrint } = input
   const elbow = pose[13]!
   const wrist = pose[15]!
@@ -54,7 +59,12 @@ export function measureKnickDeviation(input: KnickFrameInput, path: AnalysisPath
     const side = Math.sign(signed2D)
     const otherSide = side !== 0 && masterPrint.calibKnickSide !== 0 && side !== masterPrint.calibKnickSide
     const knickDiff = otherSide ? knick + masterPrint.calibKnick : Math.abs(knick - masterPrint.calibKnick)
-    return { knickDiff, armLength2D }
+    // Seite der Abweichung (#94): vorzeichenbehafteter Knick minus gespeicherter.
+    // Ohne gespeicherte Seite zählt die Seite des aktuellen Knicks.
+    const signedDiff = masterPrint.calibKnickSide !== 0
+      ? side * knick - masterPrint.calibKnickSide * masterPrint.calibKnick
+      : side * knickDiff
+    return { knickDiff, knickSide: Math.sign(signedDiff) as KnickSide, armLength2D }
   }
 
   // Pose-Fallback: worldLandmarks, sonst Bildkoordinaten — exakt wie die
@@ -62,7 +72,7 @@ export function measureKnickDeviation(input: KnickFrameInput, path: AnalysisPath
   const src = world ?? pose
   const angle2D = computeCollinearityAngle2D(src[13]!, src[15]!, computeMCP(src[17]!, src[19]!))
   const knick = computeCorrectedKnick(angle2D, forearmLengthRatio)
-  return { knickDiff: Math.abs(knick - masterPrint.calibKnickFallback), armLength2D }
+  return { knickDiff: Math.abs(knick - masterPrint.calibKnickFallback), knickSide: 0, armLength2D }
 }
 
 /**
@@ -79,7 +89,7 @@ export function createKnickTracker() {
     const justSwitchedPath = prevPath !== null && prevPath !== path
     prevPath = path
 
-    const { knickDiff, armLength2D } = measureKnickDeviation(input, path)
+    const { knickDiff, knickSide, armLength2D } = measureKnickDeviation(input, path)
     // Erster Frame nach Pfadwechsel: Sprung begrenzen, damit die Glättung
     // stetig bleibt, wenn beide Pfade leicht verschieden messen.
     const clamped = justSwitchedPath
@@ -87,7 +97,7 @@ export function createKnickTracker() {
       : knickDiff
     ema = ema * (1 - KNICK_EMA_ALPHA) + clamped * KNICK_EMA_ALPHA
 
-    return { path, justSwitchedPath, armLength2D, effectiveKnickDiff: ema }
+    return { path, justSwitchedPath, armLength2D, effectiveKnickDiff: ema, knickSide }
   }
 
   function reset() {

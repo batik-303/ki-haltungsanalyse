@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   computePalmNormal,
   computePalmBendSign,
-  computeForearmLength3D,
-  updateBendLock,
 } from '../src/core/analysis/wrist-analyzer'
 import type { Landmark } from '../src/core/types'
 
@@ -157,48 +155,5 @@ describe('computePalmBendSign — orientation invariance', () => {
     const flexedSign = computePalmBendSign(elbow, flexed)
     const extendedSign = computePalmBendSign(elbow, extended)
     expect(Math.sign(flexedSign)).not.toBe(Math.sign(extendedSign))
-  })
-})
-
-describe('updateBendLock — arm-proportional margin', () => {
-  // Two arm sizes: short and long. With the old constant floor, the longer
-  // arm needed proportionally more delta to switch locks. New margin scales
-  // with forearm length so the same RELATIVE delta switches in both cases.
-  it('switches symmetrically for proportional bend deltas across arm sizes', () => {
-    const refBendDir = 0
-    const angleDiff = 10 // > 8° threshold
-
-    const shortArm = 0.1
-    const longArm = 0.3
-
-    // Use exactly 1.5× the margin for each arm — should always switch.
-    const deltaShort = 0.00025 * shortArm * 1.5
-    const deltaLong = 0.00025 * longArm * 1.5
-
-    expect(updateBendLock(angleDiff, -deltaShort, refBendDir, true, shortArm)).toBe(false)
-    expect(updateBendLock(angleDiff, -deltaLong, refBendDir, true, longArm)).toBe(false)
-    expect(updateBendLock(angleDiff, deltaShort, refBendDir, false, shortArm)).toBe(true)
-    expect(updateBendLock(angleDiff, deltaLong, refBendDir, false, longArm)).toBe(true)
-  })
-
-  it('respects hysteresis: small delta below margin does not switch', () => {
-    const angleDiff = 10
-    const forearm = 0.2
-    const tinyDelta = 1e-6
-    expect(updateBendLock(angleDiff, tinyDelta, 0, false, forearm)).toBe(false)
-    expect(updateBendLock(angleDiff, -tinyDelta, 0, true, forearm)).toBe(true)
-  })
-
-  it('does not switch below 8° threshold regardless of bend magnitude', () => {
-    expect(updateBendLock(5, 1.0, 0, false, 0.2)).toBe(false)
-    expect(updateBendLock(7.9, 1.0, 0, false, 0.2)).toBe(false)
-  })
-})
-
-describe('computeForearmLength3D', () => {
-  it('returns Euclidean distance in 3D', () => {
-    const elbow = lm(0, 0, 0)
-    const wrist = lm(3, 4, 12)
-    expect(computeForearmLength3D(elbow, wrist)).toBeCloseTo(13)
   })
 })

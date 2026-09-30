@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   AppScreen,
+  KnickSide,
   Instrument,
   FocusMode,
   SensitivityLevel,
@@ -63,7 +64,8 @@ export interface PoseState {
 
 
   // Wrist-specific
-  lastBendForward: boolean
+  // Seite der Knick-Abweichung (#94) für die periphere Leiste, 0 = unbekannt
+  wristKnickSide: KnickSide
   // Reparatur-Status-Objekt (Deadzone/Hysterese)
   wristRepairStatus?: { repaired: boolean; [key: string]: any }
 
@@ -126,7 +128,7 @@ export interface FrameUpdate {
   rawDeviation: number
   layerInfo: LayerInfo
   returnGlowTimer: number
-  lastBendForward?: boolean
+  wristKnickSide?: KnickSide
   driftDirection?: number
   sessionZones?: ZoneCounters
   // Filtered wrist render coordinates (pixel space)
@@ -197,7 +199,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   returnGlowTimer: 0,
 
   // Wrist
-  lastBendForward: true,
+  wristKnickSide: 0,
 
   // Wrist rail
   smoothedRailDir: null,
@@ -256,7 +258,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       sessionStart: keepCalibration ? performance.now() : 0,
       sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
       returnGlowTimer: 0,
-      lastBendForward: true,
+      wristKnickSide: 0,
       wristRailAngleDeg: 0,
       wristRailIsBlue: true,
       wristAnalysisPath: null,
@@ -301,7 +303,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     sessionActive: false,
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
-    lastBendForward: true,
+    wristKnickSide: 0,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
     wristAnalysisPath: null,
@@ -336,7 +338,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       sessionStart: keepCalibration ? performance.now() : 0,
       sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
       returnGlowTimer: 0,
-      lastBendForward: true,
+      wristKnickSide: 0,
       wristRailAngleDeg: 0,
       wristRailIsBlue: true,
       wristAnalysisPath: null,
@@ -364,7 +366,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     sessionActive: false,
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
-    lastBendForward: true,
+    wristKnickSide: 0,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
     wristAnalysisPath: null,
@@ -406,7 +408,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     lastSessionStats: null,
     returnGlowTimer: 0,
-    lastBendForward: true,
+    wristKnickSide: 0,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
     wristAnalysisPath: null,
@@ -438,7 +440,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     currentLayerInfo: DEFAULT_LAYER_INFO,
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
-    lastBendForward: true,
+    wristKnickSide: 0,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
     wristAnalysisPath: null,
@@ -452,7 +454,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     currentLayer: data.layerInfo.layer,
     currentLayerInfo: data.layerInfo,
     returnGlowTimer: data.returnGlowTimer,
-    ...(data.lastBendForward !== undefined && { lastBendForward: data.lastBendForward }),
+    ...(data.wristKnickSide !== undefined && { wristKnickSide: data.wristKnickSide }),
     ...(data.driftDirection !== undefined && { driftDirection: data.driftDirection }),
     ...(data.sessionZones && { sessionZones: data.sessionZones }),
     ...(data.filteredWristCoords && { filteredWristCoords: data.filteredWristCoords }),
@@ -499,7 +501,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     sessionActive: false,
     sessionZones: { flow: 0, bewusst: 0, achtung: 0, limit: 0 },
     returnGlowTimer: 0,
-    lastBendForward: true,
+    wristKnickSide: 0,
     wristRailAngleDeg: 0,
     wristRailIsBlue: true,
     wristAnalysisPath: null,

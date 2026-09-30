@@ -365,3 +365,34 @@ describe('Rutsch-Schutz — Korrektur pendelt nicht (Geigen-Test 29.09.)', () =>
     expect(out.slice(firstBlue).every((o) => o.blue)).toBe(true)
   })
 })
+
+// ── Seite der Abweichung (#94): Richtung für die periphere Leiste ──
+// Relativ zur gespeicherten Haltung: + = Hand dreht im Kamerabild in
+// Richtung wachsender Beugung der Testfigur (knickDeg > 0), − = Gegenrichtung.
+
+function sideAfter(knickDeg: number, calibDeg: number, withHand = true) {
+  const mp = calibrate(calibDeg)
+  const tracker = createKnickTracker()
+  let side = 0
+  for (const f of repeat(10, () => makeFrame({ knickDeg, calibDeg }, { withHand }))) {
+    side = tracker.update({ pose: f.pose, world: f.world, hand: f.hand, aspect: 1, masterPrint: mp }).knickSide
+  }
+  return side
+}
+
+describe('createKnickTracker — Seite der Abweichung (#94)', () => {
+  for (const calibDeg of [10, -10, 0.5]) {
+    it(`gespeichert ${calibDeg}°: Lehnen zu beiden Seiten ergibt die jeweilige Seite`, () => {
+      expect(sideAfter(12, calibDeg)).toBe(1)
+      expect(sideAfter(-12, calibDeg)).toBe(-1)
+    })
+  }
+
+  it('durch die Gerade hindurch (gespeichert 10°, jetzt −5° absolut) zählt als Gegenseite', () => {
+    expect(sideAfter(-15, 10)).toBe(-1)
+  })
+
+  it('Pose-Fallback ohne Hand: Seite unbekannt (0)', () => {
+    expect(sideAfter(12, 10, false)).toBe(0)
+  })
+})

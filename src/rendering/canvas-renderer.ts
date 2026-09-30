@@ -6,24 +6,18 @@ import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-land
 import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
 import { resolveWristAnchor } from '../core/analysis/wrist-anchor'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristSideView, drawWristMobileBar, resetWristSideViewSmoothing } from './wrist-side-view'
+import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
 
 // Module-level glow state for wrist feedback (persists across frames)
-let wristGlowLevel = 0
-let wristGlowDecay = 0
 let lastWristRepaired = false
 let repairGoldenGlow = 0
 let repairGoldenDecay = 0
 // Debounce: minimum time between repair glow pulses (ms)
 let lastRepairPulseAt = 0
 const REPAIR_PULSE_DEBOUNCE_MS = 800
-
-// Adaptive baseline: slow EMA absorbing gradual position changes
-let adaptiveBaseline = 0
-const ADAPTIVE_BASELINE_ALPHA = 0.02
 
 // Module-level position smoother for wrist overlay anchor.
 // The One Euro filters in the hook smooth coordinates; this adds a final
@@ -54,7 +48,7 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, lastBendForward, rawDeviation, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg, wristKnickSide } = state
   const isFlow = viewMode === 'flow'
 
   // Reset smoothed positions when calibration changes
@@ -181,16 +175,9 @@ export function renderFrame(
       const nowPerf = performance.now()
       const isBlueNow = wristRailIsBlue ?? false
       if (!lastWristRepaired && isBlueNow && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
-        wristGlowLevel = 1.0
-        wristGlowDecay = nowPerf
         repairGoldenGlow = 1.0
         repairGoldenDecay = nowPerf
         lastRepairPulseAt = nowPerf
-      }
-      // Decay (800ms — matches main anchor glow)
-      if (wristGlowLevel > 0) {
-        const elapsed = nowPerf - wristGlowDecay
-        wristGlowLevel = Math.max(0, 1 - elapsed / 800)
       }
       // Repair blue glow decay (800ms — visible longer)
       if (repairGoldenGlow > 0) {
@@ -200,36 +187,8 @@ export function renderFrame(
       lastWristRepaired = isBlueNow
 
       if (!isFlow) {
-        // Adaptive baseline: slowly track the raw angle to absorb gradual position changes
-        const rawAngle = wristRailAngleDeg ?? rawDeviation * 30
-        adaptiveBaseline = adaptiveBaseline * (1 - ADAPTIVE_BASELINE_ALPHA) + rawAngle * ADAPTIVE_BASELINE_ALPHA
-
-        const isMobileCanvas = width < 480
-        if (isMobileCanvas) {
-          // Mobile: horizontal bar above bottom HUD (72px = phone HUD height)
-          drawWristMobileBar(
-            ctx, width, height,
-            rawAngle,
-            lastBendForward,
-            now,
-            wristRailIsBlue,
-            wristGlowLevel,
-            72,
-          )
-        } else {
-          // Desktop/Tablet: vertical side-view on left edge
-          drawWristSideView(
-            ctx, width, height,
-            tensionScore,
-            rawAngle,
-            lastBendForward,
-            now,
-            state.wristRepairStatus ?? undefined,
-            wristGlowLevel,
-            0,
-            wristRailIsBlue,
-          )
-        }
+        // Periphere Leiste (#94): senkrecht am linken Bildschirmrand, Laptop und Handy.
+        drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide)
       }
 
       // Anchor + glow in both modes (positioned at wrist in analyse, centered in flow)
@@ -264,7 +223,7 @@ export function renderFrame(
         const anchorX = anchorPosSmoothed.x
         const anchorY = anchorPosSmoothed.y
         // Anchor color: blue (correct) / yellow (deviation)
-        const anchorColor = wristRailIsBlue ? undefined : '#F5C842'
+        const anchorColor = wristRailIsBlue ? undefined : WRIST_YELLOW
 
         const coreR = 11 + Math.sin(now / 600) * 1
         drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, anchorColor)
