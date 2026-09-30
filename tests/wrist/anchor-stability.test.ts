@@ -24,6 +24,7 @@ describe('Wrist-Ankerpunkt Stabilität', () => {
     flexBendDir: 1,
     calibArmLength2D: 1,
     calibKnick: 0,
+    calibKnickSide: 0,
     calibKnickFallback: 0,
   }
 

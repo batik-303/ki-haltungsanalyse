@@ -1,5 +1,6 @@
 import type {
   FocusMode,
+  KnickSide,
   Landmark,
   MasterPrint,
   ShoulderMasterPrint,
@@ -14,7 +15,27 @@ import {
   computePalmBendSign,
   computeBendDirection2D,
   computeMCP,
+  computeSignedKnick2D,
 } from '../analysis/wrist-analyzer'
+
+// Unter diesem Betrag gilt die gespeicherte Haltung als gerade: Die Seite ist
+// dort zu unsicher gemessen und bleibt unbekannt (#91, Lehre aus #85).
+const CALIB_KNICK_SIDE_MIN_DEG = 2
+
+/**
+ * Knick der gespeicherten Haltung aus vielen Countdown-Frames (#91): Median
+ * des Knicks mit Seite, robust gegen einen Ausreißer im Erfassungs-Frame.
+ */
+function computeCalibKnick(samples: number[]): { calibKnick: number; calibKnickSide: KnickSide } {
+  const sorted = [...samples].sort((a, b) => a - b)
+  const mid = sorted.length / 2
+  const median = sorted.length % 2 === 1
+    ? sorted[Math.floor(mid)]!
+    : (sorted[mid - 1]! + sorted[mid]!) / 2
+  const calibKnick = Math.abs(median)
+  const calibKnickSide = calibKnick < CALIB_KNICK_SIDE_MIN_DEG ? 0 : (Math.sign(median) as KnickSide)
+  return { calibKnick, calibKnickSide }
+}
 
 /**
  * Create a Master Print from current pose landmarks for the given focus mode.
@@ -26,6 +47,8 @@ export function createMasterPrint(
     handLandmarks?: Landmark[] | null
     aspect?: number
     worldLandmarks?: Landmark[]
+    /** Knick mit Seite (Grad) aus den Countdown-Frames, siehe computeSignedKnick2D. */
+    knickSamples?: number[]
   } = {},
 ): MasterPrint | null {
   const { handLandmarks, aspect = 1 } = options
@@ -51,6 +74,10 @@ export function createMasterPrint(
       const handMiddleMCP = handLandmarks[9]!
 
       const { angle } = computeFlexionExtensionAngle(poseElbow, handWrist, handMiddleMCP, aspect)
+      // Ohne Countdown-Frames zählt nur der Erfassungs-Frame.
+      const knickSamples = options.knickSamples?.length
+        ? options.knickSamples
+        : [computeSignedKnick2D(poseElbow, handWrist, handMiddleMCP, aspect)]
 
       // Pose-only fallback baselines — needed for the pose-fallback runtime
       // path so it can decode angle/sign in matching units when the hand
@@ -73,8 +100,8 @@ export function createMasterPrint(
         calibArmLength2D: computeArmLength2D(poseElbow, poseWrist, aspect),
         // Knick-Baseline in derselben Größe wie die Laufzeit (ADR 0003): bei
         // der Kalibrierung ist das Längenverhältnis 1, der korrigierte Knick
-        // also gleich dem 2D-Winkel.
-        calibKnick: computeCollinearityAngle2D(poseElbow, handWrist, handMiddleMCP, aspect),
+        // also gleich dem 2D-Winkel. Mit Seite, gemittelt (#91).
+        ...computeCalibKnick(knickSamples),
         flexBendDirFallback: computeBendDirection2D(elbowFB, wristFB, mcpFB),
         calibKnickFallback: computeCollinearityAngle2D(elbowFB, wristFB, mcpFB),
       } satisfies WristMasterPrint

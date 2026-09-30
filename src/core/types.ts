@@ -90,12 +90,16 @@ export interface ShoulderMasterPrint {
   earShoulderDist: number
 }
 
+/** Seite des Knicks im Bild: +1 / −1, 0 = unbekannt (nah an der Geraden). */
+export type KnickSide = -1 | 0 | 1
+
 export interface WristMasterPrint {
   mode: 'wrist'
   flexAngle: number           // Projected flexion/extension angle at calibration
   flexBendDir: number         // Hand-path bend sign (palm-normal · forearm) at calibration
   calibArmLength2D: number    // 2D-Unterarmlänge bei der Kalibrierung (normiert, mit aspect)
   calibKnick: number          // Knick-Baseline Hand-Pfad (2D-Winkel in Grad, ADR 0003)
+  calibKnickSide: KnickSide   // Seite der gespeicherten Haltung (#91), 0 = nah an der Geraden
   // Pose-only fallback baselines — computed at calibration so runtime can
   // switch to the fallback path without a baseline mismatch when the hand
   // briefly disappears.

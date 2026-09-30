@@ -127,7 +127,7 @@ Der Hook `use-pose-detection.ts` ruft pro Frame nur `knickTrackerRef.current.upd
 
 - `tests/wrist/angle-orientation-drift.test.ts`: gute Haltung (5°) bei Armdrehung um sechs Achsen bis 80° bleibt ≤ 8° (reiner 2D-Winkel: bis ≈ 29°). Echter Knick 20°/40°/55° in der Bildebene exakt erkannt, durch Drehung höchstens ≈ 2,2° überhöht. Grenze Längsachse als Charakterisierung.
 - `tests/wrist/knick-baseline.test.ts`: Baselines in derselben Größe wie die Laufzeit.
-- `tests/wrist/knick-tracker.test.ts`: ganzer Ablauf von „Haltung speichern" bis Farbe, entsprechend dem Geigen-Test: Stillstand mit Pixelzittern 10 s blau; z-Werte ändern nichts; Armdrehung bis 70° bei guter Haltung blau; 20° Knick gelb und zurück blau; stark verkürzter Unterarm hält kein Gelb fest; Pfadwechsel begrenzt auf 3°. Grenze Vorzeichen als Charakterisierung. Mutationsprobe: Wiedereinbau der Nur-steigen-Sperre oder eines z-Einflusses macht je einen Test rot.
+- `tests/wrist/knick-tracker.test.ts`: ganzer Ablauf von „Haltung speichern" bis Farbe, entsprechend dem Geigen-Test: Stillstand mit Pixelzittern 10 s blau; z-Werte ändern nichts; Armdrehung bis 70° bei guter Haltung blau; 20° Knick gelb und zurück blau; stark verkürzter Unterarm hält kein Gelb fest; Pfadwechsel begrenzt auf 3°. Knick durch die Gerade in Gegenrichtung wird gelb (#91); gemittelte Kalibrierung hält Stillstand trotz Ausreißer im Erfassungs-Frame blau. Mutationsprobe: Wiedereinbau der Nur-steigen-Sperre oder eines z-Einflusses macht je einen Test rot.
 
 ---
 
@@ -139,7 +139,7 @@ Der Hook `use-pose-detection.ts` ruft pro Frame nur `knickTrackerRef.current.upd
 - [x] **z-Nullpunkte mischen** beim Knick: erledigt, der Knick nutzt kein z mehr (#82, ADR 0003)
 - [ ] Bend-Lock (`computePalmBendSign`, `computeForearmLength3D`) mischt für das **Vorzeichen** weiterhin Pose-Ellbogen und Hand-Handgelenk; bei Bedarf auf ein z-freies Vorzeichen umstellen, z. B. `computeBendDirection2D` (#76, periphere Kipprichtung)
 - [x] Geigen-Gegen-Check der Verkürzungs-Korrektur: „funktioniert schon ganz gut" (Nutzerin, 26.09.2026) (#82)
-- [ ] Vorzeichen des Knicks: Knick durch die Gerade in Gegenrichtung wird nicht erkannt (ADR 0003, Grenze Vorzeichen)
+- [x] Seite des Knicks: Knick durch die Gerade in Gegenrichtung wird erkannt (#91, ADR 0003)
 - [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74)
 - [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
 - [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)

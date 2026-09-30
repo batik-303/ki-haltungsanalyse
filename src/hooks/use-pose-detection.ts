@@ -1,4 +1,4 @@
-import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
+import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computePalmBendSign, computeForearmLength3D, computeBendDirection2D, computeMCP, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHand } from '../core/analysis/hand-landmarker'
@@ -43,6 +43,9 @@ function createWristRenderFilters() {
   }
 }
 
+// Countdown-Frames für die gemittelte Knick-Kalibrierung (≈ 1 s bei 30 fps).
+const CALIB_KNICK_SAMPLE_COUNT = 30
+
 export function usePoseDetection(
   videoRef: React.RefObject<HTMLVideoElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -53,6 +56,9 @@ export function usePoseDetection(
   // Latest filtered hand landmarks (Left handedness only). Null when wrist
   // mode is inactive, no hand detected, or no Left-categorized hand present.
   const handLandmarksRef = useRef<Landmark[] | null>(null)
+  // Knick mit Seite aus den letzten Countdown-Frames (#91) — die Kalibrierung
+  // mittelt daraus die gespeicherte Haltung statt aus einem einzigen Frame.
+  const calibKnickSamplesRef = useRef<number[]>([])
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(performance.now())
   const loadingRef = useRef(false)
@@ -266,6 +272,16 @@ export function usePoseDetection(
       // since canvas is sized to videoWidth × videoHeight in the init step.
       const aspect = canvas.height > 0 ? canvas.width / canvas.height : 1
 
+      // Countdown läuft: Knick mit Seite sammeln (letzte ~1 s), sonst leeren.
+      const calibSamples = calibKnickSamplesRef.current
+      const calibHand = handLandmarksRef.current
+      if (store.isCalibrating && store.focusMode === 'wrist' && landmarks?.[13] && calibHand) {
+        calibSamples.push(computeSignedKnick2D(landmarks[13], calibHand[0]!, calibHand[9]!, aspect))
+        if (calibSamples.length > CALIB_KNICK_SAMPLE_COUNT) calibSamples.shift()
+      } else if (!store.isCalibrating && calibSamples.length > 0) {
+        calibSamples.length = 0
+      }
+
       if (landmarks && landmarks.length > 0) {
         // Distance check
         const leftShoulder = landmarks[11]!
@@ -378,10 +394,10 @@ export function usePoseDetection(
             const effectiveAngleDiff = knickResult.effectiveKnickDiff
 
             // ── Sticky-blue rail color with grace buffer ──
-            // Apply slide shield to color decision: during fast movement (vibrato/shift), don't turn yellow
+            // Rutsch-Schutz in der Farbe: hält Blau bei Vibrato/Lagenwechsel,
+            // macht aber nie Blau (sonst Pendeln bei Korrektur-Rucken).
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            const colorAngle = slideShieldFactor < 1 ? effectiveAngleDiff * slideShieldFactor : effectiveAngleDiff
-            wristRailIsBlue = wristRailColorRef.current(colorAngle, graceBuffer)
+            wristRailIsBlue = wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor)
             wristRailAngleDeg = effectiveAngleDiff
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
@@ -591,5 +607,5 @@ export function usePoseDetection(
     readinessGateRef.current.requestArm()
   }, [])
 
-  return { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, startTracking, stopTracking }
+  return { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking }
 }
