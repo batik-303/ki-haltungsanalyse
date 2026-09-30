@@ -221,38 +221,6 @@ export function computeFlexBendDirection(
 }
 
 /**
- * Update the locked bend direction with hysteresis.
- * Only switch direction when angleDiff > 8° (avoids flicker near threshold).
- * Margin prevents oscillation when bendDir is close to refBendDir.
- */
-export function updateBendLock(
-  angleDiff: number,
-  bendDir: number,
-  refBendDir: number,
-  currentLock: boolean,
-  forearmLength: number = 0,
-): boolean {
-  if (angleDiff > 8) {
-    const diff = bendDir - refBendDir
-    // Margin scales with forearm length so the relative threshold is symmetric
-    // across arm sizes. The old `|refBendDir| * 0.6 + 0.002` had a constant
-    // floor that dominated for short arms, making one bend direction harder to
-    // lock than the other. Constant `BEND_LOCK_MARGIN_K` is tuned for hand-
-    // landmark units; if forearmLength is 0 (legacy callers) we fall back to
-    // a tiny constant to preserve hysteresis.
-    const margin = forearmLength > 0 ? BEND_LOCK_MARGIN_K * forearmLength : 1e-4
-    if (currentLock && diff < -margin) return false
-    if (!currentLock && diff > margin) return true
-    return currentLock
-  }
-  return currentLock
-}
-
-// Empirical constant for arm-proportional margin in updateBendLock.
-// Tuned for typical hand-landmark bend-sign magnitudes (~1e-4 at threshold).
-const BEND_LOCK_MARGIN_K = 0.00025
-
-/**
  * Map wrist angle deviation to a tension target (0-100).
  */
 export function computeWristTensionTarget(
@@ -508,16 +476,4 @@ export function computePalmBendSign(elbow: Landmark, handLandmarks: Landmark[]):
   const fy = handWrist.y - elbow.y
   const fz = handWrist.z - elbow.z
   return fx * palmN.x + fy * palmN.y + fz * palmN.z
-}
-
-/**
- * 3D Euclidean length of the forearm (pose elbow → hand wrist). Used by
- * updateBendLock so the lock margin scales with arm length, eliminating the
- * old constant-floor asymmetry.
- */
-export function computeForearmLength3D(elbow: Landmark, handWrist: Landmark): number {
-  const fx = handWrist.x - elbow.x
-  const fy = handWrist.y - elbow.y
-  const fz = handWrist.z - elbow.z
-  return Math.sqrt(fx * fx + fy * fy + fz * fz)
 }

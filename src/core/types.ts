@@ -123,8 +123,6 @@ export interface FrameAnalysis {
   layerInfo: LayerInfo
   returnGlowTimer: number
   // Mode-specific extras
-  bendDirection?: number       // wrist: locked bend direction sign
-  lastBendForward?: boolean    // wrist: locked direction flag
   driftDirection?: number      // violin: 1 = sinking, -1 = too high
 }
 

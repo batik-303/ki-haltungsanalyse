@@ -1,328 +1,144 @@
 // ─────────────────────────────────────────────────────────────
-//  WRIST SIDE-VIEW — anatomical line, calm by default
+//  PERIPHERE LEISTE (Wrist-Modus, #76/#94) — Variante D
 // ─────────────────────────────────────────────────────────────
-//  Design intent:
-//   • Same anatomical mapping as before (rail · anchor · forearm).
-//   • Two states only: calm (in zone, faded) and alert (out of zone, amber).
-//   • No breathing, no constant pulse, no ambient halos, no dashes, no
-//     mid-stroke gradients. One animation: a 280ms ring "bloom" on entering
-//     the deadzone — the reward moment.
-//   • Numeric angle readout in Geist Mono; precision over decoration.
+//  Eine senkrechte Leiste am linken Bildschirmrand, auf Laptop und Handy:
+//   • unten der Arm — fest, gerade, immer blau (gemessen wird nur das Handgelenk)
+//   • in der Mitte der Anker = Gelenk
+//   • oben die Hand (≈ 1/3 der Länge), die am Anker kippt
+//  Blau → Hand gerade. Gelb → nur Anker + Hand gelb, Hand kippt zur Seite des
+//  Knicks. Korrektur → nur der Anker leuchtet einmal. Keine Gradzahl.
 //
-//  All visual state lives module-level (visual continuity between frames).
-//  Analysis precision is preserved upstream — this file only smooths what
-//  the eye sees, not what the analyzer measures.
+//  Kippwinkel, ruhige Richtung und Belohnung rechnet der Core
+//  (`createWristBarTilt`); hier wird nur gezeichnet. Der Zustand lebt
+//  modul-weit (visuelle Kontinuität zwischen Frames).
 // ─────────────────────────────────────────────────────────────
 
-// Visual smoothers (reset on calibration change).
-let sideViewAngleSmoothed = 0
-let mobileBarAngleSmoothed = 0
-// Cross-state alpha lerp: 1 = alert (out of zone), 0 = calm (in zone).
-let sideViewAlertLerp = 0
-let mobileBarAlertLerp = 0
-// Track previous zone state to fire the entry-into-zone ring exactly once.
-let sideViewWasBlue: boolean | null = null
-let mobileBarWasBlue: boolean | null = null
-// Timestamp of the most recent false→true blue transition.
-let sideViewEnterZoneAt = 0
-let mobileBarEnterZoneAt = 0
+import type { KnickSide } from '../core/types'
+import { createWristBarTilt } from '../core/analysis/wrist-bar'
 
-/** Reset module-level smoothing state — call when calibration changes. */
+const bar = createWristBarTilt()
+
+/** Leisten-Zustand zurücksetzen — bei Kalibrier-Wechsel aufrufen. */
 export function resetWristSideViewSmoothing() {
-  sideViewAngleSmoothed = 0
-  mobileBarAngleSmoothed = 0
-  sideViewAlertLerp = 0
-  mobileBarAlertLerp = 0
-  sideViewWasBlue = null
-  mobileBarWasBlue = null
-  sideViewEnterZoneAt = 0
-  mobileBarEnterZoneAt = 0
+  bar.reset()
 }
 
-// ─── tuning constants ────────────────────────────────────────
-const ANGLE_SMOOTHING_ALPHA = 0.10        // symmetric EMA on the displayed angle
-const ANGLE_VISIBLE_DEG = 3                // below this, line snaps to straight
-const ANGLE_AMPLIFY = 1.4                  // makes small deviations legible
-const ANGLE_AMPLIFY_CLAMP_DEG = 55         // never tilt past this on screen
-const ALERT_FADE_ALPHA = 0.16              // per-frame alpha lerp toward target
-const CALM_OPACITY = 0.28                  // overall opacity in zone
-const ALERT_OPACITY = 1.0                  // overall opacity out of zone
-const ENTRY_RING_MS = 280                  // bloom duration on entering zone
-const FONT_FAMILY = '"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace'
-// Colors
-const CALM_INK = '#9cc3e8'                 // soft blue for calm state
-const ALERT_INK = '#f1b659'                // warm amber for alert state
-const NEUTRAL_INK = '#6c87a3'              // faint forearm/rail in alert state
+// ─── Maße ─────────────────────────────────────────────────────
+const BAR_HEIGHT_FRACTION = 0.5     // Gesamtlänge ≈ 50 % der Bildhöhe
+const HAND_FRACTION = 0.36          // Anteil der Hand an der Gesamtlänge
+const TILT_MAX_DEG = 40             // Platz für den Knick nach beiden Seiten
+const ARM_WIDTH_CSS = 16            // kräftig, Referenz Handy (CSS-Pixel) …
+const ARM_WIDTH_REF_LEN_CSS = 350   // … bei dieser Leistenlänge; Laptop wächst mit
+const ARM_WIDTH_MAX_CSS = 24
+const EDGE_MARGIN_CSS = 18          // Abstand zum Bildschirmrand
 
-// ─── helpers ─────────────────────────────────────────────────
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t
-}
-
-function smoothAngle(prev: number, target: number) {
-  return prev + (target - prev) * ANGLE_SMOOTHING_ALPHA
-}
-
-function effectiveAngle(smoothed: number) {
-  return smoothed > ANGLE_VISIBLE_DEG
-    ? Math.min(ANGLE_AMPLIFY_CLAMP_DEG, smoothed * ANGLE_AMPLIFY)
-    : 0
-}
+// ─── Farben ───────────────────────────────────────────────────
+const BLUE = '#2196F3'
+const BLUE_GLOW = '100, 181, 246'   // #64B5F6 als RGB für den Belohnungs-Hof
+/** Gelb der Leiste — dasselbe wie der Anker im Bild. */
+export const WRIST_YELLOW = '#F5C842'
 
 /**
- * Update zone-transition state, return ring-bloom progress (0..1) for this
- * frame. The ring fires once per false→true transition and decays linearly.
+ * Canvas-Pixel pro CSS-Pixel. Das Canvas hat Videogröße und wird per
+ * `object-contain` eingepasst — die Linienstärke soll in CSS-Pixeln stimmen.
  */
-function ringProgress(
-  isBlue: boolean,
-  wasBlue: boolean | null,
-  enterAt: number,
-  now: number,
-): { progress: number; nextEnterAt: number } {
-  let nextEnterAt = enterAt
-  if (wasBlue === false && isBlue === true) {
-    nextEnterAt = now
-  }
-  const age = now - nextEnterAt
-  const progress = age >= 0 && age < ENTRY_RING_MS ? 1 - age / ENTRY_RING_MS : 0
-  return { progress, nextEnterAt }
+function canvasPxPerCssPx(ctx: CanvasRenderingContext2D, width: number, height: number): number {
+  const { clientWidth, clientHeight } = ctx.canvas
+  if (!clientWidth || !clientHeight) return 1
+  const cssPerCanvas = Math.min(clientWidth / width, clientHeight / height)
+  return cssPerCanvas > 0 ? 1 / cssPerCanvas : 1
 }
 
-// ─────────────────────────────────────────────────────────────
-//  DESKTOP / TABLET — vertical anatomical line on left screen edge
-// ─────────────────────────────────────────────────────────────
-
 /**
- * Render the wrist side-view peripheral.
- * Layout: rail (up) · anchor (center) · forearm (down) · numeric angle.
- * Drawn on the RIGHT canvas edge → appears on the LEFT of screen (CSS mirror).
- *
- * The `_*` parameters preserve the legacy call signature from canvas-renderer
- * so this is a drop-in replacement. tensionScore / repairStatus / railSuccessGlow
- * are no longer needed — visual state derives entirely from `angleDiff` and
- * `isBlue`.
+ * Periphere Leiste zeichnen. Auf dem RECHTEN Canvas-Rand → erscheint durch
+ * den CSS-Spiegel am LINKEN Bildschirmrand.
  */
 export function drawWristSideView(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  _tensionScore: number,
-  angleDiff: number,
-  lastBendForward: boolean,
   now: number,
-  _wristRepairStatus?: { repaired: boolean },
-  _wristGlowLevel?: number,
-  _railSuccessGlow?: number,
-  isBlue?: boolean,
+  isBlue: boolean,
+  knickDiff: number,
+  knickSide: KnickSide,
 ) {
-  const inZone = isBlue ?? (angleDiff <= 10)
+  const { tiltDeg, anchorGlow } = bar.update({ isBlue, knickDiff, knickSide, nowMs: now })
 
-  // Smooth the displayed angle and the alert fade.
-  sideViewAngleSmoothed = smoothAngle(sideViewAngleSmoothed, angleDiff)
-  sideViewAlertLerp = lerp(sideViewAlertLerp, inZone ? 0 : 1, ALERT_FADE_ALPHA)
+  // ─── Geometrie ───
+  const px = canvasPxPerCssPx(ctx, width, height)
+  const total = height * BAR_HEIGHT_FRACTION
+  const handLen = total * HAND_FRACTION
+  const armWidthCss = Math.min(ARM_WIDTH_MAX_CSS, Math.max(ARM_WIDTH_CSS, (total / px) * (ARM_WIDTH_CSS / ARM_WIDTH_REF_LEN_CSS)))
+  const armW = armWidthCss * px
+  const handW = armW * 0.8
+  const room = handLen * Math.sin((TILT_MAX_DEG * Math.PI) / 180) + handW / 2 + EDGE_MARGIN_CSS * px
+  const cx = width - room
+  const top = (height - total) / 2
+  const ay = top + handLen             // Anker = Gelenk zwischen Hand und Arm
+  const bottom = top + total
 
-  const angle = effectiveAngle(sideViewAngleSmoothed)
-  const alert = sideViewAlertLerp
-  const overallOpacity = lerp(CALM_OPACITY, ALERT_OPACITY, alert)
-
-  // Ring bloom on entering the zone (reward moment, fires once).
-  const ring = ringProgress(inZone, sideViewWasBlue, sideViewEnterZoneAt, now)
-  sideViewEnterZoneAt = ring.nextEnterAt
-  sideViewWasBlue = inZone
-
-  // Geometry — compact and symmetric around vertical centerline.
-  const isMobile = width < 480
-  const totalLen = height * (isMobile ? 0.22 : 0.26)
-  const forearmLen = totalLen * 0.55
-  const handLen = totalLen * 0.45
-  const marginX = isMobile ? Math.max(28, width * 0.08) : 56
-  const cx = width - marginX
-  const cy = height / 2
+  // Kippen: negativ = links auf dem Bildschirm = +x auf dem gespiegelten Canvas.
+  const tilt = (tiltDeg * Math.PI) / 180
+  const hx = cx - Math.sin(tilt) * handLen
+  const hy = ay - Math.cos(tilt) * handLen
+  const handColor = isBlue ? BLUE : WRIST_YELLOW
 
   ctx.save()
   ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
 
-  // ─── rail (where the hand should be — straight up) ────────────────
-  // Always present, dims down when alert (it's a reference, not the focus).
-  ctx.beginPath()
-  ctx.moveTo(cx, cy)
-  ctx.lineTo(cx, cy - handLen)
-  ctx.strokeStyle = alert > 0.5 ? NEUTRAL_INK : CALM_INK
-  ctx.lineWidth = 1
-  ctx.globalAlpha = overallOpacity * lerp(1, 0.45, alert)
-  ctx.stroke()
+  const arm = () => { ctx.beginPath(); ctx.moveTo(cx, bottom); ctx.lineTo(cx, ay) }
+  const hand = () => { ctx.beginPath(); ctx.moveTo(cx, ay); ctx.lineTo(hx, hy) }
 
-  // ─── forearm (down from anchor) ───────────────────────────────────
-  ctx.beginPath()
-  ctx.moveTo(cx, cy)
-  ctx.lineTo(cx, cy + forearmLen)
-  ctx.strokeStyle = alert > 0.5 ? NEUTRAL_INK : CALM_INK
-  ctx.lineWidth = 1.5
-  ctx.globalAlpha = overallOpacity * lerp(1, 0.55, alert)
-  ctx.stroke()
-
-  // ─── hand line (tilts with deviation) ─────────────────────────────
-  // In zone: blends with the rail (both straight). Out of zone: amber, tilted.
-  const dirSign = lastBendForward ? 1 : -1
-  const angleRad = (angle * Math.PI) / 180
-  const hx = cx + Math.sin(angleRad) * dirSign * handLen
-  const hy = cy - Math.cos(angleRad) * handLen
-  ctx.beginPath()
-  ctx.moveTo(cx, cy)
-  ctx.lineTo(hx, hy)
-  // Color blends from calm-blue toward amber via two-pass blending in HSL
-  // would be heavier — direct hex switch reads as crisper for this aesthetic.
-  ctx.strokeStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.lineWidth = 2.5
-  ctx.globalAlpha = overallOpacity
-  ctx.stroke()
-
-  // ─── anchor (small filled circle, no glow) ────────────────────────
-  ctx.beginPath()
-  ctx.arc(cx, cy, 3.2, 0, Math.PI * 2)
-  ctx.fillStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.globalAlpha = overallOpacity * 1.0
-  ctx.fill()
-
-  // ─── entry-into-zone ring (single reward animation) ───────────────
-  if (ring.progress > 0) {
-    const ringR = 6 + (1 - ring.progress) * 14
-    ctx.beginPath()
-    ctx.arc(cx, cy, ringR, 0, Math.PI * 2)
-    ctx.strokeStyle = CALM_INK
-    ctx.lineWidth = 1.4
-    ctx.globalAlpha = ring.progress * 0.7
+  // ─── weiches Leuchten hinter den Linien ───
+  const halo = (color: string, path: () => void) => {
+    ctx.save()
+    ctx.shadowColor = color
+    ctx.shadowBlur = 20 * px
+    ctx.strokeStyle = color
+    ctx.globalAlpha = 0.3
+    ctx.lineWidth = armW * 2.6
+    path()
     ctx.stroke()
+    ctx.restore()
+  }
+  halo(BLUE, arm)
+  halo(handColor, hand)
+
+  // ─── klare Linien: Arm immer blau, Hand in der Zustandsfarbe ───
+  ctx.strokeStyle = BLUE
+  ctx.lineWidth = armW
+  arm()
+  ctx.stroke()
+  ctx.strokeStyle = handColor
+  ctx.lineWidth = handW
+  hand()
+  ctx.stroke()
+
+  // ─── Belohnung: heller Hof nur am Anker, einmal ───
+  if (anchorGlow > 0) {
+    const r = armW * 5
+    const grd = ctx.createRadialGradient(cx, ay, 0, cx, ay, r)
+    grd.addColorStop(0, `rgba(${BLUE_GLOW}, ${0.8 * anchorGlow})`)
+    grd.addColorStop(1, `rgba(${BLUE_GLOW}, 0)`)
+    ctx.fillStyle = grd
+    ctx.beginPath()
+    ctx.arc(cx, ay, r, 0, Math.PI * 2)
+    ctx.fill()
   }
 
-  // ─── numeric angle (mirror-compensated, Geist Mono) ───────────────
-  // Below the forearm, centered on the column. Text follows the same
-  // calm/alert color logic.
-  const textY = cy + forearmLen + 18
-  const angleInt = Math.round(sideViewAngleSmoothed)
-  ctx.font = `500 11px ${FONT_FAMILY}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.globalAlpha = lerp(0.5, 0.95, alert)
-  // CSS mirror: reads correctly when drawn with scale(-1, 1).
-  ctx.save()
-  ctx.translate(cx, textY)
-  ctx.scale(-1, 1)
-  ctx.fillText(`${angleInt}°`, 0, 0)
-  ctx.restore()
-
-  ctx.restore()
-}
-
-// ─────────────────────────────────────────────────────────────
-//  MOBILE — horizontal anatomical line above the bottom HUD
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Render the horizontal wrist indicator for mobile portrait screens.
- * Layout: forearm (left) ── anchor ── hand (right, tilts on deviation).
- * Sits above the React bottom bar at `bottomOffset` px from the bottom edge.
- *
- * Same calm/alert two-state design as the desktop side-view.
- */
-export function drawWristMobileBar(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  angleDiff: number,
-  lastBendForward: boolean,
-  now: number,
-  isBlue?: boolean,
-  _wristGlowLevel?: number,
-  bottomOffset = 72,
-) {
-  const inZone = isBlue ?? (angleDiff <= 10)
-
-  mobileBarAngleSmoothed = smoothAngle(mobileBarAngleSmoothed, angleDiff)
-  mobileBarAlertLerp = lerp(mobileBarAlertLerp, inZone ? 0 : 1, ALERT_FADE_ALPHA)
-
-  const angle = effectiveAngle(mobileBarAngleSmoothed)
-  const alert = mobileBarAlertLerp
-  const overallOpacity = lerp(CALM_OPACITY, ALERT_OPACITY, alert)
-
-  const ring = ringProgress(inZone, mobileBarWasBlue, mobileBarEnterZoneAt, now)
-  mobileBarEnterZoneAt = ring.nextEnterAt
-  mobileBarWasBlue = inZone
-
-  const cx = width / 2
-  const cy = height - bottomOffset - 40
-  const totalLen = width * 0.5
-  const forearmLen = totalLen * 0.5
-  const handLen = totalLen * 0.5
-
-  ctx.save()
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-
-  // Reference rail (where the hand should be — straight right)
+  // ─── Anker = Gelenk (wächst mit der Linienstärke) ───
+  ctx.fillStyle = handColor
+  ctx.shadowColor = handColor
+  ctx.shadowBlur = (18 + anchorGlow * 30) * px
   ctx.beginPath()
-  ctx.moveTo(cx, cy)
-  ctx.lineTo(cx + handLen, cy)
-  ctx.strokeStyle = alert > 0.5 ? NEUTRAL_INK : CALM_INK
-  ctx.lineWidth = 1
-  ctx.globalAlpha = overallOpacity * lerp(1, 0.45, alert)
-  ctx.stroke()
-
-  // Forearm (left of anchor)
-  ctx.beginPath()
-  ctx.moveTo(cx - forearmLen, cy)
-  ctx.lineTo(cx, cy)
-  ctx.strokeStyle = alert > 0.5 ? NEUTRAL_INK : CALM_INK
-  ctx.lineWidth = 1.5
-  ctx.globalAlpha = overallOpacity * lerp(1, 0.55, alert)
-  ctx.stroke()
-
-  // Hand line (tilts on deviation)
-  const dirSign = lastBendForward ? 1 : -1
-  const angleRad = (angle * Math.PI) / 180
-  const hx = cx + Math.cos(angleRad) * handLen
-  const hy = cy + Math.sin(angleRad) * dirSign * handLen
-  ctx.beginPath()
-  ctx.moveTo(cx, cy)
-  ctx.lineTo(hx, hy)
-  ctx.strokeStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.lineWidth = 2.5
-  ctx.globalAlpha = overallOpacity
-  ctx.stroke()
-
-  // Anchor dot
-  ctx.beginPath()
-  ctx.arc(cx, cy, 3.2, 0, Math.PI * 2)
-  ctx.fillStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.globalAlpha = overallOpacity
+  ctx.arc(cx, ay, armW * 1.4 + (2 + anchorGlow * 4) * px, 0, Math.PI * 2)
   ctx.fill()
-
-  // Entry-into-zone ring
-  if (ring.progress > 0) {
-    const ringR = 6 + (1 - ring.progress) * 14
-    ctx.beginPath()
-    ctx.arc(cx, cy, ringR, 0, Math.PI * 2)
-    ctx.strokeStyle = CALM_INK
-    ctx.lineWidth = 1.4
-    ctx.globalAlpha = ring.progress * 0.7
-    ctx.stroke()
-  }
-
-  // Numeric angle below the bar
-  const textY = cy + 22
-  const angleInt = Math.round(mobileBarAngleSmoothed)
-  ctx.font = `500 11px ${FONT_FAMILY}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = alert > 0.5 ? ALERT_INK : CALM_INK
-  ctx.globalAlpha = lerp(0.5, 0.95, alert)
-  ctx.save()
-  ctx.translate(cx, textY)
-  ctx.scale(-1, 1)
-  ctx.fillText(`${angleInt}°`, 0, 0)
-  ctx.restore()
+  ctx.shadowBlur = 0
+  ctx.fillStyle = '#fff'
+  ctx.globalAlpha = 0.85
+  ctx.beginPath()
+  ctx.arc(cx, ay, armW * 0.5, 0, Math.PI * 2)
+  ctx.fill()
 
   ctx.restore()
 }
