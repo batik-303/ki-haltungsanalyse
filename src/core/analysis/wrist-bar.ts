@@ -1,8 +1,9 @@
 import type { KnickSide } from '../types'
+import type { AnchorColor } from './anchor-color'
 
 export interface WristBarInput {
-  /** Ein Zustand der Anker-Farbe: blau = gespeicherte Haltung. */
-  isBlue: boolean
+  /** Ein Zustand der Anker-Farbe (#88): blau = gespeicherte Haltung, grau = keine sichere Sicht. */
+  color: AnchorColor
   /** Geglättete Knick-Abweichung von der gespeicherten Haltung in Grad. */
   knickDiff: number
   /** Seite der Abweichung aus dem Knick-Tracker, 0 = unbekannt. */
@@ -40,7 +41,7 @@ export function createWristBarTilt() {
   let side: KnickSide = 0
   let otherSideMs = 0
   let prevNowMs: number | null = null
-  let wasBlue: boolean | null = null
+  let prevColor: AnchorColor | null = null
   let rewardAtMs: number | null = null
 
   function update(input: WristBarInput): WristBarState {
@@ -50,12 +51,14 @@ export function createWristBarTilt() {
     side = updateSide(input.knickSide, dtMs)
     const screenDir = (side === 0 ? 1 : side) * SIDE_TO_SCREEN
 
-    if (wasBlue === false && input.isBlue) rewardAtMs = input.nowMs
-    wasBlue = input.isBlue
+    // Belohnung nur bei gelb → blau; grau → blau ist keine Korrektur, nur wieder Sicht.
+    if (prevColor === 'yellow' && input.color === 'blue') rewardAtMs = input.nowMs
+    prevColor = input.color
     const anchorGlow = rewardGlow(input.nowMs)
 
-    if (input.isBlue) {
+    if (input.color !== 'yellow') {
       // Blau = gespeicherte Haltung = gerade (kalibrierungsrelativ, Befund B).
+      // Grau = keine sichere Sicht → keine Richtung, Hand steht gerade.
       tilt = 0
       return { tiltDeg: 0, anchorGlow }
     }
@@ -93,7 +96,7 @@ export function createWristBarTilt() {
     side = 0
     otherSideMs = 0
     prevNowMs = null
-    wasBlue = null
+    prevColor = null
     rewardAtMs = null
   }
 
