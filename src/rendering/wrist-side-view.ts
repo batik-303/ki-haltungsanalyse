@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 //  PERIPHERE LEISTE (Wrist-Modus, #76/#94) — Variante D
 // ─────────────────────────────────────────────────────────────
-//  Eine senkrechte Leiste am linken Bildschirmrand, auf Laptop und Handy:
+//  Eine senkrechte Leiste am linken Bildschirmrand, auf Laptop und Handy
+//  (Analyse) — bzw. groß in der Mitte (Flow, #99, Maße: `computeFlowRailLayout`):
 //   • unten der Arm — fest, gerade, immer blau (gemessen wird nur das Handgelenk)
 //   • in der Mitte der Anker = Gelenk
 //   • oben die Hand (≈ 1/3 der Länge), die am Anker kippt
@@ -14,7 +15,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { KnickSide } from '../core/types'
-import { createWristBarTilt } from '../core/analysis/wrist-bar'
+import { createWristBarTilt, TILT_MAX_DEG } from '../core/analysis/wrist-bar'
+import { RAIL_ARM_WIDTH_PER_LENGTH, RAIL_HAND_FRACTION, RAIL_HAND_WIDTH_RATIO, type RailLayout } from '../core/analysis/flow-rail-layout'
 
 const bar = createWristBarTilt()
 
@@ -25,10 +27,7 @@ export function resetWristSideViewSmoothing() {
 
 // ─── Maße ─────────────────────────────────────────────────────
 const BAR_HEIGHT_FRACTION = 0.5     // Gesamtlänge ≈ 50 % der Bildhöhe
-const HAND_FRACTION = 0.36          // Anteil der Hand an der Gesamtlänge
-const TILT_MAX_DEG = 40             // Platz für den Knick nach beiden Seiten
-const ARM_WIDTH_CSS = 16            // kräftig, Referenz Handy (CSS-Pixel) …
-const ARM_WIDTH_REF_LEN_CSS = 350   // … bei dieser Leistenlänge; Laptop wächst mit
+const ARM_WIDTH_CSS = 16            // kräftig, Referenz Handy (CSS-Pixel); Laptop wächst mit
 const ARM_WIDTH_MAX_CSS = 24
 const EDGE_MARGIN_CSS = 18          // Abstand zum Bildschirmrand
 
@@ -50,8 +49,23 @@ function canvasPxPerCssPx(ctx: CanvasRenderingContext2D, width: number, height: 
 }
 
 /**
- * Periphere Leiste zeichnen. Auf dem RECHTEN Canvas-Rand → erscheint durch
- * den CSS-Spiegel am LINKEN Bildschirmrand.
+ * Lage der Leiste in der Analyse-Ansicht: am RECHTEN Canvas-Rand → erscheint
+ * durch den CSS-Spiegel am LINKEN Bildschirmrand.
+ */
+function computeSideRailLayout(ctx: CanvasRenderingContext2D, width: number, height: number): RailLayout {
+  const px = canvasPxPerCssPx(ctx, width, height)
+  const total = height * BAR_HEIGHT_FRACTION
+  const handLen = total * RAIL_HAND_FRACTION
+  const armWidthCss = Math.min(ARM_WIDTH_MAX_CSS, Math.max(ARM_WIDTH_CSS, (total / px) * RAIL_ARM_WIDTH_PER_LENGTH))
+  const armWidth = armWidthCss * px
+  const room = handLen * Math.sin((TILT_MAX_DEG * Math.PI) / 180) + (armWidth * RAIL_HAND_WIDTH_RATIO) / 2 + EDGE_MARGIN_CSS * px
+  const top = (height - total) / 2
+  return { cx: width - room, top, bottom: top + total, armWidth, px }
+}
+
+/**
+ * Periphere Leiste zeichnen. Ohne `layout` am Rand (Analyse-Ansicht), mit
+ * `layout` an der vorgegebenen Stelle (Flow-Ansicht).
  */
 export function drawWristSideView(
   ctx: CanvasRenderingContext2D,
@@ -61,21 +75,15 @@ export function drawWristSideView(
   isBlue: boolean,
   knickDiff: number,
   knickSide: KnickSide,
+  layout?: RailLayout,
 ) {
   const { tiltDeg, anchorGlow } = bar.update({ isBlue, knickDiff, knickSide, nowMs: now })
 
   // ─── Geometrie ───
-  const px = canvasPxPerCssPx(ctx, width, height)
-  const total = height * BAR_HEIGHT_FRACTION
-  const handLen = total * HAND_FRACTION
-  const armWidthCss = Math.min(ARM_WIDTH_MAX_CSS, Math.max(ARM_WIDTH_CSS, (total / px) * (ARM_WIDTH_CSS / ARM_WIDTH_REF_LEN_CSS)))
-  const armW = armWidthCss * px
-  const handW = armW * 0.8
-  const room = handLen * Math.sin((TILT_MAX_DEG * Math.PI) / 180) + handW / 2 + EDGE_MARGIN_CSS * px
-  const cx = width - room
-  const top = (height - total) / 2
+  const { cx, top, bottom, armWidth: armW, px } = layout ?? computeSideRailLayout(ctx, width, height)
+  const handLen = (bottom - top) * RAIL_HAND_FRACTION
+  const handW = armW * RAIL_HAND_WIDTH_RATIO
   const ay = top + handLen             // Anker = Gelenk zwischen Hand und Arm
-  const bottom = top + total
 
   // Kippen: negativ = links auf dem Bildschirm = +x auf dem gespiegelten Canvas.
   const tilt = (tiltDeg * Math.PI) / 180

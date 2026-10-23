@@ -60,3 +60,10 @@ export function selectSessionDuration(state: PoseState): string {
   const sec = Math.floor(elapsed % 60)
   return `${min}:${sec.toString().padStart(2, '0')}`
 }
+
+// ── Flow-Leiste (#77/#99) ──
+// Im Wrist-Modus zeigt die Flow-Ansicht nur die periphere Leiste: Canvas füllt
+// den Bildschirm, oben nichts, Handy unten nur „Beenden" + „Analyse".
+export function selectIsFlowRail(state: PoseState): boolean {
+  return state.focusMode === 'wrist' && state.viewMode === 'flow'
+}

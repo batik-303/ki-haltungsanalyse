@@ -19,7 +19,7 @@ export interface WristBarState {
 
 // Anzeige leicht übertrieben, damit kleine Knicke lesbar sind (#76).
 const TILT_AMPLIFY = 1.5
-const TILT_MAX_DEG = 40
+export const TILT_MAX_DEG = 40
 // Sanftes Kippen: Zeitkonstante der Glättung (ms statt Frames).
 const TILT_SMOOTH_TAU_MS = 150
 // Seite +1 dreht im ungespiegelten Kamerabild im Uhrzeigersinn; der
