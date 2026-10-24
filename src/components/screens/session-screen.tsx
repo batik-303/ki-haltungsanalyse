@@ -335,9 +335,12 @@ export function SessionScreen() {
       {/* Bottom bar: Controls — Kalibrierung läuft im Overlay */}
       {!calState && (phase === 'ready-to-calibrate' || phase === 'tracking') && (
         <div className={cn(
-          "sm:hidden absolute bottom-0 left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
+          "sm:hidden absolute left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
           // Flow-Modus: keine Balken-Fläche, nur schwebende diskrete Knöpfe (ruhig).
           !isFlow && "bg-surface/80 backdrop-blur",
+          // Flow-Leiste: Knöpfe etwas vom unteren Rand weg (Handy-Test 24.10.) —
+          // Reserve dafür in computeFlowRailLayout (FLOW_BUTTONS_PHONE_CSS).
+          isFlowRail ? "bottom-3.5" : "bottom-0",
         )}>
           {/* Controls — Spannungsleiste bewusst entfernt (Canvas führt) */}
           <div className="flex items-center gap-1.5 shrink-0">

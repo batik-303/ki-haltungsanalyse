@@ -37,9 +37,9 @@ const PHONE = { viewWidth: 390, viewHeight: 844 }
 const LAPTOP = { viewWidth: 1440, viewHeight: 900 }
 const TABLET = { viewWidth: 820, viewHeight: 1180 }
 // Höhe der Knöpfe unten (CSS-Pixel), gemessen an session-screen.tsx:
-// Handy = 8 + 44 + 8 + Safe-Area (≈ 34); Laptop = clamp(24px, 6vh, 96px) + Knopf-Reihe
+// Handy = 14 (im Flow angehoben, Handy-Test 24.10.) + 8 + 44 + 8 + Safe-Area (≈ 34); Laptop = clamp(24px, 6vh, 96px) + Knopf-Reihe
 // (≈ 42) + Abstand 12 + Mikrofon (≈ 34).
-const PHONE_BUTTONS_CSS = 94
+const PHONE_BUTTONS_CSS = 108
 const laptopButtonsCss = (viewHeight: number) => Math.min(96, Math.max(24, viewHeight * 0.06)) + 88
 const tiltReach = Math.sin((TILT_MAX_DEG * Math.PI) / 180)
 
