@@ -15,8 +15,10 @@ export const RAIL_HAND_FRACTION = 0.36
 export const RAIL_ARM_WIDTH_PER_LENGTH = 16 / 350
 /** Hand-Strich etwas schmaler als der Arm. */
 export const RAIL_HAND_WIDTH_RATIO = 0.8
+/** Breite des weichen Leuchtens hinter den Linien pro Armbreite. */
+export const RAIL_HALO_WIDTH_RATIO = 2.6
 
-// Ränder in CSS-Pixeln — gemessen bis zur runden Kappe, nicht bis zum Linienende.
+// Ränder in CSS-Pixeln — gemessen bis zum Ende des Leuchtens, nicht bis zum Linienende.
 const FLOW_TOP_MARGIN_CSS = 16
 const FLOW_SIDE_MARGIN_CSS = 16
 const FLOW_GAP_ABOVE_BUTTONS_CSS = 8
@@ -64,20 +66,21 @@ export function computeFlowRailLayout(input: FlowRailLayoutInput): RailLayout {
         Math.max(DESKTOP_BUTTONS_OFFSET_MIN_CSS, viewHeight * DESKTOP_BUTTONS_OFFSET_VH),
       )
 
-  // Länge: so hoch wie möglich (inkl. runder Kappen oben und unten), aber die
-  // gekippte Hand bleibt samt halber Strichbreite seitlich im Bild.
+  // Länge: so hoch wie möglich (inkl. Leuchten oben und unten — es reicht über die
+  // runde Kappe hinaus), aber die gekippte Hand bleibt samt halber Strichbreite
+  // seitlich im Bild.
   const heightRoomCss = viewHeight - FLOW_TOP_MARGIN_CSS - buttonsCss - FLOW_GAP_ABOVE_BUTTONS_CSS
-  const capsPerLength = RAIL_ARM_WIDTH_PER_LENGTH // zwei halbe Kappen = eine Strichbreite
+  const halosPerLength = RAIL_HALO_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH // zwei halbe Leuchtbreiten
   const reachPerLength = RAIL_HAND_FRACTION * Math.sin((TILT_MAX_DEG * Math.PI) / 180)
     + (RAIL_HAND_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH) / 2
   const totalCss = Math.max(0, Math.min(
-    heightRoomCss / (1 + capsPerLength),
+    heightRoomCss / (1 + halosPerLength),
     (viewWidth / 2 - FLOW_SIDE_MARGIN_CSS) / reachPerLength,
   ))
 
   // Senkrecht mittig im freien Bereich zwischen oberem Rand und Knöpfen.
-  const capCss = (totalCss * RAIL_ARM_WIDTH_PER_LENGTH) / 2
-  const topCss = FLOW_TOP_MARGIN_CSS + capCss + (heightRoomCss - totalCss * (1 + capsPerLength)) / 2
+  const haloCss = (totalCss * halosPerLength) / 2
+  const topCss = FLOW_TOP_MARGIN_CSS + haloCss + (heightRoomCss - totalCss * (1 + halosPerLength)) / 2
   const visibleTop = (canvasHeight - viewHeight * px) / 2
   const top = visibleTop + topCss * px
 

@@ -16,7 +16,7 @@
 
 import type { KnickSide } from '../core/types'
 import { createWristBarTilt, TILT_MAX_DEG } from '../core/analysis/wrist-bar'
-import { RAIL_ARM_WIDTH_PER_LENGTH, RAIL_HAND_FRACTION, RAIL_HAND_WIDTH_RATIO, type RailLayout } from '../core/analysis/flow-rail-layout'
+import { RAIL_ARM_WIDTH_PER_LENGTH, RAIL_HAND_FRACTION, RAIL_HAND_WIDTH_RATIO, RAIL_HALO_WIDTH_RATIO, type RailLayout } from '../core/analysis/flow-rail-layout'
 
 const bar = createWristBarTilt()
 
@@ -104,7 +104,7 @@ export function drawWristSideView(
     ctx.shadowBlur = 20 * px
     ctx.strokeStyle = color
     ctx.globalAlpha = 0.3
-    ctx.lineWidth = armW * 2.6
+    ctx.lineWidth = armW * RAIL_HALO_WIDTH_RATIO
     path()
     ctx.stroke()
     ctx.restore()
