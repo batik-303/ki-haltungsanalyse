@@ -8,6 +8,7 @@ import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
+import { StraightWristTip } from '@/components/straight-wrist-tip'
 import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
@@ -262,6 +263,9 @@ export function SessionScreen() {
 
       {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
       {!calState && <ReadinessHint />}
+
+      {/* Tipp nach geknickt gespeicherter Haltung (#101) — Analyse läuft weiter */}
+      {!calState && <StraightWristTip />}
 
       {/* ═══════════════════════════════════════════
           DESKTOP / TABLET HUD (≥480px)
