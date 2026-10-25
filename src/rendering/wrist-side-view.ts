@@ -16,6 +16,8 @@
 
 import type { KnickSide } from '../core/types'
 import { createWristBarTilt, TILT_MAX_DEG } from '../core/analysis/wrist-bar'
+import { computeContainPx, computeRailAnchorRadius } from '../core/analysis/anchor-size'
+import { drawSapphireAnchor } from './sapphire-anchor'
 import { RAIL_ARM_WIDTH_PER_LENGTH, RAIL_HAND_FRACTION, RAIL_HAND_WIDTH_RATIO, RAIL_HALO_WIDTH_RATIO, type RailLayout } from '../core/analysis/flow-rail-layout'
 
 const bar = createWristBarTilt()
@@ -38,22 +40,18 @@ const BLUE_GLOW = '100, 181, 246'   // #64B5F6 als RGB für den Belohnungs-Hof
 export const WRIST_YELLOW = '#F5C842'
 
 /**
- * Canvas-Pixel pro CSS-Pixel. Das Canvas hat Videogröße und wird per
- * `object-contain` eingepasst — die Linienstärke soll in CSS-Pixeln stimmen.
- */
-function canvasPxPerCssPx(ctx: CanvasRenderingContext2D, width: number, height: number): number {
-  const { clientWidth, clientHeight } = ctx.canvas
-  if (!clientWidth || !clientHeight) return 1
-  const cssPerCanvas = Math.min(clientWidth / width, clientHeight / height)
-  return cssPerCanvas > 0 ? 1 / cssPerCanvas : 1
-}
-
-/**
  * Lage der Leiste in der Analyse-Ansicht: am RECHTEN Canvas-Rand → erscheint
  * durch den CSS-Spiegel am LINKEN Bildschirmrand.
  */
 function computeSideRailLayout(ctx: CanvasRenderingContext2D, width: number, height: number): RailLayout {
-  const px = canvasPxPerCssPx(ctx, width, height)
+  // Das Canvas hat Videogröße und wird per `object-contain` eingepasst —
+  // die Linienstärke soll in CSS-Pixeln stimmen.
+  const px = computeContainPx({
+    canvasWidth: width,
+    canvasHeight: height,
+    viewWidth: ctx.canvas.clientWidth,
+    viewHeight: ctx.canvas.clientHeight,
+  })
   const total = height * BAR_HEIGHT_FRACTION
   const handLen = total * RAIL_HAND_FRACTION
   const armWidthCss = Math.min(ARM_WIDTH_MAX_CSS, Math.max(ARM_WIDTH_CSS, (total / px) * RAIL_ARM_WIDTH_PER_LENGTH))
@@ -134,19 +132,9 @@ export function drawWristSideView(
     ctx.fill()
   }
 
-  // ─── Anker = Gelenk (wächst mit der Linienstärke) ───
-  ctx.fillStyle = handColor
-  ctx.shadowColor = handColor
-  ctx.shadowBlur = (18 + anchorGlow * 30) * px
-  ctx.beginPath()
-  ctx.arc(cx, ay, armW * 1.4 + (2 + anchorGlow * 4) * px, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.shadowBlur = 0
-  ctx.fillStyle = '#fff'
-  ctx.globalAlpha = 0.85
-  ctx.beginPath()
-  ctx.arc(cx, ay, armW * 0.5, 0, Math.PI * 2)
-  ctx.fill()
+  // ─── Anker = Gelenk: Saphir-Look wie auf dem Körper (#102), wächst mit der Linienstärke ───
+  const anchorR = computeRailAnchorRadius(armW, px, anchorGlow)
+  drawSapphireAnchor(ctx, cx, ay, anchorR, now, 0, isBlue ? undefined : WRIST_YELLOW)
 
   ctx.restore()
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { matchVoiceCommand } from '../core/voice/voice-commands'
 
 interface SpeechRecognitionEvent {
   resultIndex: number
@@ -16,18 +17,6 @@ export type VoiceCommandMap = Record<string, () => void>
  * - `off`: bewusst aus.
  */
 export type VoiceStatus = 'off' | 'starting' | 'listening' | 'error' | 'unsupported'
-
-// Use short stems so conjugated forms ("kalibriere", "kalibriert") still match.
-// T4 #60: „bereit" ist der sichtbare, primäre Auslöser; „kalibrieren" bleibt nur
-// als unsichtbares Synonym in der Voice-Map (kein UI-Text mehr).
-const COMMAND_KEYWORDS: Record<string, string[]> = {
-  kalibrieren: ['bereit', 'kalibrier', 'calibrat'],
-  start: ['start', 'los'],
-  stop: ['stop', 'stopp', 'ende'],
-  neu: ['neu', 'nochmal', 'erneut'],
-  flow: ['flow'],
-  analyse: ['analyse', 'analys'],
-}
 
 const COMMAND_COOLDOWN_MS = 2000
 
@@ -57,7 +46,7 @@ function humanizeError(code: string): string {
  * damit ein stiller Ausfall (Mikro nicht erlaubt, offline, Aussetzer) sichtbar
  * wird — vorher zeigte die UI „aktiv", während die Erkennung längst tot war.
  *
- * @param commandMap - Keys must match COMMAND_KEYWORDS keys (kalibrieren, start, stop, neu)
+ * @param commandMap - Keys = Befehlsnamen aus `matchVoiceCommand` (kalibrieren, stop, neu, flow, analyse, development)
  * @param active - Whether voice recognition should be active
  */
 export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
@@ -122,11 +111,17 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
     // Debounce: prevent same command from firing twice (interim + final)
     let lastFiredCommand = ''
     let lastFiredTime = 0
+    // Ein Ergebnis (gleicher Index, interim → final) löst denselben Befehl nur
+    // einmal aus — auch nach Ablauf der Sperrzeit. Wichtig für Umschalt-Befehle
+    // wie „Development", die sonst doppelt schalten (an → gleich wieder aus).
+    let lastFiredResultIndex = -1
 
     recognition.onstart = () => {
       console.log('[Voice] 🎤 onstart — listening')
       setStatus('listening')
       setError(null)
+      // Neue Erkennungsrunde: die Ergebnis-Indizes beginnen wieder bei 0.
+      lastFiredResultIndex = -1
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -140,23 +135,24 @@ export function useVoiceCommands(commandMap: VoiceCommandMap, active: boolean) {
 
         console.log(`[Voice] ${isFinal ? 'FINAL' : 'interim'}: "${text}" (confidence: ${(alt.confidence * 100).toFixed(0)}%)`)
 
-        for (const [commandName, keywords] of Object.entries(COMMAND_KEYWORDS)) {
-          if (keywords.some((kw) => text.includes(kw))) {
-            const now = Date.now()
-            if (commandName === lastFiredCommand && now - lastFiredTime < COMMAND_COOLDOWN_MS) {
-              console.log(`[Voice] Command "${commandName}" cooldown, skipped`)
-              continue
-            }
+        const commandName = matchVoiceCommand(text)
+        if (!commandName) continue
 
-            const handler = commandMapRef.current[commandName]
-            if (handler) {
-              console.log(`[Voice] >>> FIRED command: "${commandName}"`)
-              lastFiredCommand = commandName
-              lastFiredTime = now
-              handler()
-              return
-            }
-          }
+        const now = Date.now()
+        const sameCommand = commandName === lastFiredCommand
+        if (sameCommand && (i === lastFiredResultIndex || now - lastFiredTime < COMMAND_COOLDOWN_MS)) {
+          console.log(`[Voice] Command "${commandName}" cooldown, skipped`)
+          continue
+        }
+
+        const handler = commandMapRef.current[commandName]
+        if (handler) {
+          console.log(`[Voice] >>> FIRED command: "${commandName}"`)
+          lastFiredCommand = commandName
+          lastFiredTime = now
+          lastFiredResultIndex = i
+          handler()
+          return
         }
       }
     }

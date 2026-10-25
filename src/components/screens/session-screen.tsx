@@ -172,6 +172,8 @@ export function SessionScreen() {
     neu: handleRecalibrate,
     flow: () => usePoseStore.getState().setViewMode('flow'),
     analyse: () => usePoseStore.getState().setViewMode('analyse'),
+    // „Development": Entwickler-Ansicht (Punkte, Linien, Gradzahl) an/aus.
+    development: () => usePoseStore.getState().toggleDebugLandmarks(),
   }), [handleArm, handleStop, handleRecalibrate])
 
   const { startListening, stopListening, status: voiceStatus, error: voiceError } = useVoiceCommands(voiceCommands, true)
