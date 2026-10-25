@@ -264,8 +264,9 @@ export function SessionScreen() {
       {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
       {!calState && <ReadinessHint />}
 
-      {/* Tipp nach geknickt gespeicherter Haltung (#101) — Analyse läuft weiter */}
-      {!calState && <StraightWristTip />}
+      {/* Tipp nach geknickt gespeicherter Haltung (#101) — Analyse läuft weiter.
+          Nicht in der Flow-Leiste: die steht mittig von oben bis unten (#77). */}
+      {!calState && !isFlowRail && <StraightWristTip />}
 
       {/* ═══════════════════════════════════════════
           DESKTOP / TABLET HUD (≥480px)

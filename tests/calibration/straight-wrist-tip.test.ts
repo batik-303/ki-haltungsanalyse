@@ -15,7 +15,7 @@ function wristPrint(calibKnick: number): WristMasterPrint {
     flexBendDir: 1,
     calibArmLength2D: 0.3,
     calibKnick,
-    calibKnickSide: calibKnick < 2 ? 0 : 1,
+    calibKnickSide: 1,
     calibKnickFallback: 0,
   }
 }

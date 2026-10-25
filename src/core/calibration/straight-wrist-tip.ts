@@ -1,6 +1,6 @@
 import type { MasterPrint } from '../types'
 
-// Ab diesem gespeicherten Knick (Grad, Hand-Pfad) kommt der Tipp; darunter nie (#97).
+// Ab diesem gespeicherten Knick (Grad, Hand-Pfad) kommt der Tipp; darunter nie (#101, Grenze aus #97).
 const STRAIGHT_WRIST_TIP_MIN_DEG = 10
 // So lange steht der Tipp nach dem Speichern am Rand, dann geht er von selbst.
 export const STRAIGHT_WRIST_TIP_DURATION_MS = 8000
