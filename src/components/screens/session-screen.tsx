@@ -8,7 +8,7 @@ import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
-import { selectSessionPhase, selectPhaseHint } from '@/store/selectors'
+import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
 import { Home } from 'lucide-react'
@@ -37,6 +37,9 @@ export function SessionScreen() {
   // farbig, im Flow-Modus bewusst diskret (weißer Text, ohne Farbe), damit die
   // periphere Ansicht ruhig bleibt und „Beenden" trotzdem jederzeit greifbar ist.
   const isFlow = viewMode === 'flow'
+  // Flow-Leiste (#77/#99): oben nichts, Canvas füllt den Bildschirm, Handy
+  // unten nur „Beenden" + „Analyse".
+  const isFlowRail = usePoseStore(selectIsFlowRail)
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
@@ -234,7 +237,10 @@ export function SessionScreen() {
       {/* Canvas overlay */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-contain scale-x-[-1] z-[2]"
+        className={cn(
+          "absolute inset-0 w-full h-full scale-x-[-1] z-[2]",
+          isFlowRail ? "object-cover" : "object-contain",
+        )}
       />
 
       {/* Kalibrier-Overlay — Variante C „Minimal HUD" (alle Größen) */}
@@ -260,7 +266,10 @@ export function SessionScreen() {
           ═══════════════════════════════════════════ */}
 
       {/* HUD: Home-Abbruch + Mode badge — top left */}
-      <div className="hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10">
+      <div className={cn(
+        "hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10",
+        isFlowRail && "sm:hidden",
+      )}>
         <ExitButton onClick={handleAbort} withLabel />
         <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
           {MODE_LABELS[focusMode] ?? focusMode}
@@ -311,7 +320,10 @@ export function SessionScreen() {
           ═══════════════════════════════════════════ */}
 
       {/* Top bar: Home + Mode badge */}
-      <div className="sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2">
+      <div className={cn(
+        "sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2",
+        isFlowRail && "hidden",
+      )}>
         <div className="flex items-center gap-2">
           <ExitButton onClick={handleAbort} />
           <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
@@ -323,27 +335,32 @@ export function SessionScreen() {
       {/* Bottom bar: Controls — Kalibrierung läuft im Overlay */}
       {!calState && (phase === 'ready-to-calibrate' || phase === 'tracking') && (
         <div className={cn(
-          "sm:hidden absolute bottom-0 left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
+          "sm:hidden absolute left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
           // Flow-Modus: keine Balken-Fläche, nur schwebende diskrete Knöpfe (ruhig).
           !isFlow && "bg-surface/80 backdrop-blur",
+          // Flow-Leiste: Knöpfe etwas vom unteren Rand weg (Handy-Test 24.10.) —
+          // Reserve dafür in computeFlowRailLayout (FLOW_BUTTONS_PHONE_CSS).
+          isFlowRail ? "bottom-3.5" : "bottom-0",
         )}>
           {/* Controls — Spannungsleiste bewusst entfernt (Canvas führt) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={handleToggleMic}
-              aria-label="Sprachsteuerung umschalten"
-              className={cn(
-                'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
-                voiceStatus === 'listening'
-                  ? 'bg-background/75 border border-white/25 text-white'
-                  : voiceStatus === 'error' || voiceStatus === 'unsupported'
-                    // Kein Rot: Amber lädt zum Antippen (Neustart per Geste) ein.
-                    ? 'bg-amber-500/85 text-amber-950'
-                    : 'bg-sapphire/80 text-white hover:bg-sapphire',
-              )}
-            >
-              {voiceStatus === 'listening' ? '🎤' : voiceStatus === 'error' || voiceStatus === 'unsupported' ? '⚠️' : '🔇'}
-            </button>
+            {!isFlowRail && (
+              <button
+                onClick={handleToggleMic}
+                aria-label="Sprachsteuerung umschalten"
+                className={cn(
+                  'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
+                  voiceStatus === 'listening'
+                    ? 'bg-background/75 border border-white/25 text-white'
+                    : voiceStatus === 'error' || voiceStatus === 'unsupported'
+                      // Kein Rot: Amber lädt zum Antippen (Neustart per Geste) ein.
+                      ? 'bg-amber-500/85 text-amber-950'
+                      : 'bg-sapphire/80 text-white hover:bg-sapphire',
+                )}
+              >
+                {voiceStatus === 'listening' ? '🎤' : voiceStatus === 'error' || voiceStatus === 'unsupported' ? '⚠️' : '🔇'}
+              </button>
+            )}
 
             {phase === 'ready-to-calibrate' && (
               <PhoneButton onClick={handleArm} primary>Speichern</PhoneButton>

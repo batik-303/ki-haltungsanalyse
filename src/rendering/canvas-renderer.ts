@@ -5,6 +5,8 @@ import { drawDebugLandmarks } from './debug-landmarks'
 import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-landmarks'
 import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
 import { resolveWristAnchor } from '../core/analysis/wrist-anchor'
+import { computeFlowRailLayout } from '../core/analysis/flow-rail-layout'
+import { selectIsFlowRail } from '../store/selectors'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW } from './wrist-side-view'
 import { drawGoldenBand } from './golden-band'
@@ -186,38 +188,22 @@ export function renderFrame(
       }
       lastWristRepaired = isBlueNow
 
-      if (!isFlow) {
+      if (isFlow) {
+        // Flow (#77/#99): nur die periphere Leiste, groß in der Mitte.
+        const { clientWidth, clientHeight } = ctx.canvas
+        const layout = computeFlowRailLayout({
+          canvasWidth: width,
+          canvasHeight: height,
+          viewWidth: clientWidth || width,
+          viewHeight: clientHeight || height,
+        })
+        drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide, layout)
+      } else {
         // Periphere Leiste (#94): senkrecht am linken Bildschirmrand, Laptop und Handy.
         drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide)
       }
 
-      // Anchor + glow in both modes (positioned at wrist in analyse, centered in flow)
-      if (isFlow) {
-        const flowX = width - 50
-        const coreR = 13 + Math.sin(now / 600) * 1
-        drawSapphireAnchor(ctx, flowX, height / 2, coreR, now, flowStreak)
-        drawReturnGlow(ctx, flowX, height / 2, coreR, returnGlowTimer, false)
-        // Blue flash: correction reward glow
-        const rsg = repairGoldenGlow
-        if (rsg > 0) {
-          ctx.save()
-          ctx.beginPath()
-          ctx.arc(flowX, height / 2, coreR + 35 * rsg, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(91, 155, 213, ${0.55 * rsg})`
-          ctx.shadowColor = '#7ec8f0'
-          ctx.shadowBlur = 45 * rsg
-          ctx.fill()
-          ctx.restore()
-          // Inner bright ring
-          ctx.beginPath()
-          ctx.arc(flowX, height / 2, coreR + 5, 0, Math.PI * 2)
-          ctx.strokeStyle = '#7ec8f0'
-          ctx.lineWidth = 4 * rsg
-          ctx.globalAlpha = 0.8 * rsg
-          ctx.stroke()
-          ctx.globalAlpha = 1
-        }
-      } else if (anchorPosSmoothed) {
+      if (!isFlow && anchorPosSmoothed) {
         // Anker nur zeichnen, wenn je eine Hand-0 gesehen wurde (sonst kein
         // Anker — Grau-Zustand: #74). Kein Pose-15-Fallback mehr.
         const anchorX = anchorPosSmoothed.x
@@ -252,7 +238,7 @@ export function renderFrame(
 
       // Foreshortening confidence warning (below side-view — right of canvas = left of screen)
       const foreConf = state.wristForeshorteningConfidence
-      if (foreConf < 0.9) {
+      if (!isFlow && foreConf < 0.9) {
         const isMobile = width < 480
         const warnX = isMobile ? width - Math.max(28, width * 0.08) : width - 50
         const warnY = height / 2 + height * 0.18
@@ -324,8 +310,8 @@ export function renderFrame(
     }
   }
 
-  // ── Mode indicator (bottom-left) ──
-  if (masterPrint && !isCalibrating) {
+  // ── Mode indicator (bottom-left) — entfällt in der Flow-Leiste (#99) ──
+  if (masterPrint && !isCalibrating && !selectIsFlowRail(state)) {
     const label = isFlow ? 'Flow' : 'Analyse'
     ctx.font = '12px sans-serif'
     ctx.fillStyle = '#ffffff'
