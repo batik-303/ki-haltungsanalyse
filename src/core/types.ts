@@ -93,6 +93,9 @@ export interface ShoulderMasterPrint {
 /** Seite des Knicks im Bild: +1 / −1, 0 = unbekannt (nah an der Geraden). */
 export type KnickSide = -1 | 0 | 1
 
+/** Ein Zustand der Anker-Farbe für Anker, periphere Leiste und Statistik (#92). */
+export type AnchorColor = 'blue' | 'yellow' | 'grey'
+
 export interface WristMasterPrint {
   mode: 'wrist'
   flexAngle: number           // Projected flexion/extension angle at calibration

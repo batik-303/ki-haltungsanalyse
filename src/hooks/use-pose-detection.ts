@@ -2,10 +2,10 @@ import { createWristRepairStatus, createWristRailColor, computeWristTensionTarge
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { pickLeftHandDetection } from '../core/analysis/hand-landmarker'
-import { computeAnchorVisibility, createAnchorGreyGate, type AnchorColor } from '../core/analysis/anchor-visibility'
+import { computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
-import type { KnickSide, Landmark } from '../core/types'
+import type { AnchorColor, KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
 import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
@@ -512,14 +512,17 @@ export function usePoseDetection(
 
           // Tension update (shoulder/wrist use slower rising rate for calm color transitions)
           if (store.focusMode !== 'violin') {
-            tensionRef.current = computeTension(tensionRef.current, tensionTarget, 0.08, 0.15)
+            // Grau = Pause (#75/#92): ohne sichere Sicht stehen Spannung, Streak
+            // und Statistik still — sonst feuert z. B. das Rückkehr-Leuchten,
+            // weil die Spannung mit der Verkürzungs-Konfidenz absinkt.
+            const paused = wristAnchorColor === 'grey'
+            if (!paused) tensionRef.current = computeTension(tensionRef.current, tensionTarget, 0.08, 0.15)
 
             const layerInfo = classifyLayer(tensionRef.current, store.focusMode, driftDir)
 
             // Session tracking
-            // Grau zählt nicht als gute Haltung (#92).
-            const isRepaired = wristAnchorColor === 'grey' ? false : wristRepairStatus?.repaired ?? undefined
-            const trackResult = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt, isRepaired, railSuccess, railMilestoneLevel)
+            const isRepaired = wristRepairStatus?.repaired ?? undefined
+            const trackResult = paused ? null : sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt, isRepaired, railSuccess, railMilestoneLevel)
 
             // Push to store (batched, Zustand merges)
             usePoseStore.getState().updateFrame({
@@ -527,13 +530,13 @@ export function usePoseDetection(
               smoothedDeviation: smoothedDev,
               rawDeviation: rawDev,
               layerInfo,
-              returnGlowTimer: trackResult.glowTimer,
+              returnGlowTimer: trackResult?.glowTimer ?? 0,
               wristKnickSide,
               driftDirection: driftDir,
               filteredWristCoords,
               wristForeshorteningConfidence: wristForeConf,
-              streakSeconds: trackResult.streakSeconds,
-              maxStreak: trackResult.maxStreak,
+              streakSeconds: trackResult?.streakSeconds,
+              maxStreak: trackResult?.maxStreak,
               // Wrist repair status for rendering/feedback
               wristRepairStatus: wristRepairStatus,
               // Rail state
@@ -558,7 +561,7 @@ export function usePoseDetection(
         // Kein Körper → Handgelenk nicht sichtbar: Anker geht nach der
         // Wartezeit auf grau und misst nach der Rückkehr neu (#92).
         if (store.focusMode === 'wrist' && store.masterPrint && !store.isCalibrating) {
-          const color = anchorGreyGateRef.current.update({ visible: false, nowMs: now, measureIsBlue: () => true })
+          const color = anchorGreyGateRef.current.hide(now)
           if (color !== store.wristAnchorColor) usePoseStore.setState({ wristAnchorColor: color })
         }
         if (store.distanceOk || store.distanceStatus !== 'no-body') {

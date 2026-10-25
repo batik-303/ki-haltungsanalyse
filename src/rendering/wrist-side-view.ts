@@ -15,8 +15,7 @@
 //  modul-weit (visuelle Kontinuität zwischen Frames).
 // ─────────────────────────────────────────────────────────────
 
-import type { KnickSide } from '../core/types'
-import type { AnchorColor } from '../core/analysis/anchor-visibility'
+import type { AnchorColor, KnickSide } from '../core/types'
 import { createWristBarTilt, TILT_MAX_DEG } from '../core/analysis/wrist-bar'
 import { computeContainPx, computeRailAnchorRadius } from '../core/analysis/anchor-size'
 import { drawSapphireAnchor } from './sapphire-anchor'

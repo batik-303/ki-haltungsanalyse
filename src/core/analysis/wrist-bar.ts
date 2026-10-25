@@ -1,5 +1,4 @@
-import type { KnickSide } from '../types'
-import type { AnchorColor } from './anchor-visibility'
+import type { AnchorColor, KnickSide } from '../types'
 
 export interface WristBarInput {
   /** Ein Zustand der Anker-Farbe: blau = gespeicherte Haltung, grau = keine sichere Sicht (#92). */

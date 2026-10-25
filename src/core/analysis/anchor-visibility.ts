@@ -1,4 +1,4 @@
-import type { Landmark } from '../types'
+import type { AnchorColor, Landmark } from '../types'
 
 // Grau-Bedingung aus #74 (docs/research/mediapipe-hand-visibility.md). Der
 // HandLandmarker liefert kein `visibility` je Punkt; die Sicht wird aus vier
@@ -27,9 +27,6 @@ export function computeAnchorVisibility({ hand, handednessScore, foreshorteningC
   return foreshorteningConfidence >= MIN_FORESHORTENING_CONFIDENCE
 }
 
-/** Ein Zustand für Anker, periphere Leiste und Statistik (#92). */
-export type AnchorColor = 'blue' | 'yellow' | 'grey'
-
 // Zeit-Hysterese aus #74: grau erst nach dieser Zeit ohne sichere Sicht,
 // zurück erst nach dieser Zeit sicherer Sicht (neu messen).
 const TO_GREY_MS = 250
@@ -54,13 +51,16 @@ export function createAnchorGreyGate() {
   let hiddenSince: number | null = null
   let visibleSince: number | null = null
 
+  /** Frame ohne sichere Sicht (auch: kein Körper im Bild) — nichts messen. */
+  function hide(nowMs: number): AnchorColor {
+    hiddenSince ??= nowMs
+    visibleSince = null
+    if (nowMs - hiddenSince >= TO_GREY_MS) color = 'grey'
+    return color
+  }
+
   function update({ visible, nowMs, measureIsBlue }: AnchorGreyGateInput): AnchorColor {
-    if (!visible) {
-      hiddenSince ??= nowMs
-      visibleSince = null
-      if (nowMs - hiddenSince >= TO_GREY_MS) color = 'grey'
-      return color
-    }
+    if (!visible) return hide(nowMs)
     hiddenSince = null
     const measured: AnchorColor = measureIsBlue() ? 'blue' : 'yellow'
     if (color === 'grey') {
@@ -72,5 +72,5 @@ export function createAnchorGreyGate() {
     return color
   }
 
-  return { update }
+  return { update, hide }
 }

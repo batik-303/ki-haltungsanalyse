@@ -1,4 +1,4 @@
-import type { Landmark } from '../core/types'
+import type { AnchorColor, Landmark } from '../core/types'
 import { usePoseStore } from '../store/pose-store'
 import { drawSilhouette } from './silhouette'
 import { drawDebugLandmarks } from './debug-landmarks'
@@ -10,7 +10,6 @@ import { computeAnchorRadius, computeContainPx } from '../core/analysis/anchor-s
 import { selectIsFlowRail } from '../store/selectors'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW, WRIST_GREY } from './wrist-side-view'
-import type { AnchorColor } from '../core/analysis/anchor-visibility'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
@@ -59,6 +58,7 @@ export function renderFrame(
   const masterPrintId = masterPrint ? `${masterPrint.mode}-${state.lastCalibrationAt ?? 0}` : null
   if (masterPrintId !== lastMasterPrintId) {
     anchorPosSmoothed = null
+    lastAnchorColor = 'blue'
     lastMasterPrintId = masterPrintId
     resetWristSideViewSmoothing()
   }

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createWristBarTilt } from '../../src/core/analysis/wrist-bar'
-import type { AnchorColor } from '../../src/core/analysis/anchor-visibility'
-import type { KnickSide } from '../../src/core/types'
+import type { AnchorColor, KnickSide } from '../../src/core/types'
 
 // Periphere Leiste (#76/#94): Arm unten fest, Anker = Gelenk, Hand oben kippt.
 // tiltDeg ist der Kippwinkel der Hand, wie die Nutzerin den (gespiegelten)

@@ -82,7 +82,7 @@ Ergebnis von #74. Ausführlich mit Primärquellen: [`docs/research/mediapipe-han
 
 Zeit-Hysterese im Grau-Tor `createAnchorGreyGate` (gleiche Datei): grau erst nach **250 ms** ohne sichere Sicht (bis dahin bleibt die letzte Farbe stehen), zurück nach **150 ms** sicherer Sicht. Ohne sichere Sicht wird **nicht gemessen** (die Blau/Gelb-Hysterese `createWristRailColor` sieht keine Werte); beim Neu-Messen sieht sie schon wieder Werte, der Anker bleibt aber grau, bis die 150 ms um sind.
 
-Wirkung von Grau: Anker grau, in der peripheren Leiste Anker **und** Hand grau, Hand gerade (Analyse und Flow). Grau → blau ist **keine** Korrektur: kein Leuchten. Der Halte-Timer pausiert, die Statistik zählt grau nicht als gute Haltung. Ein Zustand `wristAnchorColor` (`blue | yellow | grey`) im Store für Anker, Leiste und Statistik.
+Wirkung von Grau: Anker grau, in der peripheren Leiste Anker **und** Hand grau, Hand gerade (Analyse und Flow). Grau → blau ist **keine** Korrektur: kein Leuchten. Grau = **Pause**: Halte-Timer, Spannung, Streak und Statistik stehen still (sonst feuerte das Rückkehr-Leuchten, weil die Spannung mit der Verkürzungs-Konfidenz absinkt). Ohne Hand (Pose-Fallback) ist der Anker damit immer grau. Ein Zustand `wristAnchorColor` (`blue | yellow | grey`) im Store für Anker, Leiste und Statistik.
 
 **Verkürzung (Foreshortening)**: `computeForeshorteningConfidence` (`wrist-analyzer.ts:101`) vergleicht die 2D-Unterarmlänge (Pose 13→15) mit der Länge bei der Kalibrierung. Verhältnis ≥ 0,7 → 1,0; ≤ 0,3 → 0; dazwischen linear. Zeigt der Arm zur Kamera, sinkt der Wert.
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createAnchorGreyGate } from '../../src/core/analysis/anchor-visibility'
-import type { AnchorColor } from '../../src/core/analysis/anchor-visibility'
+import type { AnchorColor } from '../../src/core/types'
 
 // Grau-Tor (#92): Grau hat Vorrang vor blau/gelb, mit Zeit-Hysterese aus #74
 // (grau erst nach 250 ms, zurück nach 150 ms neu messen).
@@ -56,5 +56,18 @@ describe('createAnchorGreyGate', () => {
     let calls = 0
     gate.update({ visible: true, nowMs: clock.t, measureIsBlue: () => { calls++; return false } })
     expect(calls).toBe(1)
+  })
+
+  it('hide (kein Körper im Bild) wirkt wie ein Frame ohne sichere Sicht', () => {
+    const gate = createAnchorGreyGate()
+    const clock = { t: 0 }
+    run(gate, { visible: true, isBlue: false }, 10, clock)
+    const out: AnchorColor[] = []
+    for (let i = 0; i < 12; i++) {
+      out.push(gate.hide(clock.t))
+      clock.t += FRAME_MS
+    }
+    expect(out[0]).toBe('yellow')
+    expect(out.at(-1)).toBe('grey')
   })
 })

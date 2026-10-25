@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  AnchorColor,
   AppScreen,
   KnickSide,
   Instrument,
@@ -15,7 +16,6 @@ import type {
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import type { ReadinessPhase } from '../core/calibration/readiness-gate'
 import type { PositioningStatus } from '../core/calibration/distance-guidance'
-import type { AnchorColor } from '../core/analysis/anchor-visibility'
 
 export interface PoseState {
   // Navigation
