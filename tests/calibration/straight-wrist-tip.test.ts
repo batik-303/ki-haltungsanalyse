@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeStraightWristTip } from '../../src/core/calibration/straight-wrist-tip'
+import { computeSavedKnickLabel, computeStraightWristTip } from '../../src/core/calibration/straight-wrist-tip'
 import type { WristMasterPrint } from '../../src/core/types'
 
 /**
@@ -48,6 +48,29 @@ describe('computeStraightWristTip', () => {
     expect(computeStraightWristTip({ masterPrint: null, calibratedAt: 1000, now: 1000 })).toBeNull()
     expect(
       computeStraightWristTip({ masterPrint: { mode: 'violin', calibWristX: 0, calibWristY: 0 }, calibratedAt: 1000, now: 1000 }),
+    ).toBeNull()
+  })
+})
+
+/**
+ * Entwickler-Ansicht (#101, Nutzerinnen-Test): Bei jedem Speichern kurz die
+ * gespeicherte Gradzahl zeigen — auch unter 10° —, damit wir sehen, was
+ * „gerade" misst, und die Grenze prüfen können.
+ */
+describe('computeSavedKnickLabel', () => {
+  it('zeigt den gespeicherten Knick mit einer Nachkommastelle', () => {
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(11.26), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 11,3°')
+  })
+
+  it('auch unter der Grenze (gerade gespeichert)', () => {
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(4), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 4,0°')
+  })
+
+  it('wie der Tipp nur kurz nach dem Speichern und nur im Handgelenk-Modus', () => {
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(4), calibratedAt: 1000, now: 9000 })).toBeNull()
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(4), calibratedAt: null, now: 1000 })).toBeNull()
+    expect(
+      computeSavedKnickLabel({ masterPrint: { mode: 'violin', calibWristX: 0, calibWristY: 0 }, calibratedAt: 1000, now: 1000 }),
     ).toBeNull()
   })
 })
