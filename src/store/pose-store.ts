@@ -223,8 +223,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   flowStreak: 0,
   maxFlowStreak: 0,
 
-  // Debug overlay — default ON while we investigate the wrist analyzer.
-  debugLandmarks: true,
+  // Entwickler-Ansicht — standardmäßig aus; Sprachbefehl „Development" oder Taste D schaltet um.
+  debugLandmarks: false,
 
   // Navigation actions
   goToSetup: (instrument) => set({
