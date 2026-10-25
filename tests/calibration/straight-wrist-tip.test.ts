@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { computeSavedKnickLabel, computeStraightWristTip } from '../../src/core/calibration/straight-wrist-tip'
-import type { WristMasterPrint } from '../../src/core/types'
+import type { KnickSide, WristMasterPrint } from '../../src/core/types'
 
 /**
  * Ticket #101: Wurde das Handgelenk beim Speichern deutlich geknickt (> 10°),
@@ -8,14 +8,14 @@ import type { WristMasterPrint } from '../../src/core/types'
  * weiter (Weg A, kein Modal). Grund: gemessen wird die Abweichung von der
  * gespeicherten Haltung; schief gespeichert → eine Seite reagiert träger.
  */
-function wristPrint(calibKnick: number): WristMasterPrint {
+function wristPrint(calibKnick: number, calibKnickSide: KnickSide = 1): WristMasterPrint {
   return {
     mode: 'wrist',
     flexAngle: 0,
     flexBendDir: 1,
     calibArmLength2D: 0.3,
     calibKnick,
-    calibKnickSide: 1,
+    calibKnickSide,
     calibKnickFallback: 0,
   }
 }
@@ -59,11 +59,18 @@ describe('computeStraightWristTip', () => {
  */
 describe('computeSavedKnickLabel', () => {
   it('zeigt den gespeicherten Knick mit einer Nachkommastelle', () => {
-    expect(computeSavedKnickLabel({ masterPrint: wristPrint(11.26), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 11,3°')
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(11.26, 0), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 11,3°')
   })
 
   it('auch unter der Grenze (gerade gespeichert)', () => {
-    expect(computeSavedKnickLabel({ masterPrint: wristPrint(4), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 4,0°')
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(4, 0), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 4,0°')
+  })
+
+  // Richtung wie auf dem (gespiegelten) Bildschirm, gleiche Zuordnung wie die
+  // Hand in der Leiste (#94): Seite +1 → links, −1 → rechts.
+  it('nennt die Richtung, in die die Hand auf dem Bildschirm knickt', () => {
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(12, 1), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 12,0° · links')
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(12, -1), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 12,0° · rechts')
   })
 
   it('wie der Tipp nur kurz nach dem Speichern und nur im Handgelenk-Modus', () => {

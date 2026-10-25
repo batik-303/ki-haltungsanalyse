@@ -1,4 +1,5 @@
 import type { MasterPrint, WristMasterPrint } from '../types'
+import { SIDE_TO_SCREEN } from '../analysis/wrist-bar'
 
 // Ab diesem gespeicherten Knick (Grad, Hand-Pfad) kommt der Tipp; darunter nie (#101, Grenze aus #97).
 const STRAIGHT_WRIST_TIP_MIN_DEG = 10
@@ -28,12 +29,16 @@ export function computeStraightWristTip(input: StraightWristTipInput): string | 
 
 /**
  * Gespeicherte Gradzahl für die Entwickler-Ansicht (#101): bei jedem Speichern
- * kurz sichtbar — auch unter der Grenze —, um die 10°-Grenze zu prüfen.
+ * kurz sichtbar — auch unter der Grenze —, mit Richtung (Hals/Schnecke
+ * knicken verschieden streng?), um die 10°-Grenze zu prüfen.
  */
 export function computeSavedKnickLabel(input: StraightWristTipInput): string | null {
   const mp = freshWristPrint(input)
   if (!mp) return null
-  return `gespeichert: ${mp.calibKnick.toFixed(1).replace('.', ',')}°`
+  const deg = `gespeichert: ${mp.calibKnick.toFixed(1).replace('.', ',')}°`
+  if (mp.calibKnickSide === 0) return deg
+  // Richtung wie auf dem Bildschirm — dieselbe Zuordnung wie die Hand in der Leiste (#94).
+  return `${deg} · ${mp.calibKnickSide * SIDE_TO_SCREEN < 0 ? 'links' : 'rechts'}`
 }
 
 /** Handgelenk-Kalibrierung, aber nur in den ersten Sekunden nach dem Speichern. */
