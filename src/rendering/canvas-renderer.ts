@@ -9,13 +9,14 @@ import { computeFlowRailLayout } from '../core/analysis/flow-rail-layout'
 import { computeAnchorRadius, computeContainPx } from '../core/analysis/anchor-size'
 import { selectIsFlowRail } from '../store/selectors'
 import { drawSapphireAnchor } from './sapphire-anchor'
-import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW } from './wrist-side-view'
+import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW, WRIST_GREY } from './wrist-side-view'
+import type { AnchorColor } from '../core/analysis/anchor-visibility'
 import { drawGoldenBand } from './golden-band'
 import { drawReturnGlow } from './return-glow'
 import { drawTargetZone } from './target-zone'
 
 // Module-level glow state for wrist feedback (persists across frames)
-let lastWristRepaired = false
+let lastAnchorColor: AnchorColor = 'blue'
 let repairGoldenGlow = 0
 let repairGoldenDecay = 0
 // Debounce: minimum time between repair glow pulses (ms)
@@ -51,7 +52,7 @@ export function renderFrame(
 
   if (!landmarks) return
 
-  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, railSuccessGlow, wristRailIsBlue, wristRailAngleDeg, wristKnickSide } = state
+  const { focusMode, masterPrint, isCalibrating, tensionScore, returnGlowTimer, distanceOk, viewMode, driftDirection, flowStreak, railSuccessGlow, wristAnchorColor, wristRailAngleDeg, wristKnickSide } = state
   const isFlow = viewMode === 'flow'
 
   // Reset smoothed positions when calibration changes
@@ -174,10 +175,10 @@ export function renderFrame(
         ANCHOR_POS_ALPHA, ANCHOR_POS_MAX_ALPHA, ANCHOR_POS_SPEED_REF,
       ).pos
 
-      // Instant correction reward: glow fires the moment rail turns blue (bent → straight)
+      // Korrektur-Belohnung: Glühen im Moment gelb → blau (nicht grau → blau,
+      // das ist keine Korrektur, nur wieder Sicht — #92).
       const nowPerf = performance.now()
-      const isBlueNow = wristRailIsBlue ?? false
-      if (!lastWristRepaired && isBlueNow && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
+      if (lastAnchorColor === 'yellow' && wristAnchorColor === 'blue' && (nowPerf - lastRepairPulseAt) > REPAIR_PULSE_DEBOUNCE_MS) {
         repairGoldenGlow = 1.0
         repairGoldenDecay = nowPerf
         lastRepairPulseAt = nowPerf
@@ -187,7 +188,7 @@ export function renderFrame(
         const elapsed = nowPerf - repairGoldenDecay
         repairGoldenGlow = Math.max(0, 1 - elapsed / 800)
       }
-      lastWristRepaired = isBlueNow
+      lastAnchorColor = wristAnchorColor
 
       if (isFlow) {
         // Flow (#77/#99): nur die periphere Leiste, groß in der Mitte.
@@ -198,10 +199,10 @@ export function renderFrame(
           viewWidth: clientWidth || width,
           viewHeight: clientHeight || height,
         })
-        drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide, layout)
+        drawWristSideView(ctx, width, height, now, wristAnchorColor, wristRailAngleDeg, wristKnickSide, layout)
       } else {
         // Periphere Leiste (#94): senkrecht am linken Bildschirmrand, Laptop und Handy.
-        drawWristSideView(ctx, width, height, now, wristRailIsBlue, wristRailAngleDeg, wristKnickSide)
+        drawWristSideView(ctx, width, height, now, wristAnchorColor, wristRailAngleDeg, wristKnickSide)
       }
 
       if (!isFlow && anchorPosSmoothed) {
@@ -209,8 +210,8 @@ export function renderFrame(
         // Anker — Grau-Zustand: #74). Kein Pose-15-Fallback mehr.
         const anchorX = anchorPosSmoothed.x
         const anchorY = anchorPosSmoothed.y
-        // Anchor color: blue (correct) / yellow (deviation)
-        const anchorColor = wristRailIsBlue ? undefined : WRIST_YELLOW
+        // Anker-Farbe: blau (gespeicherte Haltung) / gelb (Abweichung) / grau (keine sichere Sicht, #92)
+        const anchorColor = wristAnchorColor === 'yellow' ? WRIST_YELLOW : wristAnchorColor === 'grey' ? WRIST_GREY : undefined
 
         // Radius in CSS-Pixeln (#106): auf Handy, Tablet und Laptop gleich groß.
         const px = computeContainPx({

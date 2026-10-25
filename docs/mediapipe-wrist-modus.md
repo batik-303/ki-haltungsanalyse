@@ -74,13 +74,15 @@ Ergebnis von #74. Ausführlich mit Primärquellen: [`docs/research/mediapipe-han
 - `minHandDetectionConfidence` / `minHandPresenceConfidence` / `minTrackingConfidence` sind **Eingabe-Schwellen**. Man sieht ihre Wirkung nur daran, dass die Hand aus dem Ergebnis verschwindet.
 - `handedness[i][0].score` ist die Sicherheit der **Links/Rechts-Einordnung**, nicht der Sichtbarkeit.
 
-**Geplantes Grau-Signal** (noch nicht gebaut): alle vier müssen erfüllt sein, sonst grau:
-1. `pickLeftHand(...) !== null`
+**Grau-Signal** (#92, `computeAnchorVisibility` in `src/core/analysis/anchor-visibility.ts`): alle vier müssen erfüllt sein, sonst grau:
+1. `pickLeftHandDetection(...) !== null`
 2. `handedness score >= 0.6`
 3. Hand-Punkt 0 im Bild (`0 <= x,y <= 1`)
 4. `wristForeshorteningConfidence >= 0.5`
 
-Dazu asymmetrische Zeit-Hysterese: grau erst nach ~250–300 ms, zurück nach ~100–150 ms. Andockstelle: `computeAnchorVisibility` in `src/core/analysis/anchor-visibility.ts`.
+Zeit-Hysterese im Grau-Tor `createAnchorGreyGate` (gleiche Datei): grau erst nach **250 ms** ohne sichere Sicht (bis dahin bleibt die letzte Farbe stehen), zurück nach **150 ms** sicherer Sicht. Ohne sichere Sicht wird **nicht gemessen** (die Blau/Gelb-Hysterese `createWristRailColor` sieht keine Werte); beim Neu-Messen sieht sie schon wieder Werte, der Anker bleibt aber grau, bis die 150 ms um sind.
+
+Wirkung von Grau: Anker grau, in der peripheren Leiste Anker **und** Hand grau, Hand gerade (Analyse und Flow). Grau → blau ist **keine** Korrektur: kein Leuchten. Der Halte-Timer pausiert, die Statistik zählt grau nicht als gute Haltung. Ein Zustand `wristAnchorColor` (`blue | yellow | grey`) im Store für Anker, Leiste und Statistik.
 
 **Verkürzung (Foreshortening)**: `computeForeshorteningConfidence` (`wrist-analyzer.ts:101`) vergleicht die 2D-Unterarmlänge (Pose 13→15) mit der Länge bei der Kalibrierung. Verhältnis ≥ 0,7 → 1,0; ≤ 0,3 → 0; dazwischen linear. Zeigt der Arm zur Kamera, sinkt der Wert.
 
@@ -149,7 +151,7 @@ Bis #94 kam die Kipprichtung aus dem Bend-Lock (`computePalmBendSign` → `lastB
 
 ### Zeichnen (`src/rendering/wrist-side-view.ts:56`)
 
-Gesamtlänge 50 % der Canvas-Höhe, Hand 36 %. Die Linienstärke rechnet in CSS-Pixel um (Canvas hat Videogröße, eingepasst per `object-contain`): Arm 16 px auf dem Handy, auf dem Laptop proportional bis 24 px. Auf dem gespiegelten Canvas ist „links auf dem Bildschirm" +x, daher `hx = cx − sin(tilt) · handLen` (`:82`). Der Zustand (`createWristBarTilt`) lebt modul-weit und wird mit `resetWristSideViewSmoothing` bei Kalibrier-Wechsel zurückgesetzt. Grau-Darstellung folgt mit #92.
+Gesamtlänge 50 % der Canvas-Höhe, Hand 36 %. Die Linienstärke rechnet in CSS-Pixel um (Canvas hat Videogröße, eingepasst per `object-contain`): Arm 16 px auf dem Handy, auf dem Laptop proportional bis 24 px. Auf dem gespiegelten Canvas ist „links auf dem Bildschirm" +x, daher `hx = cx − sin(tilt) · handLen` (`:82`). Der Zustand (`createWristBarTilt`) lebt modul-weit und wird mit `resetWristSideViewSmoothing` bei Kalibrier-Wechsel zurückgesetzt. Bei Grau zeichnet sie Anker und Hand grau, Hand gerade (#92).
 
 ### Abnahme-Tests
 
@@ -168,7 +170,8 @@ Gesamtlänge 50 % der Canvas-Höhe, Hand 36 %. Die Linienstärke rechnet in CSS-
 - [ ] Live-Abnahme Kipprichtung: Hals = links, Schnecke = rechts (`SIDE_TO_SCREEN`, #94)
 - [x] Geigen-Gegen-Check der Verkürzungs-Korrektur: „funktioniert schon ganz gut" (Nutzerin, 26.09.2026) (#82)
 - [x] Seite des Knicks: Knick durch die Gerade in Gegenrichtung wird erkannt (#91, ADR 0003)
-- [ ] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74)
-- [ ] Grau-Signal `computeAnchorVisibility` bauen; Schwellen an echtem Spielmaterial prüfen. Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
+- [x] Grau-Signal fehlt noch: nach Wegfall der Nur-steigen-Sperre läuft der Knick bei schlechter Sicht frei weiter; bei stark verkürztem Unterarm (r → 0) liefert die Korrektur ≈ 0, also blau statt grau (#74) → stark verkürzter Unterarm (foreConf < 0,5) zeigt jetzt grau (#92)
+- [x] Grau-Signal `computeAnchorVisibility` + Grau-Tor gebaut (#92)
+- [ ] Grau-Schwellen an echtem Spielmaterial prüfen (Geigen-A/B, #92). Beim Spielen tritt voller Handverlust selten auf, grau hängt eher an `foreConf` (#74-Kommentar)
 - [x] Research-Notiz `mediapipe-hand-visibility.md` nach `main` geholt (Research-Branch danach gelöscht)
 - [ ] Schwellen/Zeitkonstanten der Farbe auf der neuen Messgröße festlegen (#75)

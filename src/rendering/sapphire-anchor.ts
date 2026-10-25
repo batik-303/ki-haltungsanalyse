@@ -18,6 +18,10 @@ export function drawSapphireAnchor(
   const colors = colorOverride === '#F5C842'
     ? { glow0: 'rgba(245,200,66,0.25)', glow1: 'rgba(200,160,40,0.08)', glow2: 'rgba(200,160,40,0)',
         ring: '245,200,66', body: ['#FDE68A', '#F5C842', '#D4A017', '#B8860B'], edge: 'rgba(255,248,220,0.6)' }
+    : colorOverride === '#9E9E9E'
+    // Grau (#92): Kamera sieht das Handgelenk nicht sicher — gedämpfter Schein
+    ? { glow0: 'rgba(158,158,158,0.18)', glow1: 'rgba(117,117,117,0.06)', glow2: 'rgba(117,117,117,0)',
+        ring: '158,158,158', body: ['#E0E0E0', '#9E9E9E', '#757575', '#545454'], edge: 'rgba(245,245,245,0.5)' }
     : colorOverride === '#9B59B6'
     ? { glow0: 'rgba(155,89,182,0.25)', glow1: 'rgba(120,60,150,0.08)', glow2: 'rgba(120,60,150,0)',
         ring: '155,89,182', body: ['#D2B4DE', '#9B59B6', '#7D3C98', '#6C3483'], edge: 'rgba(235,220,245,0.6)' }
