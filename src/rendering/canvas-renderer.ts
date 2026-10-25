@@ -6,6 +6,7 @@ import { drawDebugHandLandmarks, drawDebugWristVectors } from './debug-hand-land
 import { computePalmNormal, computePalmBendSign } from '../core/analysis/wrist-analyzer'
 import { resolveWristAnchor } from '../core/analysis/wrist-anchor'
 import { computeFlowRailLayout } from '../core/analysis/flow-rail-layout'
+import { computeAnchorRadius, computeContainPx } from '../core/analysis/anchor-size'
 import { selectIsFlowRail } from '../store/selectors'
 import { drawSapphireAnchor } from './sapphire-anchor'
 import { drawWristSideView, resetWristSideViewSmoothing, WRIST_YELLOW } from './wrist-side-view'
@@ -211,7 +212,14 @@ export function renderFrame(
         // Anchor color: blue (correct) / yellow (deviation)
         const anchorColor = wristRailIsBlue ? undefined : WRIST_YELLOW
 
-        const coreR = 11 + Math.sin(now / 600) * 1
+        // Radius in CSS-Pixeln (#106): auf Handy, Tablet und Laptop gleich groß.
+        const px = computeContainPx({
+          canvasWidth: width,
+          canvasHeight: height,
+          viewWidth: ctx.canvas.clientWidth,
+          viewHeight: ctx.canvas.clientHeight,
+        })
+        const coreR = computeAnchorRadius(px, now)
         drawSapphireAnchor(ctx, anchorX, anchorY, coreR, now, 0, anchorColor)
         drawReturnGlow(ctx, anchorX, anchorY, coreR, returnGlowTimer, false)
         // Blue flash: correction reward glow

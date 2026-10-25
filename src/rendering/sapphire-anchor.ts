@@ -1,5 +1,5 @@
 /**
- * Render a sapphire-styled anchor point with glow, gradients, and ⚓ symbol.
+ * Render a sapphire-styled anchor point with glow, gradients and sparkle (ohne ⚓-Zeichen, #102).
  * When streakSeconds > 0, glow intensifies and pulse radius grows (capped at 60s).
  * When colorOverride is provided, the anchor is tinted with that color instead of sapphire blue.
  */
@@ -75,14 +75,6 @@ export function drawSapphireAnchor(
   ctx.arc(sparkX + r * 0.1, sparkY + r * 0.15, r * 0.15, 0, Math.PI * 2)
   ctx.fillStyle = 'rgba(255,255,255,0.4)'
   ctx.fill()
-
-  // Anchor symbol
-  ctx.font = 'bold ' + Math.round(r * 0.9) + 'px sans-serif'
-  ctx.fillStyle = '#fff'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('⚓', x, y)
-  ctx.textBaseline = 'alphabetic'
 
   // Streak readout (small, below anchor)
   if (streakSeconds > 0) {
