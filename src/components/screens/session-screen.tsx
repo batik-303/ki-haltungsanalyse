@@ -143,12 +143,15 @@ export function SessionScreen() {
   // Kalibrierung verworfen wird. Der Store-`recalibrate` räumt masterPrint,
   // Schulterbreite, Zeitstempel und das Bereitschafts-Tor auf; danach müssen
   // auch die rAF-Loop-Refs zurückgesetzt werden (Triple-State-System).
+  // „neu" heißt „neu speichern" (#101): direkt wieder auslösen wie „bereit" —
+  // der Countdown startet von selbst, sobald der Abstand passt.
   const handleRecalibrate = useCallback(() => {
     const store = usePoseStore.getState()
     if (store.isCalibrating) return
     store.recalibrate()
     resetAnalysisState()
-  }, [resetAnalysisState])
+    armReadiness()
+  }, [resetAnalysisState, armReadiness])
 
   // „Home" = Abbruch ohne Auswertung (Trichtermodell): Sitzung verwerfen, Kamera
   // freigeben und zurück ins Hauptmenü — kein results-Screen. Siehe CONTEXT.md → „Home".
