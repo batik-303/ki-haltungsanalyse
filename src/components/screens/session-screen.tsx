@@ -8,6 +8,7 @@ import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
+import { StraightWristTip } from '@/components/straight-wrist-tip'
 import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
@@ -142,12 +143,15 @@ export function SessionScreen() {
   // Kalibrierung verworfen wird. Der Store-`recalibrate` räumt masterPrint,
   // Schulterbreite, Zeitstempel und das Bereitschafts-Tor auf; danach müssen
   // auch die rAF-Loop-Refs zurückgesetzt werden (Triple-State-System).
+  // „neu" heißt „neu speichern" (#101): direkt wieder auslösen wie „bereit" —
+  // der Countdown startet von selbst, sobald der Abstand passt.
   const handleRecalibrate = useCallback(() => {
     const store = usePoseStore.getState()
     if (store.isCalibrating) return
     store.recalibrate()
     resetAnalysisState()
-  }, [resetAnalysisState])
+    armReadiness()
+  }, [resetAnalysisState, armReadiness])
 
   // „Home" = Abbruch ohne Auswertung (Trichtermodell): Sitzung verwerfen, Kamera
   // freigeben und zurück ins Hauptmenü — kein results-Screen. Siehe CONTEXT.md → „Home".
@@ -262,6 +266,10 @@ export function SessionScreen() {
 
       {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
       {!calState && <ReadinessHint />}
+
+      {/* Tipp nach geknickt gespeicherter Haltung (#101) — Analyse läuft weiter.
+          Nicht in der Flow-Leiste: die steht mittig von oben bis unten (#77). */}
+      {!calState && !isFlowRail && <StraightWristTip />}
 
       {/* ═══════════════════════════════════════════
           DESKTOP / TABLET HUD (≥480px)

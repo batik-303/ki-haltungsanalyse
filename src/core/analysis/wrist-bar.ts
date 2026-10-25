@@ -24,7 +24,7 @@ export const TILT_MAX_DEG = 40
 const TILT_SMOOTH_TAU_MS = 150
 // Seite +1 dreht im ungespiegelten Kamerabild im Uhrzeigersinn; der
 // CSS-Spiegel macht daraus gegen den Uhrzeigersinn → Hand kippt nach links.
-const SIDE_TO_SCREEN = -1
+export const SIDE_TO_SCREEN = -1
 // Ruhige Richtung: die Seite wechselt erst, wenn die andere Seite so lange
 // ohne Unterbrechung anhält. Kürzer als die 0,5 s bis Gelb, damit die Hand
 // beim Gelbwerden schon zur richtigen Seite zeigt.

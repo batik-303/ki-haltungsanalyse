@@ -95,6 +95,18 @@ describe('createReadinessGate', () => {
     expect(after.justArmed).toBe(false)
   })
 
+  it('„neu" (#101): nach reset() + erneutem Auslöser feuert der Countdown wieder, sobald der Abstand passt', () => {
+    const gate = createReadinessGate(opts)
+    gate.requestArm()
+    gate.update({ distanceOk: true, dtMs: 16 })
+    gate.reset()
+    gate.requestArm()
+    expect(gate.update({ distanceOk: false, dtMs: 16 }).phase).toBe('waiting')
+    const s = gate.update({ distanceOk: true, dtMs: 16 })
+    expect(s.phase).toBe('armed')
+    expect(s.justArmed).toBe(true)
+  })
+
   it('meldet einen Timeout beim Warten auf den Abstand, ohne zu sperren', () => {
     const gate = createReadinessGate(opts)
     gate.requestArm()
