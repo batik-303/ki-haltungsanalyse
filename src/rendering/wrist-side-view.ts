@@ -7,14 +7,15 @@
 //   • in der Mitte der Anker = Gelenk
 //   • oben die Hand (≈ 1/3 der Länge), die am Anker kippt
 //  Blau → Hand gerade. Gelb → nur Anker + Hand gelb, Hand kippt zur Seite des
-//  Knicks. Korrektur → nur der Anker leuchtet einmal. Keine Gradzahl.
+//  Knicks. Grau (keine sichere Sicht, #92) → Anker + Hand grau, Hand gerade.
+//  Korrektur → nur der Anker leuchtet einmal. Keine Gradzahl.
 //
 //  Kippwinkel, ruhige Richtung und Belohnung rechnet der Core
 //  (`createWristBarTilt`); hier wird nur gezeichnet. Der Zustand lebt
 //  modul-weit (visuelle Kontinuität zwischen Frames).
 // ─────────────────────────────────────────────────────────────
 
-import type { KnickSide } from '../core/types'
+import type { AnchorColor, KnickSide } from '../core/types'
 import { createWristBarTilt, TILT_MAX_DEG } from '../core/analysis/wrist-bar'
 import { computeContainPx, computeRailAnchorRadius } from '../core/analysis/anchor-size'
 import { drawSapphireAnchor } from './sapphire-anchor'
@@ -38,6 +39,9 @@ const BLUE = '#2196F3'
 const BLUE_GLOW = '100, 181, 246'   // #64B5F6 als RGB für den Belohnungs-Hof
 /** Gelb der Leiste — dasselbe wie der Anker im Bild. */
 export const WRIST_YELLOW = '#F5C842'
+/** Grau der Leiste und des Ankers: Kamera sieht das Handgelenk nicht sicher (#92). */
+export const WRIST_GREY = '#9E9E9E'
+const HAND_COLORS: Record<AnchorColor, string> = { blue: BLUE, yellow: WRIST_YELLOW, grey: WRIST_GREY }
 
 /**
  * Lage der Leiste in der Analyse-Ansicht: am RECHTEN Canvas-Rand → erscheint
@@ -70,12 +74,12 @@ export function drawWristSideView(
   width: number,
   height: number,
   now: number,
-  isBlue: boolean,
+  color: AnchorColor,
   knickDiff: number,
   knickSide: KnickSide,
   layout?: RailLayout,
 ) {
-  const { tiltDeg, anchorGlow } = bar.update({ isBlue, knickDiff, knickSide, nowMs: now })
+  const { tiltDeg, anchorGlow } = bar.update({ color, knickDiff, knickSide, nowMs: now })
 
   // ─── Geometrie ───
   const { cx, top, bottom, armWidth: armW, px } = layout ?? computeSideRailLayout(ctx, width, height)
@@ -87,7 +91,7 @@ export function drawWristSideView(
   const tilt = (tiltDeg * Math.PI) / 180
   const hx = cx - Math.sin(tilt) * handLen
   const hy = ay - Math.cos(tilt) * handLen
-  const handColor = isBlue ? BLUE : WRIST_YELLOW
+  const handColor = HAND_COLORS[color]
 
   ctx.save()
   ctx.lineCap = 'round'
@@ -134,7 +138,7 @@ export function drawWristSideView(
 
   // ─── Anker = Gelenk: Saphir-Look wie auf dem Körper (#102), wächst mit der Linienstärke ───
   const anchorR = computeRailAnchorRadius(armW, px, anchorGlow)
-  drawSapphireAnchor(ctx, cx, ay, anchorR, now, 0, isBlue ? undefined : WRIST_YELLOW)
+  drawSapphireAnchor(ctx, cx, ay, anchorR, now, 0, color === 'blue' ? undefined : handColor)
 
   ctx.restore()
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  AnchorColor,
   AppScreen,
   KnickSide,
   Instrument,
@@ -75,7 +76,8 @@ export interface PoseState {
   railSuccessGlow: number
   holdMilestoneLevel: number
   wristRailAngleDeg: number
-  wristRailIsBlue: boolean
+  // Ein Zustand blau/gelb/grau für Anker, periphere Leiste und Statistik (#92)
+  wristAnchorColor: AnchorColor
   // Analysis path used by the wrist analyzer this frame
   wristAnalysisPath: 'hand' | 'pose-fallback' | null
 
@@ -143,7 +145,7 @@ export interface FrameUpdate {
   railSuccessGlow?: number
   holdMilestoneLevel?: number
   wristRailAngleDeg?: number
-  wristRailIsBlue?: boolean
+  wristAnchorColor?: AnchorColor
   wristAnalysisPath?: 'hand' | 'pose-fallback' | null
   // Violin-Deadzone-Status
   violinDeadzone?: boolean
@@ -207,7 +209,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   railSuccessGlow: 0,
   holdMilestoneLevel: 0,
   wristRailAngleDeg: 0,
-  wristRailIsBlue: true,
+  wristAnchorColor: 'blue',
   wristAnalysisPath: null,
 
   // Filtered wrist render coords
@@ -260,7 +262,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       returnGlowTimer: 0,
       wristKnickSide: 0,
       wristRailAngleDeg: 0,
-      wristRailIsBlue: true,
+      wristAnchorColor: 'blue',
       wristAnalysisPath: null,
       driftDirection: 1,
       lastSessionStats: null,
@@ -305,7 +307,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     returnGlowTimer: 0,
     wristKnickSide: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     wristAnalysisPath: null,
     driftDirection: 1,
     lastSessionStats: null,
@@ -340,7 +342,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       returnGlowTimer: 0,
       wristKnickSide: 0,
       wristRailAngleDeg: 0,
-      wristRailIsBlue: true,
+      wristAnchorColor: 'blue',
       wristAnalysisPath: null,
       driftDirection: 1,
       lastSessionStats: null,
@@ -368,7 +370,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     returnGlowTimer: 0,
     wristKnickSide: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     wristAnalysisPath: null,
     driftDirection: 1,
   }),
@@ -410,7 +412,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     returnGlowTimer: 0,
     wristKnickSide: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     wristAnalysisPath: null,
     driftDirection: 1,
   }),
@@ -442,7 +444,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     returnGlowTimer: 0,
     wristKnickSide: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     wristAnalysisPath: null,
     driftDirection: 1,
   }),
@@ -467,7 +469,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     ...(data.railSuccessGlow !== undefined && { railSuccessGlow: data.railSuccessGlow }),
     ...(data.holdMilestoneLevel !== undefined && { holdMilestoneLevel: data.holdMilestoneLevel }),
     ...(data.wristRailAngleDeg !== undefined && { wristRailAngleDeg: data.wristRailAngleDeg }),
-    ...(data.wristRailIsBlue !== undefined && { wristRailIsBlue: data.wristRailIsBlue }),
+    ...(data.wristAnchorColor !== undefined && { wristAnchorColor: data.wristAnchorColor }),
     ...(data.wristAnalysisPath !== undefined && { wristAnalysisPath: data.wristAnalysisPath }),
   }),
 
@@ -481,7 +483,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     rawDeviation: 0,
     returnGlowTimer: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     lastSessionStats: stats,
   }),
 
@@ -503,7 +505,7 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     returnGlowTimer: 0,
     wristKnickSide: 0,
     wristRailAngleDeg: 0,
-    wristRailIsBlue: true,
+    wristAnchorColor: 'blue',
     wristAnalysisPath: null,
     driftDirection: 1,
   }),

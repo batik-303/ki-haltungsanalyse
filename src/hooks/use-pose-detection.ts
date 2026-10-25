@@ -1,10 +1,11 @@
 import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { pickLeftHand } from '../core/analysis/hand-landmarker'
+import { pickLeftHandDetection } from '../core/analysis/hand-landmarker'
+import { computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
-import type { KnickSide, Landmark } from '../core/types'
+import type { AnchorColor, KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
 import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
@@ -59,6 +60,8 @@ export function usePoseDetection(
   // Knick mit Seite aus den letzten Countdown-Frames (#91) — die Kalibrierung
   // mittelt daraus die gespeicherte Haltung statt aus einem einzigen Frame.
   const calibKnickSamplesRef = useRef<number[]>([])
+  // Sicherheit der Links/Rechts-Einordnung der linken Hand (Grau-Bedingung #74).
+  const handednessScoreRef = useRef<number | undefined>(undefined)
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(performance.now())
   const loadingRef = useRef(false)
@@ -83,6 +86,8 @@ export function usePoseDetection(
   const railTimerRef = useRef(createWristRailTimer())
   // Sticky-blue hysteresis for wrist rail color
   const wristRailColorRef = useRef(createWristRailColor())
+  // Grau-Tor vor der Blau/Gelb-Farbe: Anker grau bei unsicherer Sicht (#92)
+  const anchorGreyGateRef = useRef(createAnchorGreyGate())
   // Knick-Verlauf: Messung, Pfadwechsel-Begrenzung, Glättung (ADR 0003)
   const knickTrackerRef = useRef(createKnickTracker())
   // Last analysis path used in the wrist branch (for transition smoothing).
@@ -101,6 +106,7 @@ export function usePoseDetection(
     railDirRef.current = null
     railTimerRef.current = createWristRailTimer()
     wristRailColorRef.current = createWristRailColor()
+    anchorGreyGateRef.current = createAnchorGreyGate()
     knickTrackerRef.current.reset()
     lastAnalysisPathRef.current = null
     readinessGateRef.current.reset()
@@ -256,14 +262,17 @@ export function usePoseDetection(
       const handLandmarker = handLandmarkerRef.current
       if (store.focusMode === 'wrist' && handLandmarker) {
         try {
-          const handResults = handLandmarker.detectForVideo(video, now)
-          handLandmarksRef.current = pickLeftHand(handResults)
+          const detection = pickLeftHandDetection(handLandmarker.detectForVideo(video, now))
+          handLandmarksRef.current = detection?.landmarks ?? null
+          handednessScoreRef.current = detection?.handednessScore
         } catch (e) {
           console.warn('[HandLandmarker] detect failed', e)
           handLandmarksRef.current = null
+          handednessScoreRef.current = undefined
         }
       } else if (handLandmarksRef.current) {
         handLandmarksRef.current = null
+        handednessScoreRef.current = undefined
       }
 
       // Aspect for image-space angle math. Identical for canvas and video
@@ -330,7 +339,7 @@ export function usePoseDetection(
           let railSuccessGlow: number | undefined
           let railSuccess: boolean | undefined
           let railMilestoneLevel: number | undefined
-          let wristRailIsBlue: boolean | undefined
+          let wristAnchorColor: AnchorColor | undefined
           let wristRailAngleDeg: number | undefined
 
           if (store.focusMode === 'shoulder' && store.masterPrint.mode === 'shoulder') {
@@ -371,8 +380,18 @@ export function usePoseDetection(
             // ── Sticky-blue rail color with grace buffer ──
             // Rutsch-Schutz in der Farbe: hält Blau bei Vibrato/Lagenwechsel,
             // macht aber nie Blau (sonst Pendeln bei Korrektur-Rucken).
+            // Davor das Grau-Tor (#92): ohne sichere Sicht wird nicht gemessen.
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            wristRailIsBlue = wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor)
+            const anchorVisible = computeAnchorVisibility({
+              hand,
+              handednessScore: handednessScoreRef.current,
+              foreshorteningConfidence: foreConf,
+            })
+            wristAnchorColor = anchorGreyGateRef.current.update({
+              visible: anchorVisible,
+              nowMs: now,
+              measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor),
+            })
             wristRailAngleDeg = effectiveAngleDiff
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
@@ -412,7 +431,8 @@ export function usePoseDetection(
 
             // ── Rail 5-second challenge timer ──
             const RAIL_DEADZONE_DEG = 10
-            const isStraight = effectiveAngleDiff <= RAIL_DEADZONE_DEG
+            // Grau pausiert den Timer (#92): keine sichere Sicht, nichts zu zählen.
+            const isStraight = wristAnchorColor !== 'grey' && effectiveAngleDiff <= RAIL_DEADZONE_DEG
             const railResult = railTimerRef.current(isStraight, dt, now)
 
             // One-Euro filtered coordinates for smooth rendering
@@ -492,13 +512,17 @@ export function usePoseDetection(
 
           // Tension update (shoulder/wrist use slower rising rate for calm color transitions)
           if (store.focusMode !== 'violin') {
-            tensionRef.current = computeTension(tensionRef.current, tensionTarget, 0.08, 0.15)
+            // Grau = Pause (#75/#92): ohne sichere Sicht stehen Spannung, Streak
+            // und Statistik still — sonst feuert z. B. das Rückkehr-Leuchten,
+            // weil die Spannung mit der Verkürzungs-Konfidenz absinkt.
+            const paused = wristAnchorColor === 'grey'
+            if (!paused) tensionRef.current = computeTension(tensionRef.current, tensionTarget, 0.08, 0.15)
 
             const layerInfo = classifyLayer(tensionRef.current, store.focusMode, driftDir)
 
             // Session tracking
             const isRepaired = wristRepairStatus?.repaired ?? undefined
-            const trackResult = sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt, isRepaired, railSuccess, railMilestoneLevel)
+            const trackResult = paused ? null : sessionRef.current.recordFrame(tensionRef.current, layerInfo.layer, dt, isRepaired, railSuccess, railMilestoneLevel)
 
             // Push to store (batched, Zustand merges)
             usePoseStore.getState().updateFrame({
@@ -506,13 +530,13 @@ export function usePoseDetection(
               smoothedDeviation: smoothedDev,
               rawDeviation: rawDev,
               layerInfo,
-              returnGlowTimer: trackResult.glowTimer,
+              returnGlowTimer: trackResult?.glowTimer ?? 0,
               wristKnickSide,
               driftDirection: driftDir,
               filteredWristCoords,
               wristForeshorteningConfidence: wristForeConf,
-              streakSeconds: trackResult.streakSeconds,
-              maxStreak: trackResult.maxStreak,
+              streakSeconds: trackResult?.streakSeconds,
+              maxStreak: trackResult?.maxStreak,
               // Wrist repair status for rendering/feedback
               wristRepairStatus: wristRepairStatus,
               // Rail state
@@ -520,8 +544,8 @@ export function usePoseDetection(
               railTimerValue,
               railSuccessGlow,
               holdMilestoneLevel: railMilestoneLevel,
-              // Sticky-blue rail color
-              wristRailIsBlue,
+              // Anker-Farbe blau/gelb/grau (#92)
+              wristAnchorColor,
               wristRailAngleDeg,
               // Analysis path (for debug indicator + future fallback UX)
               wristAnalysisPath: lastAnalysisPathRef.current,
@@ -534,6 +558,12 @@ export function usePoseDetection(
       } else {
         // No body detected
         slideShieldRef.current.reset()
+        // Kein Körper → Handgelenk nicht sichtbar: Anker geht nach der
+        // Wartezeit auf grau und misst nach der Rückkehr neu (#92).
+        if (store.focusMode === 'wrist' && store.masterPrint && !store.isCalibrating) {
+          const color = anchorGreyGateRef.current.hide(now)
+          if (color !== store.wristAnchorColor) usePoseStore.setState({ wristAnchorColor: color })
+        }
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })
         }
