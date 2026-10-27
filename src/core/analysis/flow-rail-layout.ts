@@ -1,12 +1,12 @@
 import { TILT_MAX_DEG } from './wrist-bar'
 
 // ─────────────────────────────────────────────────────────────
-//  FLOW-ANSICHT (Wrist-Modus, #77/#99): nur die periphere Leiste,
-//  groß in der Mitte, fast volle Bildschirmhöhe.
+//  FLOW-ANSICHT (Wrist-Modus, #77/#99, #114): nur die periphere
+//  Leiste, mittig, höchstens ≈ 60 % der Bildschirmhöhe.
 // ─────────────────────────────────────────────────────────────
-//  Das Canvas hat Videogröße. Im Flow füllt es den Bildschirm
-//  (object-cover, zentriert), damit die Leiste auf Handy und Laptop
-//  nach derselben Regel fast von oben bis unten reicht.
+//  Das Canvas hat Videogröße. Im Flow füllt es den Bereich über der
+//  Knopf-Zeile (object-cover, zentriert) — die Knöpfe liegen also nie
+//  im Canvas, eine Reserve für sie braucht es hier nicht.
 // ─────────────────────────────────────────────────────────────
 
 /** Anteil der Hand an der Gesamtlänge der Leiste (wie in der Analyse-Ansicht). */
@@ -19,25 +19,19 @@ export const RAIL_HAND_WIDTH_RATIO = 0.8
 export const RAIL_HALO_WIDTH_RATIO = 2.6
 
 // Ränder in CSS-Pixeln — gemessen bis zum Ende des Leuchtens, nicht bis zum Linienende.
-const FLOW_TOP_MARGIN_CSS = 16
-const FLOW_SIDE_MARGIN_CSS = 16
-const FLOW_GAP_ABOVE_BUTTONS_CSS = 8
-// Knöpfe unten (session-screen.tsx): Handy = im Flow um 14 px angehobene Leiste
-// (bottom-3.5, Handy-Test 24.10.) mit 44-px-Knopf, Rand und Safe-Area; Laptop = Knopf-Reihe + Abstand + Mikrofon über clamp(24px, 6vh, 96px).
-const PHONE_MAX_WIDTH_CSS = 480
-const FLOW_BUTTONS_PHONE_CSS = 108
-const FLOW_BUTTONS_DESKTOP_CSS = 88
-const DESKTOP_BUTTONS_OFFSET_MIN_CSS = 24
-const DESKTOP_BUTTONS_OFFSET_MAX_CSS = 96
-const DESKTOP_BUTTONS_OFFSET_VH = 0.06
+const FLOW_EDGE_MARGIN_CSS = 16
+/** Höchstens dieser Anteil der Bildschirmhöhe, samt Leuchten (Entscheidung 3 aus #104). */
+export const FLOW_RAIL_MAX_SCREEN_FRACTION = 0.6
 
 export interface FlowRailLayoutInput {
   /** Canvas-Größe in Canvas-Pixeln (= Videogröße). */
   canvasWidth: number
   canvasHeight: number
-  /** Sichtbare Größe des Canvas-Elements in CSS-Pixeln (= Bildschirm). */
+  /** Sichtbare Größe des Canvas-Elements in CSS-Pixeln (= Bereich über der Knopf-Zeile). */
   viewWidth: number
   viewHeight: number
+  /** Ganze Bildschirmhöhe in CSS-Pixeln — Maßstab für die 60 %. */
+  screenHeight: number
 }
 
 /** Lage und Maße einer peripheren Leiste in Canvas-Pixeln (Analyse oder Flow). */
@@ -53,34 +47,29 @@ export interface RailLayout {
   px: number
 }
 
-/** Maße und Lage der Flow-Leiste — mittig, fast volle Höhe, Breite folgt der Höhe. */
+/** Maße und Lage der Flow-Leiste — mittig, höchstens 60 % der Bildschirmhöhe, Breite folgt der Länge. */
 export function computeFlowRailLayout(input: FlowRailLayoutInput): RailLayout {
-  const { canvasWidth, canvasHeight, viewWidth, viewHeight } = input
+  const { canvasWidth, canvasHeight, viewWidth, viewHeight, screenHeight } = input
   const scale = Math.max(viewWidth / canvasWidth, viewHeight / canvasHeight)
   const px = 1 / scale
 
-  const buttonsCss = viewWidth < PHONE_MAX_WIDTH_CSS
-    ? FLOW_BUTTONS_PHONE_CSS
-    : FLOW_BUTTONS_DESKTOP_CSS + Math.min(
-        DESKTOP_BUTTONS_OFFSET_MAX_CSS,
-        Math.max(DESKTOP_BUTTONS_OFFSET_MIN_CSS, viewHeight * DESKTOP_BUTTONS_OFFSET_VH),
-      )
-
-  // Länge: so hoch wie möglich (inkl. Leuchten oben und unten — es reicht über die
-  // runde Kappe hinaus), aber die gekippte Hand bleibt samt halber Strichbreite
-  // seitlich im Bild.
-  const heightRoomCss = viewHeight - FLOW_TOP_MARGIN_CSS - buttonsCss - FLOW_GAP_ABOVE_BUTTONS_CSS
+  // Länge samt Leuchten oben und unten (es reicht über die runde Kappe hinaus):
+  // höchstens 60 % des Bildschirms und mit Rand im Bereich; die gekippte Hand
+  // bleibt samt halber Strichbreite seitlich im Bild.
+  const heightRoomCss = Math.min(
+    screenHeight * FLOW_RAIL_MAX_SCREEN_FRACTION,
+    viewHeight - 2 * FLOW_EDGE_MARGIN_CSS,
+  )
   const halosPerLength = RAIL_HALO_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH // zwei halbe Leuchtbreiten
   const reachPerLength = RAIL_HAND_FRACTION * Math.sin((TILT_MAX_DEG * Math.PI) / 180)
     + (RAIL_HAND_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH) / 2
   const totalCss = Math.max(0, Math.min(
     heightRoomCss / (1 + halosPerLength),
-    (viewWidth / 2 - FLOW_SIDE_MARGIN_CSS) / reachPerLength,
+    (viewWidth / 2 - FLOW_EDGE_MARGIN_CSS) / reachPerLength,
   ))
 
-  // Senkrecht mittig im freien Bereich zwischen oberem Rand und Knöpfen.
-  const haloCss = (totalCss * halosPerLength) / 2
-  const topCss = FLOW_TOP_MARGIN_CSS + haloCss + (heightRoomCss - totalCss * (1 + halosPerLength)) / 2
+  // Senkrecht mittig im Bereich über der Knopf-Zeile.
+  const topCss = (viewHeight - totalCss) / 2
   const visibleTop = (canvasHeight - viewHeight * px) / 2
   const top = visibleTop + topCss * px
 

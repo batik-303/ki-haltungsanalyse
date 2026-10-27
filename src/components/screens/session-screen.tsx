@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge'
 import { Home } from 'lucide-react'
 import type { StoredSession, ViewMode } from '@/core/types'
 import { cn } from '@/lib/utils'
+import { computeSessionFrame } from '@/core/layout/session-frame'
+import { computeControlRow } from '@/core/layout/control-row'
 
 const MODE_LABELS: Record<string, string> = {
   violin: '🎻 Geige',
@@ -25,6 +27,34 @@ const MODE_LABELS: Record<string, string> = {
 export function SessionScreen() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const areaRef = useRef<HTMLDivElement>(null)
+
+  // Rahmen-Maße (#114): freier Bereich zwischen Kopf- und Knopf-Zeile plus
+  // Videogröße — daraus `computeSessionFrame`. Videogröße kann sich ändern
+  // (Handy drehen), deshalb auch auf `resize` des Videos hören.
+  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 })
+  const [videoSize, setVideoSize] = useState({ width: 0, height: 0 })
+  useEffect(() => {
+    const area = areaRef.current
+    if (!area) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      setAreaSize({ width: entry.contentRect.width, height: entry.contentRect.height })
+    })
+    observer.observe(area)
+    return () => observer.disconnect()
+  }, [])
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const update = () => setVideoSize({ width: video.videoWidth, height: video.videoHeight })
+    video.addEventListener('loadedmetadata', update)
+    video.addEventListener('resize', update)
+    return () => {
+      video.removeEventListener('loadedmetadata', update)
+      video.removeEventListener('resize', update)
+    }
+  }, [])
 
   const focusMode = usePoseStore((s) => s.focusMode)
   const phase = usePoseStore(selectSessionPhase)
@@ -38,8 +68,8 @@ export function SessionScreen() {
   // farbig, im Flow-Modus bewusst diskret (weißer Text, ohne Farbe), damit die
   // periphere Ansicht ruhig bleibt und „Beenden" trotzdem jederzeit greifbar ist.
   const isFlow = viewMode === 'flow'
-  // Flow-Leiste (#77/#99): oben nichts, Canvas füllt den Bildschirm, Handy
-  // unten nur „Beenden" + „Analyse".
+  // Flow-Leiste (#77/#99, #114): ohne Kopfzeile und Rahmen, das Canvas füllt
+  // den Bereich über der Knopf-Zeile.
   const isFlowRail = usePoseStore(selectIsFlowRail)
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
@@ -227,175 +257,122 @@ export function SessionScreen() {
     }
   }, [voiceStatus, startListening, stopListening])
 
+  const row = computeControlRow({ phase, viewMode, calibrating: calState !== null })
+  const frame = computeSessionFrame({
+    videoWidth: videoSize.width,
+    videoHeight: videoSize.height,
+    areaWidth: areaSize.width,
+    areaHeight: areaSize.height,
+  })
+
   return (
-    <div data-theme="dark" className="fixed inset-0 bg-black">
-      {/* Video feed — fills viewport, hidden in flow mode */}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        className={cn(
-          "absolute inset-0 w-full h-full object-contain scale-x-[-1] saturate-[0.4] brightness-[0.85]",
-          viewMode === 'flow' && "opacity-0"
-        )}
-      />
-
-      {/* Canvas overlay */}
-      <canvas
-        ref={canvasRef}
-        className={cn(
-          "absolute inset-0 w-full h-full scale-x-[-1] z-[2]",
-          isFlowRail ? "object-cover" : "object-contain",
-        )}
-      />
-
-      {/* Kalibrier-Overlay — Variante C „Minimal HUD" (alle Größen) */}
-      {calState && (
-        <CalibrationOverlay
-          phase={calState}
-          modeLabel={MODE_LABELS[focusMode] ?? focusMode}
-          onRecalibrate={() => { setCalState(null); handleArm() }}
-        />
-      )}
-
-      {/* Distanz-Rand-Führung „Randglühen" (vor Kalibrierung) — hinter dem Overlay aus */}
-      {!calState && <DistanceGlow />}
-
-      {/* Distanz-Richtungshinweis („näher"/„zurück") vor der Kalibrierung (Punkt 2) */}
-      {!calState && <DistanceHint />}
-
-      {/* Bereitschafts-Tor: dezenter Hinweis + Halte-Fortschritt am oberen Rand (#36) */}
-      {!calState && <ReadinessHint />}
-
-      {/* Tipp nach geknickt gespeicherter Haltung (#101) — Analyse läuft weiter.
-          Nicht in der Flow-Leiste: die steht mittig von oben bis unten (#77). */}
-      {!calState && !isFlowRail && <StraightWristTip />}
-
-      {/* ═══════════════════════════════════════════
-          DESKTOP / TABLET HUD (≥480px)
-          ═══════════════════════════════════════════ */}
-
-      {/* HUD: Home-Abbruch + Mode badge — top left */}
-      <div className={cn(
-        "hidden sm:flex items-center gap-2 absolute top-[clamp(8px,2vh,16px)] left-[clamp(8px,2vh,16px)] z-10",
-        isFlowRail && "sm:hidden",
-      )}>
-        <ExitButton onClick={handleAbort} withLabel />
-        <Badge variant="secondary" className="text-sm px-3 py-1 bg-background/60 backdrop-blur">
-          {MODE_LABELS[focusMode] ?? focusMode}
-        </Badge>
-      </div>
-
-      {/* Timer & Spannungsleiste bewusst entfernt: der Timer stresst und widerspricht
-          der ruhigen Philosophie (Übungsdauer erscheint stattdessen am Ende auf der
-          Ergebnis-Seite). Die Spannung führt ohnehin der Canvas selbst über Glühen/
-          Farbe — die Prozentleiste war redundant. */}
-
-      {/* HUD: Einstieg — zentrierter Stapel: Gold-Knopf oben, Sprach-Hinweis darunter */}
-      {!calState && phase === 'ready-to-calibrate' && (
-        <div className="hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10">
-          <FallbackButton onClick={handleArm} primary>Haltung speichern</FallbackButton>
-          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
-        </div>
-      )}
-
-      {/* HUD: Tracking-Steuerung — zentrierter Stapel: [Beenden] [Flow⇄Analyse] oben,
-          Sprach-Hinweis mittig darunter (analog zum Einstieg-Stapel). „Neu kalibrieren"
-          entfällt in V0.1 (bleibt per Sprache „neu" erreichbar); Home liegt oben links. */}
-      {!calState && phase === 'tracking' && (
-        <div className="hidden sm:flex flex-col items-center gap-3 absolute bottom-[clamp(24px,6vh,96px)] left-1/2 -translate-x-1/2 z-10">
-          <div className="flex items-center gap-3">
-            {isFlow ? (
-              // Flow-Modus: diskrete, farblose Kärtchen (nur weißer Text), damit die
-              // periphere Ansicht ruhig bleibt. Statt des segmentierten Umschalters
-              // ein schlichter Rückweg „Analyse".
-              <>
-                <FallbackButton onClick={handleStop} discreet>Beenden</FallbackButton>
-                <FallbackButton onClick={handleToggleView} discreet>Analyse</FallbackButton>
-              </>
-            ) : (
-              // Analyse-Modus: farbige Hauptaktion + segmentierter Ansicht-Umschalter.
-              <>
-                <FallbackButton onClick={handleStop} primary>Beenden</FallbackButton>
-                <ViewToggle viewMode={viewMode} onToggle={handleToggleView} />
-              </>
-            )}
-          </div>
-          <MicButton status={voiceStatus} error={voiceError} hint={hint} onClick={handleToggleMic} />
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════
-          PHONE HUD (<480px)
-          ═══════════════════════════════════════════ */}
-
-      {/* Top bar: Home + Mode badge */}
-      <div className={cn(
-        "sm:hidden absolute top-0 left-0 right-0 z-10 flex justify-between items-center px-4 pt-safe py-2",
-        isFlowRail && "hidden",
-      )}>
-        <div className="flex items-center gap-2">
-          <ExitButton onClick={handleAbort} />
-          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-background/60 backdrop-blur">
+    <div data-theme="dark" className="fixed inset-0 flex flex-col bg-black">
+      {/* ═══ Kopfzeile über dem Rahmen (#114): Hauptmenü + Modus-Schild, im Flow aus.
+          „Hauptmenü" (ohne Auswertung) steht damit weit weg von „Beenden". ═══ */}
+      {!isFlow && (
+        <header className="flex shrink-0 items-center gap-2 px-4 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2">
+          <ExitButton onClick={handleAbort} withLabel />
+          <Badge variant="secondary" className="text-xs px-2 py-0.5 sm:text-sm sm:px-3 sm:py-1 bg-background/60 backdrop-blur">
             {MODE_LABELS[focusMode] ?? focusMode}
           </Badge>
+        </header>
+      )}
+
+      {/* ═══ Freier Bereich zwischen Kopf- und Knopf-Zeile ═══ */}
+      <div ref={areaRef} className="relative min-h-0 flex-1">
+        {/* Rahmen = genau das ganze Kamerabild, kein Zoom (#104, Entscheidung 1).
+            Im Flow-Wrist kein Rahmen: das Canvas füllt den Bereich über der
+            Knopf-Zeile, die Leiste steht mittig (computeFlowRailLayout). */}
+        <div
+          className={cn(
+            'absolute overflow-hidden',
+            isFlowRail ? 'inset-0' : 'rounded-xl',
+            !isFlow && 'ring-1 ring-white/15',
+          )}
+          style={isFlowRail ? undefined : { left: frame.left, top: frame.top, width: frame.width, height: frame.height }}
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className={cn(
+              'absolute inset-0 h-full w-full object-contain scale-x-[-1] saturate-[0.4] brightness-[0.85]',
+              isFlow && 'opacity-0',
+            )}
+          />
+
+          <canvas
+            ref={canvasRef}
+            className={cn(
+              'absolute inset-0 z-[2] h-full w-full scale-x-[-1]',
+              isFlowRail ? 'object-cover' : 'object-contain',
+            )}
+          />
+
+          {/* Randglühen am Innenrand des Rahmens (#104, Entscheidung 6) — hinter dem Overlay aus */}
+          {!calState && <DistanceGlow />}
+
+          {/* Kärtchen oben mittig im Rahmen: Abstand, Bereitschaft, Tipp (#101) */}
+          {!calState && <DistanceHint />}
+          {!calState && <ReadinessHint />}
+          {!calState && !isFlowRail && <StraightWristTip />}
+        </div>
+
+        {/* Kalibrier-Overlay — Variante C „Minimal HUD"; Status-Kärtchen oben im Rahmen */}
+        {calState && (
+          <CalibrationOverlay
+            phase={calState}
+            modeLabel={MODE_LABELS[focusMode] ?? focusMode}
+            topInset={isFlowRail ? 0 : frame.top}
+            onRecalibrate={() => { setCalState(null); handleArm() }}
+          />
+        )}
+      </div>
+
+      {/* ═══ Knopf-Zeile (#104, Entscheidung 4): feste Plätze [🎤] [Hauptknopf] [Ansicht],
+          auf allen Geräten gleich; im Flow an derselben Stelle, nur farblos.
+          Timer & Spannungsleiste bleiben bewusst weg (Canvas führt). ═══ */}
+      <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pt-2">
+        <div className="flex justify-end">
+          {row.mic && <MicToggle status={voiceStatus} discreet={row.discreet} onClick={handleToggleMic} />}
+        </div>
+        <div className="flex min-h-[44px] justify-center">
+          {row.main === 'save' && (
+            <RowButton onClick={handleArm} primary>
+              <span className="sm:hidden">Speichern</span>
+              <span className="hidden sm:inline">Haltung speichern</span>
+            </RowButton>
+          )}
+          {row.main === 'stop' && (
+            <RowButton onClick={handleStop} primary={!row.discreet} discreet={row.discreet}>Beenden</RowButton>
+          )}
+        </div>
+        <div className="flex justify-start">
+          {row.view === 'to-mirror' && <RowButton onClick={handleToggleView} discreet>Analyse</RowButton>}
+          {row.view === 'to-flow' && (
+            <>
+              <button
+                onClick={handleToggleView}
+                aria-label="Zur Flow-Ansicht wechseln"
+                className="sm:hidden min-h-[44px] px-2.5 rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95 bg-sapphire/80 text-white hover:bg-sapphire"
+              >
+                🌊
+              </button>
+              <div className="hidden sm:block">
+                <ViewToggle viewMode={viewMode} onToggle={handleToggleView} />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Bottom bar: Controls — Kalibrierung läuft im Overlay */}
-      {!calState && (phase === 'ready-to-calibrate' || phase === 'tracking') && (
-        <div className={cn(
-          "sm:hidden absolute left-0 right-0 z-10 flex flex-row items-center justify-center gap-2 p-2 pb-safe",
-          // Flow-Modus: keine Balken-Fläche, nur schwebende diskrete Knöpfe (ruhig).
-          !isFlow && "bg-surface/80 backdrop-blur",
-          // Flow-Leiste: Knöpfe etwas vom unteren Rand weg (Handy-Test 24.10.) —
-          // Reserve dafür in computeFlowRailLayout (FLOW_BUTTONS_PHONE_CSS).
-          isFlowRail ? "bottom-3.5" : "bottom-0",
-        )}>
-          {/* Controls — Spannungsleiste bewusst entfernt (Canvas führt) */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {!isFlowRail && (
-              <button
-                onClick={handleToggleMic}
-                aria-label="Sprachsteuerung umschalten"
-                className={cn(
-                  'px-2 py-2 min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
-                  voiceStatus === 'listening'
-                    ? 'bg-background/75 border border-white/25 text-white'
-                    : voiceStatus === 'error' || voiceStatus === 'unsupported'
-                      // Kein Rot: Amber lädt zum Antippen (Neustart per Geste) ein.
-                      ? 'bg-amber-500/85 text-amber-950'
-                      : 'bg-sapphire/80 text-white hover:bg-sapphire',
-                )}
-              >
-                {voiceStatus === 'listening' ? '🎤' : voiceStatus === 'error' || voiceStatus === 'unsupported' ? '⚠️' : '🔇'}
-              </button>
-            )}
-
-            {phase === 'ready-to-calibrate' && (
-              <PhoneButton onClick={handleArm} primary>Speichern</PhoneButton>
-            )}
-            {phase === 'tracking' && (
-              <>
-                {/* Flow-Modus: diskretes, farbloses „Beenden" + Rückweg „Analyse"
-                    (weißer Text). Analyse-Modus: farbiger CTA + Umschalt-Icon. */}
-                <PhoneButton onClick={handleStop} primary={!isFlow} discreet={isFlow}>Beenden</PhoneButton>
-                {isFlow ? (
-                  <PhoneButton onClick={handleToggleView} discreet>Analyse</PhoneButton>
-                ) : (
-                <button
-                  onClick={handleToggleView}
-                  aria-label="Zur Flow-Ansicht wechseln"
-                  className="min-h-[44px] px-2.5 rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95 bg-sapphire/80 text-white hover:bg-sapphire"
-                >
-                  🌊
-                </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ═══ Hinweis-Zeile unter den Knöpfen — feste Höhe, damit der Rahmen nicht
+          springt. Inhalt stellt #111 um; im Flow leer. ═══ */}
+      <div className="flex h-8 shrink-0 items-center justify-center px-4 pb-safe box-content">
+        {!isFlow && !calState && (
+          <p className="truncate font-label text-xs text-white/80">{micLabel(voiceStatus, voiceError, hint)}</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -434,19 +411,19 @@ function ExitButton({ onClick, withLabel }: { onClick: () => void; withLabel?: b
   )
 }
 
-function PhoneButton({ onClick, children, primary, discreet }: { onClick: () => void; children: React.ReactNode; primary?: boolean; discreet?: boolean }) {
+function RowButton({ onClick, children, primary, discreet }: { onClick: () => void; children: React.ReactNode; primary?: boolean; discreet?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'min-h-[44px] rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95',
+        'min-h-[44px] rounded-lg px-4 text-xs font-medium transition-all backdrop-blur active:scale-95 sm:px-6 sm:text-sm',
         discreet
           // Flow-Modus: farbloses, diskretes Kärtchen — nur weißer Text
-          ? 'px-4 py-3 bg-white/10 border border-white/25 text-white hover:bg-white/20'
+          ? 'bg-white/10 border border-white/25 text-white hover:bg-white/20'
           : primary
           // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
-          ? 'px-4 py-3 font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
-          : 'px-3 py-3 bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
+          ? 'font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
+          : 'bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
       )}
     >
       {children}
@@ -492,61 +469,35 @@ function ViewToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () =
   )
 }
 
-function MicButton({
-  status,
-  error,
-  hint,
-  onClick,
-}: {
-  status: VoiceStatus
-  error: string | null
-  hint: string
-  onClick: () => void
-}) {
-  // Beobachtbarer Zustand statt blindem „aktiv" — ein stiller Ausfall wird sichtbar.
-  const label =
-    status === 'listening' ? `🎤 ${hint}`
-    : status === 'starting' ? '🎤 startet …'
-    : status === 'error' || status === 'unsupported' ? `🎤 ${error ?? 'Mikro aus — tippen'}`
-    : '🎤 Aus — tippen zum Aktivieren'
-
+// Mikro-Platz links in der Knopf-Zeile: zeigt, ob die Sprache zuhört. Im Flow
+// farblos wie die anderen Knöpfe.
+function MicToggle({ status, discreet, onClick }: { status: VoiceStatus; discreet: boolean; onClick: () => void }) {
   const isProblem = status === 'error' || status === 'unsupported'
-
   return (
     <button
       onClick={onClick}
+      aria-label="Sprachsteuerung umschalten"
       className={cn(
-        'px-4 py-2 rounded-lg text-xs font-medium transition-all max-w-[min(80vw,420px)] truncate',
-        'backdrop-blur text-white active:scale-95',
-        status === 'listening'
-          ? 'bg-background/75 border border-white/25 text-white hover:bg-background/85'
-          : isProblem
-            // Kein Rot (Feedback-Grundsatz): Amber lädt zum Antippen ein, statt zu tadeln.
-            ? 'bg-amber-500/85 text-amber-950 border border-amber-300/40 hover:bg-amber-500'
-            : 'bg-sapphire/80 hover:bg-sapphire',
+        'min-h-[44px] min-w-[44px] rounded-lg px-2 text-sm font-medium transition-all backdrop-blur active:scale-95',
+        discreet
+          ? 'bg-white/10 border border-white/25 text-white hover:bg-white/20'
+          : status === 'listening'
+            ? 'bg-background/75 border border-white/25 text-white'
+            : isProblem
+              // Kein Rot: Amber lädt zum Antippen (Neustart per Geste) ein.
+              ? 'bg-amber-500/85 text-amber-950'
+              : 'bg-sapphire/80 text-white hover:bg-sapphire',
       )}
     >
-      {label}
+      {status === 'listening' ? '🎤' : isProblem ? '⚠️' : '🔇'}
     </button>
   )
 }
 
-function FallbackButton({ onClick, children, primary, discreet }: { onClick: () => void; children: React.ReactNode; primary?: boolean; discreet?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'rounded-lg font-medium transition-all backdrop-blur active:scale-95',
-        discreet
-          // Flow-Modus: farbloses, diskretes Kärtchen — nur weißer Text, gleiche Form
-          ? 'px-6 py-2.5 text-sm bg-white/10 border border-white/25 text-white hover:bg-white/20'
-          : primary
-          // Geigenholz-Gold-CTA: sofort als Hauptaktion erkennbar
-          ? 'px-6 py-2.5 text-sm font-semibold bg-accent text-accent-foreground shadow-lg shadow-black/30 ring-1 ring-accent/60 hover:bg-accent/90'
-          : 'px-4 py-2 text-xs bg-background/40 border border-border/50 text-foreground/80 hover:bg-background/60 hover:text-foreground',
-      )}
-    >
-      {children}
-    </button>
-  )
+// Beobachtbarer Zustand statt blindem „aktiv" — ein stiller Ausfall wird sichtbar.
+function micLabel(status: VoiceStatus, error: string | null, hint: string): string {
+  return status === 'listening' ? `🎤 ${hint}`
+    : status === 'starting' ? '🎤 startet …'
+    : status === 'error' || status === 'unsupported' ? `🎤 ${error ?? 'Mikro aus — tippen'}`
+    : '🎤 Aus — tippen zum Aktivieren'
 }

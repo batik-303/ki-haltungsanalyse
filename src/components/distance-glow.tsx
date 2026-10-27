@@ -10,9 +10,9 @@ import { computeDistanceGlowTone } from '@/core/calibration/distance-glow'
  * passt; Grün bestätigt leise „passt". Der Ton-Wechsel läuft weich (langsame
  * Transition) — kein hektisches Blinken, kein Zähler.
  *
- * Bewusst als vollflächiges, `pointer-events-none` DOM-Overlay (nicht auf dem
- * gespiegelten Canvas): ein symmetrischer Rand-Schein braucht keine
- * Koordinaten-Mathematik und bleibt vom Spiegel unberührt.
+ * Bewusst als `pointer-events-none` DOM-Overlay über dem ganzen Rahmen (nicht
+ * auf dem gespiegelten Canvas): es leuchtet am Innenrand des Rahmens (#114),
+ * braucht keine Koordinaten-Mathematik und bleibt vom Spiegel unberührt.
  */
 
 // Glut-Farben über dem dunklen Kamerabild (literal, analog zu den Overlays).

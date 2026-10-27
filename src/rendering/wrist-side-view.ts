@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 //  PERIPHERE LEISTE (Wrist-Modus, #76/#94) — Variante D
 // ─────────────────────────────────────────────────────────────
-//  Eine senkrechte Leiste am linken Bildschirmrand, auf Laptop und Handy
+//  Eine senkrechte Leiste am linken Rand des Rahmens (#114), auf allen Geräten
 //  (Analyse) — bzw. groß in der Mitte (Flow, #99, Maße: `computeFlowRailLayout`):
 //   • unten der Arm — fest, gerade, immer blau (gemessen wird nur das Handgelenk)
 //   • in der Mitte der Anker = Gelenk

@@ -10,9 +10,10 @@ import { TILT_MAX_DEG } from '../../src/core/analysis/wrist-bar'
 import { selectIsFlowRail } from '../../src/store/selectors'
 import type { PoseState } from '../../src/store/pose-store'
 
-// Flow-Ansicht (#77/#99): nur die periphere Leiste, groß in der Mitte, fast
-// volle Bildschirmhöhe — oben etwas Rand, unten Platz über den Knöpfen.
-// Das Canvas hat Videogröße und füllt im Flow den Bildschirm (object-cover).
+// Flow-Ansicht (#77/#99, #114): nur die periphere Leiste, mittig. Das Canvas
+// hat Videogröße und füllt im Flow den Bereich ÜBER der Knopf-Zeile
+// (object-cover) — die Knöpfe liegen also nie im Canvas. Die Leiste nimmt
+// höchstens ≈ 60 % der Bildschirmhöhe ein (Entscheidung 3 aus #104).
 
 // Sichtbarer Bereich des Canvas in CSS-Pixeln (object-cover, zentriert).
 function toCss(
@@ -33,14 +34,11 @@ function toCss(
   }
 }
 
-const PHONE = { viewWidth: 390, viewHeight: 844 }
-const LAPTOP = { viewWidth: 1440, viewHeight: 900 }
-const TABLET = { viewWidth: 820, viewHeight: 1180 }
-// Höhe der Knöpfe unten (CSS-Pixel), gemessen an session-screen.tsx:
-// Handy = 14 (im Flow angehoben, Handy-Test 24.10.) + 8 + 44 + 8 + Safe-Area (≈ 34); Laptop = clamp(24px, 6vh, 96px) + Knopf-Reihe
-// (≈ 42) + Abstand 12 + Mikrofon (≈ 34).
-const PHONE_BUTTONS_CSS = 108
-const laptopButtonsCss = (viewHeight: number) => Math.min(96, Math.max(24, viewHeight * 0.06)) + 88
+// Bildschirm und Bereich über der Knopf-Zeile (Kopfzeile ist im Flow aus).
+const PHONE = { viewWidth: 390, viewHeight: 744, screenHeight: 844 }
+const LAPTOP = { viewWidth: 1440, viewHeight: 800, screenHeight: 900 }
+const TABLET = { viewWidth: 820, viewHeight: 1080, screenHeight: 1180 }
+const TABLET_LANDSCAPE = { viewWidth: 1180, viewHeight: 720, screenHeight: 820 }
 const tiltReach = Math.sin((TILT_MAX_DEG * Math.PI) / 180)
 
 const state = (over: Partial<PoseState>): PoseState =>
@@ -60,58 +58,51 @@ describe('computeFlowRailLayout', () => {
     { name: 'Handy hochkant, Hochformat-Video', canvasWidth: 480, canvasHeight: 640, ...PHONE },
     { name: 'Handy hochkant, Querformat-Video', canvasWidth: 640, canvasHeight: 480, ...PHONE },
     { name: 'Laptop, Querformat-Video', canvasWidth: 640, canvasHeight: 480, ...LAPTOP },
+    { name: 'Tablet hochkant, Querformat-Video', canvasWidth: 640, canvasHeight: 480, ...TABLET },
+    { name: 'Tablet quer, Querformat-Video', canvasWidth: 640, canvasHeight: 480, ...TABLET_LANDSCAPE },
   ]
 
   for (const c of cases) {
     describe(c.name, () => {
       const layout = computeFlowRailLayout(c)
       const css = toCss(layout, c.canvasWidth, c.canvasHeight, c.viewWidth, c.viewHeight)
+      const haloHalf = (css.armWidth * RAIL_HALO_WIDTH_RATIO) / 2
+      const length = css.bottom - css.top
 
-      it('steht waagerecht in der Bildschirm-Mitte', () => {
+      it('steht waagerecht in der Mitte', () => {
         expect(css.cx).toBeCloseTo(c.viewWidth / 2, 5)
       })
 
-      const cap = css.armWidth / 2
-      const buttons = c.viewWidth < 480 ? PHONE_BUTTONS_CSS : laptopButtonsCss(c.viewHeight)
-
-      it('lässt oben etwas Rand – auch die runde Kappe', () => {
-        expect(css.top - cap).toBeGreaterThan(16 - 1e-6)
-        expect(css.top).toBeLessThan(c.viewHeight * 0.08)
+      it('steht senkrecht mittig über der Knopf-Zeile', () => {
+        expect((css.top + css.bottom) / 2).toBeCloseTo(c.viewHeight / 2, 5)
       })
 
-      it('endet mit der Kappe über den Knöpfen unten', () => {
-        expect(css.bottom + cap).toBeLessThanOrEqual(c.viewHeight - buttons - 8)
+      it('nimmt samt Leuchten höchstens 60 % der Bildschirmhöhe ein', () => {
+        expect(length + 2 * haloHalf).toBeLessThanOrEqual(c.screenHeight * 0.6 + 1e-6)
       })
 
-      it('füllt fast die volle Höhe', () => {
-        expect(css.bottom - css.top).toBeGreaterThan(c.viewHeight * 0.7)
+      it('bleibt deutlich sichtbar (mindestens 45 % der Bildschirmhöhe)', () => {
+        expect(length).toBeGreaterThan(c.screenHeight * 0.45)
       })
 
-      it('Breite wächst mit der Höhe (dicker als die Analyse-Leiste)', () => {
-        expect(css.armWidth).toBeGreaterThan(24)
-        expect(css.armWidth).toBeCloseTo((css.bottom - css.top) * RAIL_ARM_WIDTH_PER_LENGTH, 5)
+      it('Leuchten hält oben und unten Abstand zum Rand des Bereichs', () => {
+        expect(css.top - haloHalf).toBeGreaterThanOrEqual(16 - 1e-6)
+        expect(css.bottom + haloHalf).toBeLessThanOrEqual(c.viewHeight - 16 + 1e-6)
+      })
+
+      it('Breite wächst mit der Länge', () => {
+        expect(css.armWidth).toBeGreaterThan(18)
+        expect(css.armWidth).toBeCloseTo(length * RAIL_ARM_WIDTH_PER_LENGTH, 5)
       })
     })
   }
 
-  // Tablet-Test 24.10.: das Leuchten (Halo, armWidth * RAIL_HALO_WIDTH_RATIO)
-  // reichte bis in die Knöpfe — es zählt oben und unten mit zur Leiste.
-  describe('Leuchten hält Abstand zu Rand und Knöpfen', () => {
-    const haloCases = [
-      { name: 'Tablet hochkant, Hochformat-Video', canvasWidth: 480, canvasHeight: 640, ...TABLET },
-      { name: 'Tablet hochkant, Querformat-Video', canvasWidth: 640, canvasHeight: 480, ...TABLET },
-      { name: 'Handy hochkant', canvasWidth: 480, canvasHeight: 640, ...PHONE },
-      { name: 'Laptop', canvasWidth: 640, canvasHeight: 480, ...LAPTOP },
-    ]
-    for (const c of haloCases) {
-      it(c.name, () => {
-        const css = toCss(computeFlowRailLayout(c), c.canvasWidth, c.canvasHeight, c.viewWidth, c.viewHeight)
-        const haloHalf = (css.armWidth * RAIL_HALO_WIDTH_RATIO) / 2
-        const buttons = c.viewWidth < 480 ? PHONE_BUTTONS_CSS : laptopButtonsCss(c.viewHeight)
-        expect(css.top - haloHalf).toBeGreaterThanOrEqual(16 - 1e-6)
-        expect(css.bottom + haloHalf + 8).toBeLessThanOrEqual(c.viewHeight - buttons + 1e-6)
-      })
-    }
+  it('niedriger Bereich: Leiste passt trotzdem samt Leuchten hinein', () => {
+    const c = { canvasWidth: 640, canvasHeight: 480, viewWidth: 900, viewHeight: 300, screenHeight: 900 }
+    const css = toCss(computeFlowRailLayout(c), 640, 480, c.viewWidth, c.viewHeight)
+    const haloHalf = (css.armWidth * RAIL_HALO_WIDTH_RATIO) / 2
+    expect(css.top - haloHalf).toBeGreaterThanOrEqual(16 - 1e-6)
+    expect(css.bottom + haloHalf).toBeLessThanOrEqual(300 - 16 + 1e-6)
   })
 
   it('Handy und Laptop: gleiche Regel → ähnliche Strichstärke', () => {
@@ -123,7 +114,7 @@ describe('computeFlowRailLayout', () => {
   })
 
   it('gekippte Hand bleibt auf schmalem Handy im Bild', () => {
-    const narrow = { canvasWidth: 480, canvasHeight: 640, viewWidth: 320, viewHeight: 900 }
+    const narrow = { canvasWidth: 480, canvasHeight: 640, viewWidth: 320, viewHeight: 900, screenHeight: 1000 }
     const layout = computeFlowRailLayout(narrow)
     const css = toCss(layout, 480, 640, narrow.viewWidth, narrow.viewHeight)
     const total = css.bottom - css.top
@@ -135,6 +126,6 @@ describe('computeFlowRailLayout', () => {
 
   it('liefert Canvas-Pixel pro CSS-Pixel für Leuchten/Ränder', () => {
     const layout = computeFlowRailLayout({ canvasWidth: 640, canvasHeight: 480, ...LAPTOP })
-    expect(layout.px).toBeCloseTo(1 / Math.max(1440 / 640, 900 / 480), 5)
+    expect(layout.px).toBeCloseTo(1 / Math.max(1440 / 640, 800 / 480), 5)
   })
 })
