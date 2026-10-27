@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge'
 import { Home } from 'lucide-react'
 import type { StoredSession, ViewMode } from '@/core/types'
 import { cn } from '@/lib/utils'
+// PROTOTYP #116 Frage 3 – nie nach main
+import { PrototypeCountdownOverlay, PrototypeSwitcher, readPrototypeVariant, PROTOTYPE_TOTAL_SECONDS, type PrototypeVariant } from '@/components/prototype-countdown-variants'
 
 const MODE_LABELS: Record<string, string> = {
   violin: '🎻 Geige',
@@ -44,6 +46,8 @@ export function SessionScreen() {
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
+  const [protoVariant, setProtoVariant] = useState<PrototypeVariant | null>(readPrototypeVariant)
+
   const { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
   const { startCountdown } = useCalibration({
@@ -61,10 +65,11 @@ export function SessionScreen() {
     const landmarker = landmarkerRef.current
     if (!landmarker) return
 
-    setCalState({ kind: 'counting', count: 3 })
+    const seconds = readPrototypeVariant() ? PROTOTYPE_TOTAL_SECONDS : 3
+    setCalState({ kind: 'counting', count: seconds })
 
     startCountdown(
-      3,
+      seconds,
       landmarker,
       (remaining) => setCalState({ kind: 'counting', count: remaining }),
       (success, reason) => {
@@ -250,7 +255,11 @@ export function SessionScreen() {
       />
 
       {/* Kalibrier-Overlay — Variante C „Minimal HUD" (alle Größen) */}
-      {calState && (
+      {protoVariant && <PrototypeSwitcher variant={protoVariant} onChange={setProtoVariant} />}
+      {calState?.kind === 'counting' && protoVariant && (
+        <PrototypeCountdownOverlay variant={protoVariant} remaining={calState.count} />
+      )}
+      {calState && !(calState.kind === 'counting' && protoVariant) && (
         <CalibrationOverlay
           phase={calState}
           modeLabel={MODE_LABELS[focusMode] ?? focusMode}
