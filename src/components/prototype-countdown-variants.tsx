@@ -4,9 +4,10 @@
  * Frage: Wie sieht man den Countdown beim Speichern, ohne dass Text auf dem
  * Körper steht? Drei Varianten, umschaltbar über `?variant=a|b|c` und die
  * schwebende Leiste unten:
- *   a – nur Kärtchen oben im Rahmen („Halte still“ + Zahl)
- *   b – Kärtchen oben + blaues Randglühen, das jede Sekunde sanft pulsiert
- *   c – Kärtchen oben + leiser Ton pro Sekunde
+ *   a – Kärtchen oben mit großer Zahl + pulsierendes Randglühen
+ *   b – Kärtchen oben nur Text + Randglühen + große Zahl in der Mitte
+ *   c – wie b, aber die Zahl in der Mitte durchscheinend
+ * (Runde 2: Ton fällt weg – passt nicht zur ruhigen Philosophie.)
  *
  * Ablauf (b′) ist nur nachgestellt: 2 s Lesezeit + 1 s „still halten“ laufen
  * hier fest ab (keine echte Ruhe-Erkennung), danach 3 – 2 – 1.
@@ -17,9 +18,9 @@ export type PrototypeVariant = 'a' | 'b' | 'c'
 
 const VARIANTS: PrototypeVariant[] = ['a', 'b', 'c']
 const VARIANT_NAMES: Record<PrototypeVariant, string> = {
-  a: 'Nur Kärtchen',
-  b: 'Kärtchen + Randglühen',
-  c: 'Kärtchen + Ton',
+  a: 'Zahl im Kärtchen',
+  b: 'Zahl in der Mitte',
+  c: 'Zahl Mitte, durchscheinend',
 }
 
 const BLUE = '#2196F3'
@@ -38,15 +39,11 @@ export function PrototypeCountdownOverlay({ variant, remaining }: { variant: Pro
   const isNumber = remaining <= NUMBER_SECONDS
   const isReading = remaining > NUMBER_SECONDS + 1
 
-  // Variante c: leiser Ton bei jeder Zahl, letzter etwas heller.
-  useEffect(() => {
-    if (variant !== 'c' || !isNumber) return
-    playTone(remaining === 1 ? 880 : 660)
-  }, [variant, isNumber, remaining])
+  const numberInCard = variant === 'a'
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      {variant === 'b' && <PulsingGlow pulseKey={isNumber ? remaining : 0} pulsing={isNumber} />}
+      <PulsingGlow pulseKey={isNumber ? remaining : 0} pulsing={isNumber} />
 
       <div className="absolute top-[clamp(56px,9vh,88px)] left-1/2 -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-2xl bg-white/92 px-5 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.25)] backdrop-blur">
@@ -57,13 +54,24 @@ export function PrototypeCountdownOverlay({ variant, remaining }: { variant: Pro
               {isReading ? 'gleich wird gespeichert' : isNumber ? 'wird gespeichert …' : 'gleich geht’s los'}
             </span>
           </div>
-          {isNumber && (
-            <span className="ml-2 font-headline text-4xl font-extrabold tabular-nums leading-none" style={{ color: BLUE }}>
+          {isNumber && numberInCard && (
+            <span className="ml-3 font-headline text-6xl font-extrabold tabular-nums leading-none" style={{ color: BLUE }}>
               {remaining}
             </span>
           )}
         </div>
       </div>
+
+      {isNumber && !numberInCard && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className="font-headline font-extrabold tabular-nums leading-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+            style={{ color: BLUE, fontSize: 'clamp(96px, 26vw, 168px)', opacity: variant === 'c' ? 0.45 : 1 }}
+          >
+            {remaining}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -91,20 +99,6 @@ function PulsingGlow({ pulseKey, pulsing }: { pulseKey: number; pulsing: boolean
       }}
     />
   )
-}
-
-let audioCtx: AudioContext | null = null
-function playTone(freq: number) {
-  audioCtx ??= new AudioContext()
-  const osc = audioCtx.createOscillator()
-  const gain = audioCtx.createGain()
-  osc.frequency.value = freq
-  gain.gain.setValueAtTime(0, audioCtx.currentTime)
-  gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.02)
-  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25)
-  osc.connect(gain).connect(audioCtx.destination)
-  osc.start()
-  osc.stop(audioCtx.currentTime + 0.3)
 }
 
 /** Schwebende Umschalt-Leiste (nur Prototyp). Pfeiltasten ← → schalten auch. */
