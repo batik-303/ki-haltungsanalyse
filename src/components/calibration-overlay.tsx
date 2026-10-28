@@ -56,9 +56,11 @@ export function CalibrationOverlay({ phase, modeLabel, topInset, onRecalibrate }
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center">
-      {/* Status-Pill oben mittig im Rahmen */}
-      <div className="absolute left-1/2 -translate-x-1/2" style={{ top: topInset + 12 }}>
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 font-label text-[15px] shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
+      {/* Status-Pill oben mittig im Rahmen — eigene Breite (w-max) und einzeilig:
+          sonst darf sie mittig gestellt nur die halbe Breite nutzen und bricht
+          am Handy schief um (Handy-Test 28.10.). */}
+      <div className="absolute left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-24px)]" style={{ top: topInset + 12 }}>
+        <div className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-white/90 px-3.5 py-1.5 font-label text-[15px] shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
           <span
             className="h-2 w-2 rounded-full"
             style={{ background: SAPPHIRE, boxShadow: `0 0 0 3px ${SAPPHIRE}33` }}
