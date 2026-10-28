@@ -191,13 +191,14 @@ export function renderFrame(
       lastAnchorColor = wristAnchorColor
 
       if (isFlow) {
-        // Flow (#77/#99): nur die periphere Leiste, groß in der Mitte.
+        // Flow (#77/#99, #114): nur die periphere Leiste, mittig, ≤ 60 % der Bildschirmhöhe.
         const { clientWidth, clientHeight } = ctx.canvas
         const layout = computeFlowRailLayout({
           canvasWidth: width,
           canvasHeight: height,
           viewWidth: clientWidth || width,
           viewHeight: clientHeight || height,
+          screenHeight: window.innerHeight || clientHeight || height,
         })
         drawWristSideView(ctx, width, height, now, wristAnchorColor, wristRailAngleDeg, wristKnickSide, layout)
       } else {

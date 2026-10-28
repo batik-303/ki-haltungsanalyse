@@ -56,3 +56,23 @@ describe('Kalibrier-Overlay — Lesbarkeit über dem Kamerabild', () => {
     expect(source).toMatch(/max-w-/)
   })
 })
+
+// Handy-Test 28.10. (#114): Das mittig gestellte Status-Kärtchen („Live Spiegel
+// · 🤚 Handgelenk aktiv") durfte nur die halbe Breite nutzen (absolute +
+// left-1/2) — die rechte Hälfte brach in zwei Zeilen um, das Kärtchen wurde schief.
+describe('Kalibrier-Overlay — Status-Kärtchen bleibt eine Zeile', () => {
+  /** Der Block des Status-Kärtchens oben. */
+  function statusPillSource(): string {
+    const start = source.indexOf('Status-Pill oben')
+    expect(start).toBeGreaterThan(-1)
+    return source.slice(start, source.indexOf('</div>\n      </div>', start))
+  }
+
+  it('nimmt seine eigene Breite statt der halben Bereichsbreite', () => {
+    expect(statusPillSource()).toMatch(/w-max/)
+  })
+
+  it('bricht nicht innerhalb der Textteile um', () => {
+    expect(statusPillSource()).toMatch(/whitespace-nowrap/)
+  })
+})

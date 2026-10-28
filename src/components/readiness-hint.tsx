@@ -2,7 +2,7 @@ import { usePoseStore } from '@/store/pose-store'
 import { computeReadinessView } from '@/core/calibration/readiness-gate'
 
 /**
- * Dezentes Auslöser-Feedback am oberen Canvas-Rand (#59).
+ * Dezentes Auslöser-Feedback oben mittig im Rahmen (#59, #114).
  *
  * Erscheint erst, wenn bewusst ausgelöst wurde (Stimme „bereit" / Knopf
  * „Haltung speichern") und der Abstand noch nicht passt („waiting") bzw. kurz
@@ -32,7 +32,7 @@ export function ReadinessHint() {
   const accent = view.tone === 'success' ? SUCCESS : SAPPHIRE
 
   return (
-    <div className="pointer-events-none absolute top-[clamp(12px,3vh,24px)] left-1/2 -translate-x-1/2 z-[6]">
+    <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-[6] w-max max-w-[calc(100%-24px)]">
       <div className="inline-flex items-center gap-2.5 rounded-full bg-white/90 px-4 py-2 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
         <span
           className="h-2.5 w-2.5 rounded-full"
