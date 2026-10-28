@@ -10,7 +10,7 @@ const STRAIGHT_WRIST_TIP_NECK_MIN_DEG = 28
 export const STRAIGHT_WRIST_TIP_DURATION_MS = 8000
 
 const STRAIGHT_WRIST_TIP =
-  'Tipp: Halte dein Handgelenk beim Speichern möglichst gerade, dann misst die App genauer. Sag „neu“, um neu zu speichern.'
+  'Tipp: Halte dein Handgelenk beim Speichern möglichst gerade, dann misst die App genauer. Sag „neu“ oder geh über das Hauptmenü und speichere neu.'
 
 export interface StraightWristTipInput {
   masterPrint: MasterPrint | null

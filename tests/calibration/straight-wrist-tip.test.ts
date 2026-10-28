@@ -36,6 +36,12 @@ describe('computeStraightWristTip', () => {
     expect(tip).toMatch(/neu/)
   })
 
+  // #111: beide Wege nennen — Sprache „neu" oder über das Hauptmenü (Knopf-Wort).
+  it('nennt beide Wege zum neu Speichern', () => {
+    const tip = computeStraightWristTip({ masterPrint: wristPrint(15.3), calibratedAt: 1000, now: 1000 })
+    expect(tip).toMatch(/Sag „neu“ oder geh über das Hauptmenü und speichere neu\.$/)
+  })
+
   it('Richtung Schnecke bis einschließlich 10° gespeichert: kein Tipp', () => {
     expect(computeStraightWristTip({ masterPrint: wristPrint(10), calibratedAt: 1000, now: 1000 })).toBeNull()
     expect(computeStraightWristTip({ masterPrint: wristPrint(3), calibratedAt: 1000, now: 1000 })).toBeNull()

@@ -98,7 +98,7 @@ export interface ReadinessGateOptions {
 
 export interface ReadinessGate {
   /**
-   * Bewusster Auslöser (Stimme „bereit" / Knopf „Haltung speichern", T4).
+   * Bewusster Auslöser (Stimme „speichern"/„bereit" / Knopf „Haltung speichern", T4).
    * Latcht den Wunsch; `update` schaltet scharf, sobald der Abstand passt.
    * Einmal scharf, ist ein weiterer Aufruf wirkungslos (idempotent bis `reset`).
    */
@@ -200,7 +200,7 @@ export function computeReadinessView(
   switch (state.phase) {
     case 'idle':
       return {
-        hint: 'Sag „bereit“, wenn du so weit bist',
+        hint: 'Sag „speichern“, wenn du so weit bist',
         tone: 'sapphire',
       }
     case 'waiting':

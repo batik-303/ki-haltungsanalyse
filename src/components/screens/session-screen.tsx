@@ -13,10 +13,11 @@ import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/s
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
 import { Home } from 'lucide-react'
-import type { StoredSession, ViewMode } from '@/core/types'
+import type { StoredSession } from '@/core/types'
 import { cn } from '@/lib/utils'
 import { computeSessionFrame } from '@/core/layout/session-frame'
 import { computeControlRow } from '@/core/layout/control-row'
+import { computeHintLine, VOICE_TIP_DURATION_MS } from '@/core/layout/hint-line'
 
 const MODE_LABELS: Record<string, string> = {
   violin: '🎻 Geige',
@@ -213,6 +214,18 @@ export function SessionScreen() {
   const { startListening, stopListening, status: voiceStatus, error: voiceError } = useVoiceCommands(voiceCommands, true)
   const [calState, setCalState] = useState<CalibrationPhase | null>(null)
 
+  // Sprach-Hinweis nach dem Speichern (#111): nach Ablauf einmal neu rendern,
+  // damit die Hinweis-Zeile von selbst ruhig wird.
+  const calibratedAt = usePoseStore((s) => s.lastCalibrationAt)
+  const [hintNow, setHintNow] = useState(() => performance.now())
+  useEffect(() => {
+    if (calibratedAt === null) return
+    const remaining = calibratedAt + VOICE_TIP_DURATION_MS - performance.now()
+    if (remaining <= 0) return
+    const id = setTimeout(() => setHintNow(performance.now()), remaining)
+    return () => clearTimeout(id)
+  }, [calibratedAt])
+
   // Freihändiger Start: `useVoiceCommands(…, true)` lässt die Erkennung von selbst
   // anlaufen (siehe Hook). Kein separater Mount-Effekt mehr — der hatte mit dem
   // Auto-Stopp des Hooks um den Start gerennt und ihn im Dev (StrictMode) tot gelegt.
@@ -258,6 +271,16 @@ export function SessionScreen() {
   }, [voiceStatus, startListening, stopListening])
 
   const row = computeControlRow({ phase, viewMode, calibrating: calState !== null })
+  const hintLine = computeHintLine({
+    phase,
+    phaseHint: hint,
+    viewMode,
+    calibrating: calState !== null,
+    voiceStatus,
+    voiceError,
+    calibratedAt,
+    now: hintNow,
+  })
   const frame = computeSessionFrame({
     videoWidth: videoSize.width,
     videoHeight: videoSize.height,
@@ -337,41 +360,22 @@ export function SessionScreen() {
           {row.mic && <MicToggle status={voiceStatus} discreet={row.discreet} onClick={handleToggleMic} />}
         </div>
         <div className="flex min-h-[44px] justify-center">
-          {row.main === 'save' && (
-            <RowButton onClick={handleArm} primary>
-              <span className="sm:hidden">Speichern</span>
-              <span className="hidden sm:inline">Haltung speichern</span>
-            </RowButton>
-          )}
+          {row.main === 'save' && <RowButton onClick={handleArm} primary>Haltung speichern</RowButton>}
           {row.main === 'stop' && (
             <RowButton onClick={handleStop} primary={!row.discreet} discreet={row.discreet}>Beenden</RowButton>
           )}
         </div>
         <div className="flex justify-start">
-          {row.view === 'to-mirror' && <RowButton onClick={handleToggleView} discreet>Analyse</RowButton>}
-          {row.view === 'to-flow' && (
-            <>
-              <button
-                onClick={handleToggleView}
-                aria-label="Zur Flow-Ansicht wechseln"
-                className="sm:hidden min-h-[44px] px-2.5 rounded-lg text-xs font-medium transition-all backdrop-blur active:scale-95 bg-sapphire/80 text-white hover:bg-sapphire"
-              >
-                🌊
-              </button>
-              <div className="hidden sm:block">
-                <ViewToggle viewMode={viewMode} onToggle={handleToggleView} />
-              </div>
-            </>
-          )}
+          {/* Ansicht-Knopf nennt das Ziel (#111): im Spiegel „Flow", im Flow „Spiegel". */}
+          {row.view === 'to-flow' && <RowButton onClick={handleToggleView}>Flow</RowButton>}
+          {row.view === 'to-mirror' && <RowButton onClick={handleToggleView} discreet>Spiegel</RowButton>}
         </div>
       </div>
 
       {/* ═══ Hinweis-Zeile unter den Knöpfen — feste Höhe, damit der Rahmen nicht
-          springt. Inhalt stellt #111 um; im Flow leer. ═══ */}
+          springt. Inhalt: computeHintLine (#111); im Flow leer. ═══ */}
       <div className="flex h-8 shrink-0 items-center justify-center px-4 pb-safe box-content">
-        {!isFlow && !calState && (
-          <p className="truncate font-label text-xs text-white/80">{micLabel(voiceStatus, voiceError, hint)}</p>
-        )}
+        {hintLine && <p className="truncate font-label text-xs text-white/80">{hintLine}</p>}
       </div>
     </div>
   )
@@ -431,44 +435,6 @@ function RowButton({ onClick, children, primary, discreet }: { onClick: () => vo
   )
 }
 
-// Segmentierter Ansicht-Umschalter (Desktop/Tablet): der aktive Modus ist im
-// tiefen Saphir hervorgehoben. Ein Klick auf das inaktive Segment schaltet um;
-// der aktive tut nichts.
-//
-// Bewusst nicht `sapphire` — das ist `--color-layer-flow`, die Flow-Farbe auf
-// dem Canvas. Ein Bedienelement in Layer-Blau liest sich wie ein Haltungssignal
-// (dieselbe Trennung, die #29 zwischen CTA-Gold und Warn-Amber zieht).
-function ViewToggle({ viewMode, onToggle }: { viewMode: ViewMode; onToggle: () => void }) {
-  return (
-    <div className="flex items-center rounded-lg overflow-hidden backdrop-blur border border-sapphire-deep/50 text-xs font-medium">
-      <button
-        onClick={() => viewMode !== 'analyse' && onToggle()}
-        aria-pressed={viewMode === 'analyse'}
-        className={cn(
-          'px-3 py-2 transition-all active:scale-95',
-          viewMode === 'analyse'
-            ? 'bg-sapphire-deep text-white'
-            : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
-        )}
-      >
-        Analyse
-      </button>
-      <button
-        onClick={() => viewMode !== 'flow' && onToggle()}
-        aria-pressed={viewMode === 'flow'}
-        className={cn(
-          'px-3 py-2 transition-all active:scale-95',
-          viewMode === 'flow'
-            ? 'bg-sapphire-deep text-white'
-            : 'bg-background/40 text-foreground/70 hover:bg-background/60 hover:text-foreground',
-        )}
-      >
-        Flow
-      </button>
-    </div>
-  )
-}
-
 // Mikro-Platz links in der Knopf-Zeile: zeigt, ob die Sprache zuhört. Im Flow
 // farblos wie die anderen Knöpfe.
 function MicToggle({ status, discreet, onClick }: { status: VoiceStatus; discreet: boolean; onClick: () => void }) {
@@ -492,12 +458,4 @@ function MicToggle({ status, discreet, onClick }: { status: VoiceStatus; discree
       {status === 'listening' ? '🎤' : isProblem ? '⚠️' : '🔇'}
     </button>
   )
-}
-
-// Beobachtbarer Zustand statt blindem „aktiv" — ein stiller Ausfall wird sichtbar.
-function micLabel(status: VoiceStatus, error: string | null, hint: string): string {
-  return status === 'listening' ? `🎤 ${hint}`
-    : status === 'starting' ? '🎤 startet …'
-    : status === 'error' || status === 'unsupported' ? `🎤 ${error ?? 'Mikro aus — tippen'}`
-    : '🎤 Aus — tippen zum Aktivieren'
 }

@@ -76,3 +76,11 @@ describe('Kalibrier-Overlay — Status-Kärtchen bleibt eine Zeile', () => {
     expect(statusPillSource()).toMatch(/whitespace-nowrap/)
   })
 })
+
+// #111: Knopf-Wort = Sprach-Wort — das Overlay lädt mit „speichern" ein.
+describe('Kalibrier-Overlay — Sprachhinweis', () => {
+  it('nennt „speichern" statt „bereit"', () => {
+    expect(source).toMatch(/„speichern“/)
+    expect(source).not.toMatch(/„bereit“/)
+  })
+})

@@ -72,10 +72,10 @@ export function computeCalibrationView(phase: CalibrationPhase): CalibrationView
         title: 'Nochmal versuchen',
         hint:
           phase.reason === 'no_hand'
-            ? 'Hand sichtbar ins Bild halten und „bereit“ sagen'
+            ? 'Hand sichtbar ins Bild halten und „speichern“ sagen'
             : phase.reason === 'no_posture'
-              ? 'Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“'
-              : 'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
+              ? 'Alles gut — nimm ruhig deine Spielhaltung ein und sag „speichern“'
+              : 'Haltung noch nicht erkannt — ruhig hinstellen und „speichern“ sagen',
         glyph: '↻',
         tone: 'accent',
         cta: 'Erneut versuchen',
