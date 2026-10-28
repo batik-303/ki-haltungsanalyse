@@ -22,6 +22,11 @@ export const RAIL_HALO_WIDTH_RATIO = 2.6
 const FLOW_EDGE_MARGIN_CSS = 16
 /** Höchstens dieser Anteil der Bildschirmhöhe, samt Leuchten (Entscheidung 3 aus #104). */
 export const FLOW_RAIL_MAX_SCREEN_FRACTION = 0.6
+// Handy-Test 28.10.: am Handy wirkte die Leiste so zu dünn und zu klein —
+// dort darf sie höher reichen und ist dicker. Laptop/Tablet bleiben bei 60 %.
+const PHONE_MAX_WIDTH_CSS = 480
+const FLOW_RAIL_MAX_SCREEN_FRACTION_PHONE = 0.72
+const FLOW_RAIL_WIDTH_BOOST_PHONE = 1.3
 
 export interface FlowRailLayoutInput {
   /** Canvas-Größe in Canvas-Pixeln (= Videogröße). */
@@ -47,7 +52,7 @@ export interface RailLayout {
   px: number
 }
 
-/** Maße und Lage der Flow-Leiste — mittig, höchstens 60 % der Bildschirmhöhe, Breite folgt der Länge. */
+/** Maße und Lage der Flow-Leiste — mittig, höchstens 60 % der Bildschirmhöhe (Handy 72 %), Breite folgt der Länge. */
 export function computeFlowRailLayout(input: FlowRailLayoutInput): RailLayout {
   const { canvasWidth, canvasHeight, viewWidth, viewHeight, screenHeight } = input
   const scale = Math.max(viewWidth / canvasWidth, viewHeight / canvasHeight)
@@ -56,13 +61,16 @@ export function computeFlowRailLayout(input: FlowRailLayoutInput): RailLayout {
   // Länge samt Leuchten oben und unten (es reicht über die runde Kappe hinaus):
   // höchstens 60 % des Bildschirms und mit Rand im Bereich; die gekippte Hand
   // bleibt samt halber Strichbreite seitlich im Bild.
+  const isPhone = viewWidth < PHONE_MAX_WIDTH_CSS
+  const maxFraction = isPhone ? FLOW_RAIL_MAX_SCREEN_FRACTION_PHONE : FLOW_RAIL_MAX_SCREEN_FRACTION
+  const widthPerLength = RAIL_ARM_WIDTH_PER_LENGTH * (isPhone ? FLOW_RAIL_WIDTH_BOOST_PHONE : 1)
   const heightRoomCss = Math.min(
-    screenHeight * FLOW_RAIL_MAX_SCREEN_FRACTION,
+    screenHeight * maxFraction,
     viewHeight - 2 * FLOW_EDGE_MARGIN_CSS,
   )
-  const halosPerLength = RAIL_HALO_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH // zwei halbe Leuchtbreiten
+  const halosPerLength = RAIL_HALO_WIDTH_RATIO * widthPerLength // zwei halbe Leuchtbreiten
   const reachPerLength = RAIL_HAND_FRACTION * Math.sin((TILT_MAX_DEG * Math.PI) / 180)
-    + (RAIL_HAND_WIDTH_RATIO * RAIL_ARM_WIDTH_PER_LENGTH) / 2
+    + (RAIL_HAND_WIDTH_RATIO * widthPerLength) / 2
   const totalCss = Math.max(0, Math.min(
     heightRoomCss / (1 + halosPerLength),
     (viewWidth / 2 - FLOW_EDGE_MARGIN_CSS) / reachPerLength,
@@ -77,7 +85,7 @@ export function computeFlowRailLayout(input: FlowRailLayoutInput): RailLayout {
     cx: canvasWidth / 2,
     top,
     bottom: top + totalCss * px,
-    armWidth: totalCss * RAIL_ARM_WIDTH_PER_LENGTH * px,
+    armWidth: totalCss * widthPerLength * px,
     px,
   }
 }

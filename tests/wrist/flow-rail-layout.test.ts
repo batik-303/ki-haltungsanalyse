@@ -14,6 +14,8 @@ import type { PoseState } from '../../src/store/pose-store'
 // hat Videogröße und füllt im Flow den Bereich ÜBER der Knopf-Zeile
 // (object-cover) — die Knöpfe liegen also nie im Canvas. Die Leiste nimmt
 // höchstens ≈ 60 % der Bildschirmhöhe ein (Entscheidung 3 aus #104).
+// Handy-Test 28.10.: am Handy war die Leiste so zu dünn und zu klein — dort
+// darf sie bis ≈ 72 % reichen und ist etwas dicker. Laptop/Tablet bleiben.
 
 // Sichtbarer Bereich des Canvas in CSS-Pixeln (object-cover, zentriert).
 function toCss(
@@ -77,12 +79,15 @@ describe('computeFlowRailLayout', () => {
         expect((css.top + css.bottom) / 2).toBeCloseTo(c.viewHeight / 2, 5)
       })
 
-      it('nimmt samt Leuchten höchstens 60 % der Bildschirmhöhe ein', () => {
-        expect(length + 2 * haloHalf).toBeLessThanOrEqual(c.screenHeight * 0.6 + 1e-6)
+      const isPhone = c.viewWidth < 480
+      const maxFraction = isPhone ? 0.72 : 0.6
+
+      it(`nimmt samt Leuchten höchstens ${maxFraction * 100} % der Bildschirmhöhe ein`, () => {
+        expect(length + 2 * haloHalf).toBeLessThanOrEqual(c.screenHeight * maxFraction + 1e-6)
       })
 
-      it('bleibt deutlich sichtbar (mindestens 45 % der Bildschirmhöhe)', () => {
-        expect(length).toBeGreaterThan(c.screenHeight * 0.45)
+      it('bleibt deutlich sichtbar', () => {
+        expect(length).toBeGreaterThan(c.screenHeight * (isPhone ? 0.6 : 0.45))
       })
 
       it('Leuchten hält oben und unten Abstand zum Rand des Bereichs', () => {
@@ -90,9 +95,10 @@ describe('computeFlowRailLayout', () => {
         expect(css.bottom + haloHalf).toBeLessThanOrEqual(c.viewHeight - 16 + 1e-6)
       })
 
-      it('Breite wächst mit der Länge', () => {
-        expect(css.armWidth).toBeGreaterThan(18)
-        expect(css.armWidth).toBeCloseTo(length * RAIL_ARM_WIDTH_PER_LENGTH, 5)
+      it('Breite wächst mit der Länge (am Handy etwas dicker)', () => {
+        expect(css.armWidth).toBeGreaterThan(isPhone ? 28 : 18)
+        if (isPhone) expect(css.armWidth).toBeGreaterThan(length * RAIL_ARM_WIDTH_PER_LENGTH)
+        else expect(css.armWidth).toBeCloseTo(length * RAIL_ARM_WIDTH_PER_LENGTH, 5)
       })
     })
   }
@@ -105,12 +111,13 @@ describe('computeFlowRailLayout', () => {
     expect(css.bottom + haloHalf).toBeLessThanOrEqual(300 - 16 + 1e-6)
   })
 
-  it('Handy und Laptop: gleiche Regel → ähnliche Strichstärke', () => {
+  it('Handy mindestens so dick wie Laptop, aber nicht klobig', () => {
     const phone = computeFlowRailLayout({ canvasWidth: 480, canvasHeight: 640, ...PHONE })
     const laptop = computeFlowRailLayout({ canvasWidth: 640, canvasHeight: 480, ...LAPTOP })
     const phoneCss = toCss(phone, 480, 640, PHONE.viewWidth, PHONE.viewHeight)
     const laptopCss = toCss(laptop, 640, 480, LAPTOP.viewWidth, LAPTOP.viewHeight)
-    expect(Math.abs(phoneCss.armWidth - laptopCss.armWidth)).toBeLessThan(8)
+    expect(phoneCss.armWidth).toBeGreaterThanOrEqual(laptopCss.armWidth)
+    expect(phoneCss.armWidth - laptopCss.armWidth).toBeLessThan(14)
   })
 
   it('gekippte Hand bleibt auf schmalem Handy im Bild', () => {
