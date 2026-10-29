@@ -9,6 +9,7 @@ import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
 import { StraightWristTip } from '@/components/straight-wrist-tip'
+import { SaveSequenceOverlay } from '@/components/save-sequence-overlay'
 import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
 import { saveSession, addHoldMilestones } from '@/core/persistence/session-db'
 import { Badge } from '@/components/ui/badge'
@@ -75,9 +76,9 @@ export function SessionScreen() {
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
-  const { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
+  const { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
-  const { startCountdown } = useCalibration({
+  const { doCapture } = useCalibration({
     videoRef,
     canvasRef,
     handLandmarkerRef,
@@ -85,37 +86,40 @@ export function SessionScreen() {
     onCalibrated: resetAnalysisState,
   })
 
-  // Interner Countdown-Läufer. Wird **nicht** direkt vom Nutzer aufgerufen,
+  // Ruhiges Speichern (#118). Wird **nicht** direkt vom Nutzer aufgerufen,
   // sondern vom Auslöse-Tor (`readinessArmed`-Effekt), sobald der bewusste
-  // Auslöser + der passende Abstand zusammenkommen (#59).
+  // Auslöser + der passende Abstand zusammenkommen (#59). Lesezeit, still
+  // halten, 3 – 2 – 1 und Pause führt danach der rAF-Loop.
   const handleCalibrate = useCallback(() => {
+    if (!landmarkerRef.current) return
+    setCalState(null)
+    startSave()
+  }, [landmarkerRef, startSave])
+
+  // Erfassungs-Kante aus dem rAF-Loop (#118): nach 3 – 2 – 1 genau einmal
+  // speichern. Die Kante wird sofort quittiert.
+  const saveCaptureDue = usePoseStore((s) => s.saveCaptureDue)
+  useEffect(() => {
+    if (!saveCaptureDue) return
+    const store = usePoseStore.getState()
+    store.setSaveCaptureDue(false)
     const landmarker = landmarkerRef.current
-    if (!landmarker) return
-
-    setCalState({ kind: 'counting', count: 3 })
-
-    startCountdown(
-      3,
-      landmarker,
-      (remaining) => setCalState({ kind: 'counting', count: remaining }),
-      (success, reason) => {
-        if (success) {
-          // Erfolg geht direkt in die Analyse über (#58): keine „gespeichert"-
-          // Bestätigung. Der Store hat die Session bereits gestartet
-          // (calibrate → sessionActive); hier wird der frisch zurückgesetzte
-          // Session-Tracker (rAF-Loop-Ref) scharf geschaltet und das Overlay
-          // ausgeblendet — die Analyse läuft sofort weiter.
-          startTracking()
-          setCalState(null)
-        } else {
-          // Weiche Erfassung (#59): nichts gespeichert → Tor zurück auf idle,
-          // damit der Nutzer ruhig neu auslösen kann (kein Wiederholzwang).
-          resetAnalysisState()
-          setCalState({ kind: 'retry', reason })
-        }
-      },
-    )
-  }, [landmarkerRef, startCountdown, resetAnalysisState, startTracking])
+    const result = landmarker ? doCapture(landmarker) : { success: false as const, reason: 'no_pose' as const }
+    store.setCalibrating(false)
+    store.setSaveStep(null)
+    if (result.success) {
+      // Erfolg geht direkt in die Analyse über (#58): keine „gespeichert"-
+      // Bestätigung. Der Store hat die Session bereits gestartet
+      // (calibrate → sessionActive); hier wird der frisch zurückgesetzte
+      // Session-Tracker (rAF-Loop-Ref) scharf geschaltet.
+      startTracking()
+    } else {
+      // Weiche Erfassung (#59): nichts gespeichert → Tor zurück auf idle,
+      // damit der Nutzer ruhig neu auslösen kann (kein Wiederholzwang).
+      resetAnalysisState()
+      setCalState({ kind: 'retry', reason: result.reason })
+    }
+  }, [saveCaptureDue, landmarkerRef, doCapture, startTracking, resetAnalysisState])
 
   // Bewusster Kalibrier-Auslöser (#59): „bereit"/„Haltung speichern" (T4) und
   // der Rückfall-Knopf laufen hierüber. Kein Sofort-Countdown mehr — das
@@ -213,6 +217,7 @@ export function SessionScreen() {
 
   const { startListening, stopListening, status: voiceStatus, error: voiceError } = useVoiceCommands(voiceCommands, true)
   const [calState, setCalState] = useState<CalibrationPhase | null>(null)
+  const saving = usePoseStore((s) => s.saveStep !== null)
 
   // Sprach-Hinweis nach dem Speichern (#111): nach Ablauf einmal neu rendern,
   // damit die Hinweis-Zeile von selbst ruhig wird.
@@ -253,10 +258,10 @@ export function SessionScreen() {
   useEffect(() => {
     if (!readinessArmed) return
     setReadinessArmed(false)
-    if (phase === 'ready-to-calibrate' && !calState) {
+    if (phase === 'ready-to-calibrate' && !calState && !saving) {
       handleCalibrate()
     }
-  }, [readinessArmed, phase, calState, handleCalibrate, setReadinessArmed])
+  }, [readinessArmed, phase, calState, saving, handleCalibrate, setReadinessArmed])
 
   // Mikro-Knopf: läuft die Erkennung, schaltet ein Tipp sie aus. Ist sie aus oder
   // in einem Fehlerzustand (z. B. Mikro nicht freigegeben), ist der Tipp eine
@@ -270,12 +275,13 @@ export function SessionScreen() {
     }
   }, [voiceStatus, startListening, stopListening])
 
-  const row = computeControlRow({ phase, viewMode, calibrating: calState !== null })
+  const calibrating = calState !== null || saving
+  const row = computeControlRow({ phase, viewMode, calibrating })
   const hintLine = computeHintLine({
     phase,
     phaseHint: hint,
     viewMode,
-    calibrating: calState !== null,
+    calibrating,
     voiceStatus,
     voiceError,
     calibratedAt,
@@ -333,15 +339,18 @@ export function SessionScreen() {
           />
 
           {/* Randglühen am Innenrand des Rahmens (#104, Entscheidung 6) — hinter dem Overlay aus */}
-          {!calState && <DistanceGlow />}
+          {!calibrating && <DistanceGlow />}
 
           {/* Kärtchen oben mittig im Rahmen: Abstand, Bereitschaft, Tipp (#101) */}
-          {!calState && <DistanceHint />}
-          {!calState && <ReadinessHint />}
-          {!calState && !isFlowRail && <StraightWristTip />}
+          {!calibrating && <DistanceHint />}
+          {!calibrating && <ReadinessHint />}
+          {!calibrating && !isFlowRail && <StraightWristTip />}
+
+          {/* Ruhiges Speichern (#118): Kärtchen oben, Zahl in der Mitte, Glühen pulsiert */}
+          <SaveSequenceOverlay />
         </div>
 
-        {/* Kalibrier-Overlay — Variante C „Minimal HUD"; Status-Kärtchen oben im Rahmen */}
+        {/* „Nochmal versuchen“ nach weicher Erfassung — Variante C „Minimal HUD" */}
         {calState && (
           <CalibrationOverlay
             phase={calState}

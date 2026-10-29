@@ -1,10 +1,11 @@
 import { computeCalibrationView, type CalibrationPhase, type CalibrationTone } from '@/core/calibration/overlay-view'
 
 /**
- * Kalibrier-Overlay — Variante C „Minimal HUD" (Ticket #28, Karte #15).
+ * Kalibrier-Overlay „Nochmal versuchen“ — Variante C „Minimal HUD" (Ticket #28,
+ * Karte #15). Den Countdown zeigt seit #118 `SaveSequenceOverlay`.
  *
- * Keine Karte: ein großer, frei über dem dunklen Kamerabild schwebender
- * Countdown-Zähler (nur die reine Zahl, kein Ring — T4 #60) als Mittelpunkt,
+ * Keine Karte: ein großes, frei über dem dunklen Kamerabild schwebendes
+ * Wiederhol-Zeichen als Mittelpunkt,
  * Titel/Hinweis als heller Text mit Scrim, kompakte CTA am unteren Rand,
  * Status-Pill oben. Folgt dem Projektgrundsatz „Canvas ist primär, Chrome
  * minimal und am Rand".
@@ -19,7 +20,7 @@ import { computeCalibrationView, type CalibrationPhase, type CalibrationTone } f
 
 // Signal-Farben über dem dunklen Kamerabild (literal, analog zu den Canvas-Indikatoren).
 // `success` bleibt im geteilten Ton-Typ (Bereitschafts-Tor #36); das Overlay
-// selbst zeigt seit #58 nur noch sapphire (Countdown) und accent (Nochmal versuchen).
+// selbst zeigt seit #118 nur noch accent (Nochmal versuchen).
 const SAPPHIRE = '#2196F3'
 const SUCCESS = '#2ecc71'
 const PRIMARY = '#002b49'
@@ -70,7 +71,7 @@ export function CalibrationOverlay({ phase, modeLabel, topInset, onRecalibrate }
         </div>
       </div>
 
-      {/* Großer, klarer Zähler + Titel/Hinweis — zentriert (T4 #60: nur die Zahl, kein Ring) */}
+      {/* Wiederhol-Zeichen + Titel/Hinweis — zentriert */}
       <div className="flex flex-col items-center gap-5 px-6 text-center">
         <CountdownGlyph glyph={view.glyph} color={arc} />
         <div style={{ textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
@@ -109,9 +110,8 @@ export function CalibrationOverlay({ phase, modeLabel, topInset, onRecalibrate }
 }
 
 /**
- * Großer, klarer Zähler (T4 #60, Variante A „Randglühen"): nur die reine Zahl
- * (bzw. der Wiederhol-Pfeil), **kein** Ring und **kein** Rahmen. Ein weicher
- * Schlagschatten hebt die Ziffer vom dunklen Kamerabild ab.
+ * Großes Zeichen (Wiederhol-Pfeil), **kein** Ring und **kein** Rahmen. Ein
+ * weicher Schlagschatten hebt es vom dunklen Kamerabild ab.
  */
 function CountdownGlyph({ glyph, color }: { glyph: string; color: string }) {
   return (

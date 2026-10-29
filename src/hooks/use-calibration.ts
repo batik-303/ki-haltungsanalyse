@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import { usePoseStore } from '../store/pose-store'
 import { createMasterPrint } from '../core/calibration/master-print'
 import { computeShoulderWidth } from '../core/calibration/distance-check'
@@ -26,12 +26,11 @@ interface UseCalibrationOptions {
 }
 
 /**
- * Hook for managing calibration flows (standard 3s, timer 10s).
+ * Erfassung der Haltung im Moment nach 3 – 2 – 1. Den Ablauf davor (Lesezeit,
+ * still halten, Zählen, Pause) führt seit #118 der rAF-Loop
+ * (`createSaveSequence` in `usePoseDetection`).
  */
 export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated }: UseCalibrationOptions) {
-  const countdownRef = useRef<number | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
   const doCapture = useCallback((landmarker: PoseLandmarker): CalibrationResult => {
     const video = videoRef.current
     if (!video) return { success: false, reason: 'no_pose' }
@@ -91,41 +90,5 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKn
     return { success: true }
   }, [videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated])
 
-  const startCountdown = useCallback((
-    seconds: number,
-    landmarker: PoseLandmarker,
-    onTick: (remaining: number) => void,
-    onDone: (success: boolean, reason?: CalibrationFailureReason) => void,
-  ) => {
-    usePoseStore.getState().setCalibrating(true)
-    let count = seconds
-
-    onTick(count)
-    intervalRef.current = setInterval(() => {
-      count--
-      if (count > 0) {
-        onTick(count)
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current)
-        const result = doCapture(landmarker)
-        usePoseStore.getState().setCalibrating(false)
-        onDone(result.success, result.reason)
-      }
-    }, 1000)
-  }, [doCapture])
-
-  const cancelCountdown = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-    usePoseStore.getState().setCalibrating(false)
-  }, [])
-
-  return {
-    startCountdown,
-    cancelCountdown,
-    doCapture,
-    countdownRef,
-  }
+  return { doCapture }
 }

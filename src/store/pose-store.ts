@@ -16,6 +16,10 @@ import type {
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import type { ReadinessPhase } from '../core/calibration/readiness-gate'
 import type { PositioningStatus } from '../core/calibration/distance-guidance'
+import type { SaveSequenceState } from '../core/calibration/save-sequence'
+
+/** React-sichtbarer Schnappschuss des ruhigen Speicherns (#118). */
+export type SaveStepSnapshot = Pick<SaveSequenceState, 'step' | 'count' | 'pauseStatus'>
 
 export interface PoseState {
   // Navigation
@@ -46,6 +50,12 @@ export interface PoseState {
   // Warten auf den Abstand dauert ungewöhnlich lange — sanfter Hinweis auf den
   // Knopf „Haltung speichern", **kein** Sperren (kein Festhängen).
   readinessTimedOut: boolean
+
+  // Ruhiges Speichern (#118): Schnappschuss fürs Kärtchen/Glühen/Zahl, `null`
+  // außerhalb des Speicherns. Die Zustandsmaschine lebt als useRef im Hook.
+  saveStep: SaveStepSnapshot | null
+  // Kante: jetzt die Haltung erfassen. Wird vom Verbraucher quittiert.
+  saveCaptureDue: boolean
 
   // Live analysis (updated every frame from canvas loop)
   tensionScore: number
@@ -116,6 +126,8 @@ export interface PoseState {
   setReadiness: (phase: ReadinessPhase, timedOut: boolean) => void
   setReadinessArmed: (armed: boolean) => void
   setCalibrating: (calibrating: boolean) => void
+  setSaveStep: (step: SaveStepSnapshot | null) => void
+  setSaveCaptureDue: (due: boolean) => void
   toggleDebugLandmarks: () => void
   calibrate: (masterPrint: MasterPrint, shoulderWidth: number) => void
   recalibrate: () => void
@@ -182,6 +194,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
   // Kalibrier-Auslöser (#59)
   readinessPhase: 'idle',
   readinessArmed: false,
+  saveStep: null,
+  saveCaptureDue: false,
   readinessTimedOut: false,
 
   // Live analysis
@@ -250,6 +264,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       distanceStatus: 'no-body',
       readinessPhase: 'idle',
       readinessArmed: false,
+      saveStep: null,
+      saveCaptureDue: false,
       readinessTimedOut: false,
       tensionScore: 0,
       smoothedDeviation: 0,
@@ -296,6 +312,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     distanceStatus: 'no-body',
     readinessPhase: 'idle',
     readinessArmed: false,
+    saveStep: null,
+    saveCaptureDue: false,
     readinessTimedOut: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -330,6 +348,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
       distanceStatus: 'no-body',
       readinessPhase: 'idle',
       readinessArmed: false,
+      saveStep: null,
+      saveCaptureDue: false,
       readinessTimedOut: false,
       tensionScore: 0,
       smoothedDeviation: 0,
@@ -359,6 +379,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     lastCalibrationAt: null,
     readinessPhase: 'idle',
     readinessArmed: false,
+    saveStep: null,
+    saveCaptureDue: false,
     readinessTimedOut: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -387,6 +409,10 @@ export const usePoseStore = create<PoseState>((set, get) => ({
 
   setCalibrating: (calibrating) => set({ isCalibrating: calibrating }),
 
+  setSaveStep: (step) => set({ saveStep: step }),
+
+  setSaveCaptureDue: (due) => set({ saveCaptureDue: due }),
+
   toggleDebugLandmarks: () => set((s) => ({ debugLandmarks: !s.debugLandmarks })),
 
   // Kalibrierung geht direkt in die Analyse über (#58): mit dem Speichern der
@@ -401,6 +427,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     isCalibrating: false,
     readinessPhase: 'idle',
     readinessArmed: false,
+    saveStep: null,
+    saveCaptureDue: false,
     readinessTimedOut: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -434,6 +462,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     sessionActive: false,
     readinessPhase: 'idle',
     readinessArmed: false,
+    saveStep: null,
+    saveCaptureDue: false,
     readinessTimedOut: false,
     tensionScore: 0,
     smoothedDeviation: 0,
@@ -494,6 +524,8 @@ export const usePoseStore = create<PoseState>((set, get) => ({
     isCalibrating: false,
     readinessPhase: 'idle',
     readinessArmed: false,
+    saveStep: null,
+    saveCaptureDue: false,
     readinessTimedOut: false,
     tensionScore: 0,
     smoothedDeviation: 0,
