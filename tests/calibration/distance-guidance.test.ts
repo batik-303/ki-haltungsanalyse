@@ -27,10 +27,24 @@ describe('computeDistanceGuidance', () => {
     expect(g.message).toMatch(/bild|kamera/i)
   })
 
-  it('zeigt bei gutem Abstand keinen Hinweis (das Randglühen bestätigt)', () => {
+  it('bestätigt bei gutem Abstand mit „Abstand passt“ und lädt zur Spielhaltung ein (#115, #116)', () => {
     const g = computeDistanceGuidance('good')
-    expect(g.show).toBe(false)
-    expect(g.message).toBe('')
+    expect(g.show).toBe(true)
+    expect(g.message).toBe('Abstand passt')
+    expect(g.detail).toBe('Nimm deine Spielhaltung ein – so, wie du gleich üben willst')
+    expect(g.tone).toBe('blue')
+  })
+
+  it('führt mit gelbem Punkt, solange der Abstand nicht passt (#115)', () => {
+    for (const status of ['too-far', 'too-close', 'no-body'] as const) {
+      const g = computeDistanceGuidance(status)
+      expect(g.tone).toBe('yellow')
+      expect(g.detail).toBe('')
+    }
+  })
+
+  it('zeigt nach dem Speichern (drifted) kein Kärtchen', () => {
+    expect(computeDistanceGuidance('drifted').show).toBe(false)
   })
 
   it('nutzt keine Fehler-/Negativ-Sprache', () => {

@@ -1,5 +1,8 @@
+import { computeDistanceGlowTone, DISTANCE_GLOW_COLORS } from '../core/calibration/distance-glow'
+
 /**
  * Render a dashed target outline showing where to stand before calibration.
+ * Farbe wie das Randglühen: Gelb = Abstand passt noch nicht, Blau = passt (#115).
  */
 export function drawTargetZone(
   ctx: CanvasRenderingContext2D,
@@ -14,7 +17,7 @@ export function drawTargetZone(
   const targetHipY = height * 0.7
 
   ctx.globalAlpha = distanceOk ? 0.2 : 0.12
-  ctx.strokeStyle = distanceOk ? '#2ecc71' : '#5b9bd5'
+  ctx.strokeStyle = DISTANCE_GLOW_COLORS[computeDistanceGlowTone(distanceOk)]
   ctx.lineWidth = 2
   ctx.setLineDash([8, 6])
 

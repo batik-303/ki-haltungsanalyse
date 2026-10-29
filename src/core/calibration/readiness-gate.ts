@@ -18,7 +18,7 @@
  */
 
 import type { Landmark } from '../types'
-import type { CalibrationTone } from './overlay-view'
+import type { DistanceGlowTone } from './distance-glow'
 
 // ── Achsen-Check (Ersatz für Geigen-Erkennung) ──────────────────────
 
@@ -182,13 +182,14 @@ export function createReadinessGate(options: ReadinessGateOptions = {}): Readine
 
 export interface ReadinessView {
   hint: string
-  tone: CalibrationTone
+  /** Farbe des Punkts: Gelb führt, Blau bestätigt — wie das Randglühen (#115). */
+  tone: DistanceGlowTone
 }
 
 /**
  * Bildet die Auslöse-Phase auf ein Ansichtsmodell ab. Ehrliche Sprache (nie
  * „Geige erkannt" — Pose sieht keine Objekte) und positive, ermutigende Töne —
- * **kein Rot**, im Einklang mit der Feedback-Philosophie.
+ * **kein Rot**, kein Grün: Gelb führt, Blau bestätigt (#115).
  *
  * Bei `timedOut` (der Abstand passt ungewöhnlich lange nicht) lenkt der Hinweis
  * sanft auf den Knopf „Haltung speichern" — kein Druck, kein Einsperren, nur ein
@@ -201,19 +202,19 @@ export function computeReadinessView(
     case 'idle':
       return {
         hint: 'Sag „speichern“, wenn du so weit bist',
-        tone: 'sapphire',
+        tone: 'blue',
       }
     case 'waiting':
       return {
         hint: state.timedOut
           ? 'Klappt der Abstand nicht? Tippe auf „Haltung speichern“'
           : 'Rück dich in den guten Abstand — es startet dann von selbst',
-        tone: 'sapphire',
+        tone: 'yellow',
       }
     case 'armed':
       return {
         hint: 'Los geht’s',
-        tone: 'success',
+        tone: 'blue',
       }
   }
 }
