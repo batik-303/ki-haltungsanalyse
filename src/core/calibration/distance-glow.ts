@@ -26,6 +26,13 @@ export const DISTANCE_GLOW_COLORS: Record<DistanceGlowTone, string> = {
 export const DISTANCE_GLOW_OUTER_ALPHA = 0.54
 export const DISTANCE_GLOW_INNER_ALPHA = 0.36
 
+/**
+ * Puls beim Speichern (#118): bei jeder Zahl kurz kräftiger und breiter, dann
+ * weich zurück auf den Grundschein — sichtbar aus dem Augenwinkel.
+ */
+export const DISTANCE_GLOW_PULSE_OUTER_ALPHA = 0.6
+export const DISTANCE_GLOW_PULSE_INNER_ALPHA = 0.47
+
 /** Gelb führt, solange der Abstand nicht passt; Blau bestätigt „passt". */
 export function computeDistanceGlowTone(distanceOk: boolean): DistanceGlowTone {
   return distanceOk ? 'blue' : 'yellow'
@@ -39,7 +46,10 @@ function alphaHex(alpha: number): string {
  * Zwei geschichtete Inset-Schatten: ein weicher, breiter Rand-Schein plus eine
  * innere Kontur — beide in der Glühfarbe.
  */
-export function computeDistanceGlowShadow(tone: DistanceGlowTone): string {
+export function computeDistanceGlowShadow(tone: DistanceGlowTone, { pulse = false }: { pulse?: boolean } = {}): string {
   const color = DISTANCE_GLOW_COLORS[tone]
+  if (pulse) {
+    return `inset 0 0 180px 48px ${color}${alphaHex(DISTANCE_GLOW_PULSE_OUTER_ALPHA)}, inset 0 0 60px 12px ${color}${alphaHex(DISTANCE_GLOW_PULSE_INNER_ALPHA)}`
+  }
   return `inset 0 0 140px 28px ${color}${alphaHex(DISTANCE_GLOW_OUTER_ALPHA)}, inset 0 0 48px 6px ${color}${alphaHex(DISTANCE_GLOW_INNER_ALPHA)}`
 }

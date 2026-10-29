@@ -9,33 +9,18 @@ import { computeCalibrationView } from '../../src/core/calibration/overlay-view'
  * in den ermutigenden Accent-Zustand „Nochmal versuchen", nicht in einen Fehler.
  */
 describe('computeCalibrationView', () => {
-  describe('Countdown (counting)', () => {
-    it('zeigt die Restsekunde als großen Zähler (nur die Zahl) und den sapphire-Ton', () => {
-      const view = computeCalibrationView({ kind: 'counting', count: 3 })
-      expect(view.title).toBe('Haltung einnehmen')
-      expect(view.hint).toBe('Halte deine optimale Spielhaltung …')
-      expect(view.glyph).toBe('3')
-      expect(view.tone).toBe('sapphire')
-      expect(view.ctaBusy).toBe(true)
-      expect(view.ctaAction).toBe('none')
-    })
-
-    it('zählt die reine Restsekunde herunter (kein Ring, kein Fortschritt)', () => {
-      // T4 #60: Variante A zeigt nur die klare Zahl — kein Ring, kein
-      // `progress`-Feld mehr im Ansichtsmodell.
-      expect(computeCalibrationView({ kind: 'counting', count: 2 }).glyph).toBe('2')
-      expect(computeCalibrationView({ kind: 'counting', count: 1 }).glyph).toBe('1')
-      expect('progress' in computeCalibrationView({ kind: 'counting', count: 2 })).toBe(false)
-    })
-
-    it('vermeidet in der CTA das Wort „kalibrieren" (T4 #60)', () => {
-      expect(computeCalibrationView({ kind: 'counting', count: 3 }).cta.toLowerCase()).not.toContain('kalibr')
-    })
+  // Der Countdown steht seit #118 nicht mehr in diesem Overlay: Kärtchen oben
+  // + nur die Zahl in der Mitte zeigt `computeSaveSequenceView`. Der alte große
+  // Text „Haltung einnehmen“ in der Mitte entfällt.
+  it('kennt keinen Countdown-Zustand mehr (#118)', () => {
+    // @ts-expect-error — `counting` gehört nicht mehr zu CalibrationPhase
+    const view = computeCalibrationView({ kind: 'counting', count: 3 })
+    expect(view?.title).not.toBe('Haltung einnehmen')
   })
 
   // Ein Erfolgs-Zustand mit „Session starten"-CTA entfällt bewusst (T2 #58):
   // eine gelungene Kalibrierung geht ohne Bestätigung direkt in die Analyse.
-  // Das Overlay kennt daher nur noch `counting` und `retry`.
+  // Das Overlay kennt daher nur noch `retry`.
 
   describe('Nochmal versuchen (retry) — kein Rot', () => {
     it('nutzt den Accent-Ton und die Wiederhol-CTA (ohne das Wort „kalibrieren")', () => {
@@ -75,10 +60,10 @@ describe('computeCalibrationView', () => {
 
   it('verwendet in keinem Zustand einen Rot-Ton', () => {
     const tones = [
-      computeCalibrationView({ kind: 'counting', count: 2 }).tone,
       computeCalibrationView({ kind: 'retry', reason: 'no_hand' }).tone,
+      computeCalibrationView({ kind: 'retry' }).tone,
     ]
     expect(tones).not.toContain('error')
-    expect(new Set(tones)).toEqual(new Set(['sapphire', 'accent']))
+    expect(new Set(tones)).toEqual(new Set(['accent']))
   })
 })

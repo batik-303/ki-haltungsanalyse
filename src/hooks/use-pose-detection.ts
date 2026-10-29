@@ -16,6 +16,8 @@ import { createOneEuroFilter } from '../core/signal/one-euro-filter'
 import { computeTension } from '../core/signal/tension'
 import { computeShoulderWidth, checkDistance } from '../core/calibration/distance-check'
 import { createReadinessGate } from '../core/calibration/readiness-gate'
+import { createSaveSequence } from '../core/calibration/save-sequence'
+import type { PositioningStatus } from '../core/calibration/distance-guidance'
 import { createSessionTracker } from '../core/session/session-tracker'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
@@ -44,9 +46,6 @@ function createWristRenderFilters() {
   }
 }
 
-// Countdown-Frames für die gemittelte Knick-Kalibrierung (≈ 1 s bei 30 fps).
-const CALIB_KNICK_SAMPLE_COUNT = 30
-
 export function usePoseDetection(
   videoRef: React.RefObject<HTMLVideoElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -57,7 +56,7 @@ export function usePoseDetection(
   // Latest filtered hand landmarks (Left handedness only). Null when wrist
   // mode is inactive, no hand detected, or no Left-categorized hand present.
   const handLandmarksRef = useRef<Landmark[] | null>(null)
-  // Knick mit Seite aus den letzten Countdown-Frames (#91) — die Kalibrierung
+  // Knick mit Seite aus den Frames von 3 – 2 – 1 (#91, #118) — die Kalibrierung
   // mittelt daraus die gespeicherte Haltung statt aus einem einzigen Frame.
   const calibKnickSamplesRef = useRef<number[]>([])
   // Sicherheit der Links/Rechts-Einordnung der linken Hand (Grau-Bedingung #74).
@@ -96,6 +95,9 @@ export function usePoseDetection(
   // Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59). Reine Zustandsmaschine
   // als useRef (Triple-State: Analyse-Zustand nie in Zustand/Store).
   const readinessGateRef = useRef(createReadinessGate())
+  // Ruhiges Speichern (#118): Lesezeit → still halten → 3 – 2 – 1, Pause bei
+  // falschem Abstand. Läuft nur, solange `isCalibrating` gilt.
+  const saveSequenceRef = useRef(createSaveSequence())
 
   const resetAnalysisState = useCallback(() => {
     smootherRef.current.reset()
@@ -110,6 +112,7 @@ export function usePoseDetection(
     knickTrackerRef.current.reset()
     lastAnalysisPathRef.current = null
     readinessGateRef.current.reset()
+    saveSequenceRef.current.reset()
     usePoseStore.getState().setReadiness('idle', false)
     usePoseStore.getState().setReadinessArmed(false)
     const mode = usePoseStore.getState().focusMode
@@ -279,14 +282,38 @@ export function usePoseDetection(
       // since canvas is sized to videoWidth × videoHeight in the init step.
       const aspect = canvas.height > 0 ? canvas.width / canvas.height : 1
 
-      // Countdown läuft: Knick mit Seite sammeln (letzte ~1 s), sonst leeren.
-      const calibSamples = calibKnickSamplesRef.current
-      const calibHand = handLandmarksRef.current
-      if (store.isCalibrating && store.focusMode === 'wrist' && landmarks?.[13] && calibHand) {
-        calibSamples.push(computeSignedKnick2D(landmarks[13], calibHand[0]!, calibHand[9]!, aspect))
-        if (calibSamples.length > CALIB_KNICK_SAMPLE_COUNT) calibSamples.shift()
-      } else if (!store.isCalibrating && calibSamples.length > 0) {
-        calibSamples.length = 0
+      // Ruhiges Speichern (#118): einen Schritt weiterführen, Schnappschuss nur
+      // bei Änderung in den Store. Gesammelt wird nur während 3 – 2 – 1; davor,
+      // in der Pause und außerhalb des Speicherns wird verworfen. Nach der
+      // Erfassungs-Kante (`done`) bleiben die Proben liegen, bis
+      // `doCapture` sie gelesen hat.
+      const stepSave = (distanceStatus: PositioningStatus, shoulderWidth: number) => {
+        const calibSamples = calibKnickSamplesRef.current
+        if (!store.isCalibrating || !store.saveStep) {
+          if (calibSamples.length > 0) calibSamples.length = 0
+          return
+        }
+        const hand = handLandmarksRef.current
+        const wristPoint = (store.focusMode === 'wrist' ? hand?.[0] : undefined) ?? landmarks?.[15] ?? null
+        const save = saveSequenceRef.current.update({
+          dtMs: dt * 1000,
+          distanceStatus,
+          wrist: wristPoint ? { x: wristPoint.x, y: wristPoint.y } : null,
+          aspect,
+          shoulderWidth,
+        })
+        const prev = store.saveStep
+        if (prev.step !== save.step || prev.count !== save.count || prev.pauseStatus !== save.pauseStatus) {
+          usePoseStore.getState().setSaveStep({ step: save.step, count: save.count, pauseStatus: save.pauseStatus })
+        }
+        if (save.sampling) {
+          if (store.focusMode === 'wrist' && landmarks?.[13] && hand) {
+            calibSamples.push(computeSignedKnick2D(landmarks[13], hand[0]!, hand[9]!, aspect))
+          }
+        } else if (save.step !== 'done' && calibSamples.length > 0) {
+          calibSamples.length = 0
+        }
+        if (save.capture) usePoseStore.getState().setSaveCaptureDue(true)
       }
 
       if (landmarks && landmarks.length > 0) {
@@ -302,6 +329,7 @@ export function usePoseDetection(
         if (store.distanceOk !== distOk || store.distanceStatus !== distStatus) {
           usePoseStore.setState({ distanceOk: distOk, distanceStatus: distStatus })
         }
+        stepSave(distStatus, shoulderWidth)
 
         // ── Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (#59) ──
         // Kein Auto-Arm mehr: das Tor feuert nur, wenn zuvor bewusst ausgelöst
@@ -567,6 +595,7 @@ export function usePoseDetection(
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })
         }
+        stepSave('no-body', 0)
         // Auslöse-Tor weiterführen, solange noch nicht kalibriert (#59). Ohne
         // Körper gilt der Abstand als nicht ok → ein bewusster Auslöser wartet
         // ruhig weiter (waiting), ohne Körper bleibt es idle.
@@ -603,5 +632,17 @@ export function usePoseDetection(
     readinessGateRef.current.requestArm()
   }, [])
 
-  return { resetAnalysisState, armReadiness, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking }
+  // Ruhiges Speichern starten (#118): ab jetzt führt der rAF-Loop die Folge;
+  // die Erfassung meldet er über die Kante `saveCaptureDue`.
+  const startSave = useCallback(() => {
+    saveSequenceRef.current.reset()
+    calibKnickSamplesRef.current.length = 0
+    const first = saveSequenceRef.current.state()
+    const store = usePoseStore.getState()
+    store.setSaveStep({ step: first.step, count: first.count, pauseStatus: first.pauseStatus })
+    store.setSaveCaptureDue(false)
+    store.setCalibrating(true)
+  }, [])
+
+  return { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking }
 }

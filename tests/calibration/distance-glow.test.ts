@@ -55,3 +55,17 @@ describe('Stärke des Randglühens', () => {
     expect(computeDistanceGlowShadow('blue')).toContain('#2196F3')
   })
 })
+
+describe('Pulsieren beim Speichern (#118)', () => {
+  it('ist beim Puls kräftiger und breiter als der ruhige Grundschein', () => {
+    const calm = computeDistanceGlowShadow('blue')
+    const pulse = computeDistanceGlowShadow('blue', { pulse: true })
+    expect(pulse).not.toBe(calm)
+    expect(pulse).toContain('#2196F3')
+    const alphas = (s: string) => [...s.matchAll(/#2196F3([0-9a-f]{2})/g)].map((m) => parseInt(m[1]!, 16))
+    const [calmOuter, calmInner] = alphas(calm)
+    const [pulseOuter, pulseInner] = alphas(pulse)
+    expect(pulseOuter!).toBeGreaterThan(calmOuter!)
+    expect(pulseInner!).toBeGreaterThan(calmInner!)
+  })
+})
