@@ -13,7 +13,7 @@ describe('computeReadinessView', () => {
   it('idle: ruhig, lädt zum bewussten Auslöser ein', () => {
     const view = computeReadinessView({ phase: 'idle', timedOut: false })
     expect(view.tone).toBe('sapphire')
-    expect(view.hint.length).toBeGreaterThan(0)
+    expect(view.hint).toBe('Sag „speichern“, wenn du so weit bist')
   })
 
   it('waiting: führt sanft zum Abstand und verspricht den Auto-Start', () => {

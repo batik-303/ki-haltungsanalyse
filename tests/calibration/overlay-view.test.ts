@@ -50,25 +50,25 @@ describe('computeCalibrationView', () => {
       expect(view.ctaBusy).toBe(false)
     })
 
-    it('nennt bei fehlender Hand den konkreten Hinweis (auf „bereit" umgetextet)', () => {
+    it('nennt bei fehlender Hand den konkreten Hinweis (auf „speichern" umgetextet, #111)', () => {
       const view = computeCalibrationView({ kind: 'retry', reason: 'no_hand' })
-      expect(view.hint).toBe('Hand sichtbar ins Bild halten und „bereit“ sagen')
+      expect(view.hint).toBe('Hand sichtbar ins Bild halten und „speichern“ sagen')
       expect(view.hint.toLowerCase()).not.toContain('kalibr')
     })
 
     it('lädt bei fehlender Spielhaltung sanft neu ein (weiche Erfassung, #59)', () => {
       const view = computeCalibrationView({ kind: 'retry', reason: 'no_posture' })
-      expect(view.hint).toBe('Alles gut — nimm ruhig deine Spielhaltung ein und sag „bereit“')
+      expect(view.hint).toBe('Alles gut — nimm ruhig deine Spielhaltung ein und sag „speichern“')
       expect(view.tone).toBe('accent')
       expect(view.ctaAction).toBe('recalibrate')
     })
 
-    it('gibt sonst einen allgemeinen, ermutigenden Hinweis (auf „bereit" umgetextet)', () => {
+    it('gibt sonst einen allgemeinen, ermutigenden Hinweis (auf „speichern" umgetextet, #111)', () => {
       expect(computeCalibrationView({ kind: 'retry', reason: 'no_pose' }).hint).toBe(
-        'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
+        'Haltung noch nicht erkannt — ruhig hinstellen und „speichern“ sagen',
       )
       expect(computeCalibrationView({ kind: 'retry' }).hint).toBe(
-        'Haltung noch nicht erkannt — ruhig hinstellen und „bereit“ sagen',
+        'Haltung noch nicht erkannt — ruhig hinstellen und „speichern“ sagen',
       )
     })
   })

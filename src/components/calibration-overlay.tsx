@@ -101,7 +101,7 @@ export function CalibrationOverlay({ phase, modeLabel, topInset, onRecalibrate }
         </button>
         <div className="flex items-center gap-1.5 font-label text-[15px] text-white">
           <span>🎤 Oder sag</span>
-          <span className="font-semibold">„bereit“</span>
+          <span className="font-semibold">„speichern“</span>
         </div>
       </div>
     </div>
