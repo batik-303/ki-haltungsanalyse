@@ -244,8 +244,9 @@ function VariantC({ view, onAgain, onHome }: VariantProps) {
 // ---------- Variante D: Anker-Kreis + Übungszeit + „Mehr" (Wunsch 02.11.) ----------
 // Kreis aus A, darunter sichtbar nur „Diese Übung“. Unter „Mehr“: Serie,
 // Ankerpunkte und Übungszeit Woche/Monat/insgesamt. Kein Prozent, kein Ruhe-Satz.
-function VariantD({ view, onAgain, onHome }: VariantProps) {
+function VariantD({ view, stats, onAgain, onHome }: VariantProps) {
   const [open, setOpen] = useState(false)
+  const t = inWords(anchorSeconds(stats))
   const periods = demoPeriods()
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center px-5 pt-12 pb-24">
@@ -263,10 +264,14 @@ function VariantD({ view, onAgain, onHome }: VariantProps) {
           }}
         >
           <div className="flex flex-col items-center">
-            <div className="font-headline font-light tabular-nums leading-none text-[clamp(3.5rem,18vw,5.5rem)] tracking-[-0.03em]">
-              {view.anchorDurationStr}
+            <div className="font-headline leading-none">
+              <span className="font-light tabular-nums text-[clamp(3.5rem,18vw,5.5rem)] tracking-[-0.03em]">
+                {t.big}
+              </span>
+              <span className="ml-1.5 text-[clamp(1.25rem,6vw,1.9rem)]">{t.unit}</span>
             </div>
-            <div className="mt-1 font-label text-sm opacity-85">Minuten im Anker</div>
+            {t.rest && <div className="mt-1 font-headline text-[clamp(1.1rem,5vw,1.5rem)] opacity-90">{t.rest}</div>}
+            <div className="mt-2 font-label text-sm opacity-85">im Anker</div>
           </div>
         </div>
 
