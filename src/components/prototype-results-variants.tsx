@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 export const VARIANTS = ['D', 'A', 'B', 'C', 'Jetzt'] as const
 type VariantKey = (typeof VARIANTS)[number]
 const VARIANT_NAMES: Record<VariantKey, string> = {
-  D: 'Anker-Kreis + Übungszeit + „Mehr“',
+  D: 'Anker-Kreis + diese Übung + „Mehr“',
   A: 'Nur der Anker',
   B: 'Zeit in Worten + kleine Zeile',
   C: 'Blaues Band + „Mehr“',
@@ -53,9 +53,11 @@ function demoStats(kind: 'kurz' | 'lang'): SessionStats {
   }
 }
 
-/** Beispiel: insgesamt mit der App geübt (Sekunden). */
-function demoLifetimeSeconds(): number {
-  return readParam('demo') === 'kurz' ? 25 * 60 : 3 * 3600 + 20 * 60
+/** Beispiel: Übungszeit mit der App je Zeitraum (Sekunden). Echt später aus gespeicherten Übungen. */
+function demoPeriods(): { week: number; month: number; total: number } {
+  return readParam('demo') === 'kurz'
+    ? { week: 25 * 60, month: 25 * 60, total: 25 * 60 }
+    : { week: 70 * 60, month: 165 * 60, total: 200 * 60 }
 }
 /** „3 Std. 20 Min." bzw. „25 Min." */
 function hoursMinutes(sec: number) {
@@ -240,10 +242,11 @@ function VariantC({ view, onAgain, onHome }: VariantProps) {
 }
 
 // ---------- Variante D: Anker-Kreis + Übungszeit + „Mehr" (Wunsch 02.11.) ----------
-// Kreis aus A, darunter sichtbar: wie lange geübt (diese Übung + insgesamt mit
-// der App). Serie und Ankerpunkte eingeklappt wie in C. Kein Prozent, kein Ruhe-Satz.
+// Kreis aus A, darunter sichtbar nur „Diese Übung“. Unter „Mehr“: Serie,
+// Ankerpunkte und Übungszeit Woche/Monat/insgesamt. Kein Prozent, kein Ruhe-Satz.
 function VariantD({ view, onAgain, onHome }: VariantProps) {
   const [open, setOpen] = useState(false)
+  const periods = demoPeriods()
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center px-5 pt-12 pb-24">
       <div className="w-full max-w-[420px] flex flex-col items-center gap-8 text-center">
@@ -267,16 +270,9 @@ function VariantD({ view, onAgain, onHome }: VariantProps) {
           </div>
         </div>
 
-        <div className="flex w-full justify-center gap-6 font-label text-sm text-muted-foreground">
-          <div>
-            Diese Übung
-            <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
-          </div>
-          <div className="w-px bg-border" />
-          <div>
-            Mit Blue Anchor insgesamt
-            <div className="font-mono text-lg text-foreground">{hoursMinutes(demoLifetimeSeconds())}</div>
-          </div>
+        <div className="font-label text-sm text-muted-foreground">
+          Diese Übung
+          <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
         </div>
 
         <Actions onAgain={onAgain} onHome={onHome} />
@@ -289,17 +285,36 @@ function VariantD({ view, onAgain, onHome }: VariantProps) {
           <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
         </button>
         {open && (
-          <dl className="grid w-full grid-cols-2 gap-3 text-left">
-            {[
-              ['Längste Serie', `${view.streakStr} min`],
-              ['Ankerpunkte', `${view.anchorPoints ?? 0}`],
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-xl bg-secondary px-4 py-3">
-                <dt className="font-label text-xs text-muted-foreground">{k}</dt>
-                <dd className="font-mono text-base text-foreground">{v}</dd>
+          <div className="flex w-full flex-col gap-4 text-left">
+            <dl className="grid grid-cols-2 gap-3">
+              {[
+                ['Längste Serie', `${view.streakStr} min`],
+                ['Ankerpunkte', `${view.anchorPoints ?? 0}`],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-xl bg-secondary px-4 py-3">
+                  <dt className="font-label text-xs text-muted-foreground">{k}</dt>
+                  <dd className="font-mono text-base text-foreground">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div>
+              <div className="mb-2 font-label text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                Geübt mit Blue Anchor
               </div>
-            ))}
-          </dl>
+              <dl className="grid grid-cols-3 gap-3">
+                {[
+                  ['Diese Woche', periods.week],
+                  ['Dieser Monat', periods.month],
+                  ['Insgesamt', periods.total],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-xl bg-secondary px-3 py-3">
+                    <dt className="font-label text-xs text-muted-foreground">{k}</dt>
+                    <dd className="font-mono text-sm text-foreground">{hoursMinutes(Number(v))}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
         )}
       </div>
     </div>
