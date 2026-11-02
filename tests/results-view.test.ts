@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { computeResultsView } from '../src/core/session/results-view'
 import type { SessionStats } from '../src/core/types'
 
-// Reines View-Modell für den „Anker-Fokus"-Results-Screen (Variante A, #21/#44).
+// Reines View-Modell für den „Anker-Fokus"-Results-Screen (Variante D, #128).
 // Prüft nur Ableitungen aus rohen SessionStats — keine React-/DOM-Belange.
 
 // Basis-Session: 12:34 gesamt, 68 % im Flow, längste Serie 2:23, 105 Ankerpunkte.
@@ -24,69 +24,63 @@ function baseStats(overrides: Partial<SessionStats> = {}): SessionStats {
 
 describe('computeResultsView', () => {
   it('bildet das Mode-Label aus dem FocusMode', () => {
-    const v = computeResultsView(baseStats(), 'violin', 0)
+    const v = computeResultsView(baseStats(), 'violin')
     expect(v.modeLabel).toBe('🎻 Geige')
   })
 
   it('formatiert die Gesamtdauer als mm:ss ohne führende Minuten-Null', () => {
-    const v = computeResultsView(baseStats(), 'violin', 0)
+    const v = computeResultsView(baseStats(), 'violin')
     expect(v.totalDurationStr).toBe('12:34')
   })
 
-  it('berechnet die „Im Anker"-Dauer als Flow-Anteil der Gesamtdauer (mm:ss)', () => {
-    // 68 % von 754 s = 512,72 s = 8:32
-    const v = computeResultsView(baseStats(), 'violin', 0)
-    expect(v.anchorDurationStr).toBe('8:32')
-  })
 
-  it('gibt den gerundeten Flow-Prozentsatz zurück', () => {
-    const v = computeResultsView(baseStats({ zonePercentages: { flow: 67.6, bewusst: 21, achtung: 9, limit: 2.4 } }), 'violin', 0)
-    expect(v.flowPercent).toBe(68)
-  })
 
   it('formatiert die längste Serie als mm:ss', () => {
-    const v = computeResultsView(baseStats(), 'violin', 0)
+    const v = computeResultsView(baseStats(), 'violin')
     expect(v.streakStr).toBe('2:23')
   })
 
   it('reicht die Ankerpunkte durch', () => {
-    const v = computeResultsView(baseStats(), 'violin', 0)
+    const v = computeResultsView(baseStats(), 'violin')
     expect(v.anchorPoints).toBe(105)
   })
 
   it('lässt Ankerpunkte undefiniert, wenn keine erfasst wurden', () => {
-    const v = computeResultsView(baseStats({ anchorPoints: undefined }), 'violin', 0)
+    const v = computeResultsView(baseStats({ anchorPoints: undefined }), 'violin')
     expect(v.anchorPoints).toBeUndefined()
   })
 
-  it('erkennt einen neuen Rekord (Serie erreicht oder übertrifft die Bestmarke)', () => {
-    const v = computeResultsView(baseStats({ maxFlowStreak: 143 }), 'violin', 143)
-    expect(v.isNewRecord).toBe(true)
-    expect(v.successTitle).toBe('Neue persönliche Bestmarke')
+
+
+
+
+
+  it('zeigt die Zeit im Anker in Worten: Minuten groß, Sekunden darunter (#128)', () => {
+    // 68 % von 754 s = 512 s = 8 Min. 32 Sek.
+    const v = computeResultsView(baseStats(), 'violin')
+    expect(v.anchorTime).toEqual({ big: '8', unit: 'Min.', rest: '32 Sek.' })
   })
 
-  it('meldet keinen Rekord unterhalb der Bestmarke, bleibt aber positiv formuliert', () => {
-    const v = computeResultsView(baseStats({ maxFlowStreak: 90 }), 'violin', 143)
-    expect(v.isNewRecord).toBe(false)
-    expect(v.successTitle).toBe('Deine längste ruhige Serie')
+  it('zeigt unter einer Minute nur die Sekunden (z. B. „41 Sek.“)', () => {
+    // 50 % von 82 s = 41 s
+    const v = computeResultsView(baseStats({ durationMs: 82_000, zonePercentages: { flow: 50, bewusst: 50, achtung: 0, limit: 0 } }), 'violin')
+    expect(v.anchorTime).toEqual({ big: '41', unit: 'Sek.' })
   })
 
-  it('meldet keinen Rekord bei einer Null-Serie, selbst wenn die Bestmarke 0 ist', () => {
-    const v = computeResultsView(baseStats({ maxFlowStreak: 0 }), 'violin', 0)
-    expect(v.isNewRecord).toBe(false)
+  it('lässt die Sekunden-Zeile bei glatten Minuten weg (10 Min., nicht „0 Sek.“)', () => {
+    const v = computeResultsView(baseStats({ durationMs: 600_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    expect(v.anchorTime).toEqual({ big: '10', unit: 'Min.' })
   })
 
-  it('liefert für jeden Modus einen nicht-leeren Ruhe-Impuls', () => {
-    for (const mode of ['violin', 'wrist', 'shoulder'] as const) {
-      expect(computeResultsView(baseStats(), mode, 0).calmMessage.length).toBeGreaterThan(0)
+  it('zeigt bei null Sekunden im Anker „0 Sek.“', () => {
+    const v = computeResultsView(baseStats({ zonePercentages: { flow: 0, bewusst: 100, achtung: 0, limit: 0 } }), 'violin')
+    expect(v.anchorTime).toEqual({ big: '0', unit: 'Sek.' })
+  })
+
+  it('zeigt keine Prozente, keinen Ruhe-Satz und keine Bestmarken-Karte mehr (#128)', () => {
+    const v = computeResultsView(baseStats(), 'wrist')
+    for (const removed of ['flowPercent', 'calmMessage', 'successTitle', 'isNewRecord']) {
+      expect(v).not.toHaveProperty(removed)
     }
-  })
-
-  it('passt den Ruhe-Impuls an den Modus an (Handgelenk vs. Schulter)', () => {
-    const wrist = computeResultsView(baseStats(), 'wrist', 0).calmMessage
-    const shoulder = computeResultsView(baseStats(), 'shoulder', 0).calmMessage
-    expect(wrist).not.toBe(shoulder)
-    expect(wrist).toContain('Handgelenk')
-    expect(shoulder).toContain('Schulter')
   })
 })
