@@ -1,8 +1,11 @@
 // Übungszeit mit Blue Anchor je Zeitraum (#128). Reine Funktionen.
 import type { StoredSession } from '../types'
 
-/** Schreibt eine Dauer als „3 Std. 20 Min."; unter einer Stunde nur „25 Min.". */
+/** Schreibt eine Dauer als „3 Std. 20 Min."; unter einer Stunde nur „25 Min.";
+ *  unter einer Minute „unter 1 Min." (positiv statt „0 Min.", #128). */
 export function formatHoursMinutes(durationMs: number): string {
+  if (durationMs > 0 && durationMs < 60_000) return 'unter 1 Min.'
+
   const totalMinutes = Math.floor(durationMs / 60_000)
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60

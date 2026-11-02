@@ -12,6 +12,10 @@ describe('formatHoursMinutes', () => {
     expect(formatHoursMinutes(25 * 60_000)).toBe('25 Min.')
   })
 
+  it('zeigt eine kurze Übungszeit unter einer Minute als „unter 1 Min.“ statt „0 Min.“', () => {
+    expect(formatHoursMinutes(20_000)).toBe('unter 1 Min.')
+  })
+
   it('zeigt ohne Übungszeit „0 Min.“', () => {
     expect(formatHoursMinutes(0)).toBe('0 Min.')
   })
