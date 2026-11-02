@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Medal, RotateCcw, Share2 } from 'lucide-react'
 import { getPersonalBestStreak } from '@/core/persistence/session-db'
 import { computeResultsView } from '@/core/session/results-view'
+import { PrototypeResults } from '@/components/prototype-results-variants'
 
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
@@ -28,8 +29,9 @@ export function ResultsScreen() {
 
   const view = computeResultsView(lastStats, focusMode, personalBest)
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-5 py-10">
+  // PROTOTYP #127: Varianten A/B/C + heutige Seite („Jetzt“) zum Vergleich.
+  const current = (
+    <div className="min-h-screen bg-background flex flex-col items-center px-5 py-10 pb-24">
       <div className="w-full max-w-[560px] flex flex-col items-center gap-8 text-center">
         {/* Mode-Chip: Instrument · Gesamtdauer */}
         <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 font-label text-sm font-semibold text-secondary-foreground">
@@ -118,5 +120,14 @@ export function ResultsScreen() {
         </div>
       </div>
     </div>
+  )
+  return (
+    <PrototypeResults
+      current={current}
+      view={view}
+      stats={lastStats}
+      onAgain={practiceAgain}
+      onHome={goHome}
+    />
   )
 }
