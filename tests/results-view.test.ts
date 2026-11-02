@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { computeResultsView } from '../src/core/session/results-view'
 import type { SessionStats } from '../src/core/types'
 
-// Reines View-Modell für den „Anker-Fokus"-Results-Screen (Variante D, #128).
+// Reines View-Modell für die schlichte Ergebnis-Seite (Variante D, #128).
 // Prüft nur Ableitungen aus rohen SessionStats — keine React-/DOM-Belange.
 
 // Basis-Session: 12:34 gesamt, 68 % im Flow, längste Serie 2:23, 105 Ankerpunkte.
@@ -33,8 +33,6 @@ describe('computeResultsView', () => {
     expect(v.totalDurationStr).toBe('12:34')
   })
 
-
-
   it('formatiert die längste Serie als mm:ss', () => {
     const v = computeResultsView(baseStats(), 'violin')
     expect(v.streakStr).toBe('2:23')
@@ -45,15 +43,10 @@ describe('computeResultsView', () => {
     expect(v.anchorPoints).toBe(105)
   })
 
-  it('lässt Ankerpunkte undefiniert, wenn keine erfasst wurden', () => {
+  it('zeigt 0 Ankerpunkte, wenn keine erfasst wurden', () => {
     const v = computeResultsView(baseStats({ anchorPoints: undefined }), 'violin')
-    expect(v.anchorPoints).toBeUndefined()
+    expect(v.anchorPoints).toBe(0)
   })
-
-
-
-
-
 
   it('zeigt die Zeit im Anker in Worten: Minuten groß, Sekunden darunter (#128)', () => {
     // 68 % von 754 s = 512 s = 8 Min. 32 Sek.
@@ -77,10 +70,13 @@ describe('computeResultsView', () => {
     expect(v.anchorTime).toEqual({ big: '0', unit: 'Sek.' })
   })
 
-  it('zeigt keine Prozente, keinen Ruhe-Satz und keine Bestmarken-Karte mehr (#128)', () => {
-    const v = computeResultsView(baseStats(), 'wrist')
-    for (const removed of ['flowPercent', 'calmMessage', 'successTitle', 'isNewRecord']) {
-      expect(v).not.toHaveProperty(removed)
-    }
+  it('zeigt glatte 1 Minute als „1 Min.“ (60 s)', () => {
+    const v = computeResultsView(baseStats({ durationMs: 60_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    expect(v.anchorTime).toEqual({ big: '1', unit: 'Min.' })
+  })
+
+  it('zeigt 541 s als „9 Min.“ und „1 Sek.“', () => {
+    const v = computeResultsView(baseStats({ durationMs: 541_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    expect(v.anchorTime).toEqual({ big: '9', unit: 'Min.', rest: '1 Sek.' })
   })
 })

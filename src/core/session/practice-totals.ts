@@ -1,4 +1,5 @@
 // Übungszeit mit Blue Anchor je Zeitraum (#128). Reine Funktionen.
+import type { StoredSession } from '../types'
 
 /** Schreibt eine Dauer als „3 Std. 20 Min."; unter einer Stunde nur „25 Min.". */
 export function formatHoursMinutes(durationMs: number): string {
@@ -8,12 +9,9 @@ export function formatHoursMinutes(durationMs: number): string {
   return hours > 0 ? `${hours} Std. ${minutes} Min.` : `${minutes} Min.`
 }
 
-/** Was von einer gespeicherten Übung fürs Zusammenzählen gebraucht wird. */
-export interface PracticeEntry {
-  /** Zeitpunkt des Speicherns (Ende der Übung), ms seit 1970. */
-  timestamp: number
-  durationMs: number
-}
+/** Was von einer gespeicherten Übung fürs Zusammenzählen gebraucht wird
+ *  (`timestamp` = Zeitpunkt des Speicherns, also Ende der Übung). */
+export type PracticeEntry = Pick<StoredSession, 'timestamp' | 'durationMs'>
 
 export interface PracticeTotals {
   weekMs: number

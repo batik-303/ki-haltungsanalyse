@@ -24,8 +24,8 @@ export interface ResultsView {
   anchorTime: AnchorTimeWords
   /** Längste ununterbrochene ruhige Serie als mm:ss. */
   streakStr: string
-  /** Ankerpunkte der Session (fehlt, wenn keine erfasst wurden). */
-  anchorPoints?: number
+  /** Ankerpunkte der Session (0, wenn keine erfasst wurden). */
+  anchorPoints: number
 }
 
 /** „8 Min." + „32 Sek."; unter einer Minute nur „41 Sek."; glatte Minuten ohne Sekunden-Zeile. */
@@ -59,6 +59,6 @@ export function computeResultsView(stats: SessionStats, focusMode: FocusMode): R
     totalDurationStr: formatMmSs(totalSeconds),
     anchorTime: formatAnchorTimeWords(anchorSeconds),
     streakStr: formatMmSs(stats.maxFlowStreak),
-    anchorPoints: stats.anchorPoints,
+    anchorPoints: stats.anchorPoints ?? 0,
   }
 }

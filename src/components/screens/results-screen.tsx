@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 
 // Schlichte Ergebnis-Seite (Variante D, #127/#128): blauer Anker-Kreis mit der
 // Zeit im Anker in Worten, darunter nur „Diese Übung". Alles Weitere wartet
-// zugeklappt unter „Mehr anzeigen". Keine Prozente, kein Ruhe-Satz.
+// zugeklappt unter „Mehr anzeigen".
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
   const focusMode = usePoseStore((s) => s.focusMode)
@@ -101,20 +101,20 @@ export function ResultsScreen() {
         </div>
 
         {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit je Zeitraum */}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           aria-expanded={showMore}
-          className="flex items-center gap-1 font-label text-sm text-muted-foreground"
+          className="h-auto gap-1 font-label text-sm font-normal text-muted-foreground"
           onClick={() => setShowMore((open) => !open)}
         >
           {showMore ? 'Weniger anzeigen' : 'Mehr anzeigen'}
           <ChevronDown className={cn('size-4 transition-transform', showMore && 'rotate-180')} />
-        </button>
+        </Button>
         {showMore && (
           <div className="flex w-full flex-col gap-4 text-left">
             <dl className="grid grid-cols-2 gap-3">
               <InfoTile label="Längste Serie" value={`${view.streakStr} min`} />
-              <InfoTile label="Ankerpunkte" value={String(view.anchorPoints ?? 0)} />
+              <InfoTile label="Ankerpunkte" value={String(view.anchorPoints)} />
             </dl>
             {totals && (
               <div>

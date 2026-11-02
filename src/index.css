@@ -31,7 +31,6 @@
   --ui-accent: #B07A24;
   --ui-accent-foreground: #2b1a00;
   /* Weiche, warme Erfolgs-Tönung (Verlauf-Endpunkt der Erfolgs-Karte, #44). */
-  --ui-accent-soft: #fff4d6;
   --ui-destructive: #4a575f;
   --ui-destructive-foreground: #ffffff;
   --ui-card: #ffffff;
@@ -60,7 +59,6 @@
      über dem Kamerabild, nicht ein aufgehellter Ton. */
   --ui-accent: #B07A24;
   --ui-accent-foreground: #2b1a00;
-  --ui-accent-soft: #2c3a24;
   --ui-destructive: #4a575f;
   --ui-destructive-foreground: #ffffff;
   --ui-card: #0d1b2a;
@@ -131,7 +129,6 @@
   --color-secondary-foreground: var(--ui-secondary-foreground);
   --color-accent: var(--ui-accent);
   --color-accent-foreground: var(--ui-accent-foreground);
-  --color-accent-soft: var(--ui-accent-soft);
   --color-destructive: var(--ui-destructive);
   --color-destructive-foreground: var(--ui-destructive-foreground);
   --color-card: var(--ui-card);
