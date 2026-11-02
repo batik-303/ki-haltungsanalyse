@@ -11,9 +11,10 @@ import type { SessionStats } from '@/core/types'
 import type { ResultsView } from '@/core/session/results-view'
 import { cn } from '@/lib/utils'
 
-export const VARIANTS = ['A', 'B', 'C', 'Jetzt'] as const
+export const VARIANTS = ['D', 'A', 'B', 'C', 'Jetzt'] as const
 type VariantKey = (typeof VARIANTS)[number]
 const VARIANT_NAMES: Record<VariantKey, string> = {
+  D: 'Anker-Kreis + Übungszeit + „Mehr“',
   A: 'Nur der Anker',
   B: 'Zeit in Worten + kleine Zeile',
   C: 'Blaues Band + „Mehr“',
@@ -32,7 +33,7 @@ function writeParam(name: string, value: string) {
 
 export function readVariant(): VariantKey {
   const v = readParam('variant')
-  return (VARIANTS as readonly string[]).includes(v ?? '') ? (v as VariantKey) : 'A'
+  return (VARIANTS as readonly string[]).includes(v ?? '') ? (v as VariantKey) : 'D'
 }
 
 // ---------- Beispiel-Daten ----------
@@ -50,6 +51,17 @@ function demoStats(kind: 'kurz' | 'lang'): SessionStats {
     maxFlowStreak: kind === 'kurz' ? 22 : 194,
     anchorPoints: kind === 'kurz' ? 8 : 107,
   }
+}
+
+/** Beispiel: insgesamt mit der App geübt (Sekunden). */
+function demoLifetimeSeconds(): number {
+  return readParam('demo') === 'kurz' ? 25 * 60 : 3 * 3600 + 20 * 60
+}
+/** „3 Std. 20 Min." bzw. „25 Min." */
+function hoursMinutes(sec: number) {
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  return h > 0 ? `${h} Std. ${m} Min.` : `${m} Min.`
 }
 
 /** Beim Laden mit ?demo= direkt auf die Ergebnis-Seite springen. */
@@ -122,9 +134,6 @@ function VariantA({ view, onAgain, onHome }: VariantProps) {
             <div className="mt-1 font-label text-sm opacity-85">Minuten im Anker</div>
           </div>
         </div>
-        <p className="max-w-[340px] text-center font-headline text-[1.02rem] leading-relaxed text-muted-foreground">
-          {view.calmMessage}
-        </p>
       </div>
 
       <div className="w-full max-w-[420px]">
@@ -170,10 +179,6 @@ function VariantB({ view, stats, onAgain, onHome }: VariantProps) {
           </div>
         </div>
 
-        <div className="w-full rounded-2xl bg-secondary px-6 py-5 text-left text-secondary-foreground">
-          <p className="font-headline text-[1.02rem] font-medium leading-relaxed">{view.calmMessage}</p>
-        </div>
-
         <Actions onAgain={onAgain} onHome={onHome} />
       </div>
     </div>
@@ -204,7 +209,6 @@ function VariantC({ view, onAgain, onHome }: VariantProps) {
       </div>
 
       <div className="mx-auto flex w-full max-w-[520px] flex-col items-center gap-6 px-5 pt-8 pb-24 text-center">
-        <p className="font-headline text-[1.02rem] leading-relaxed text-foreground">{view.calmMessage}</p>
 
         <Actions onAgain={onAgain} onHome={onHome} />
 
@@ -235,7 +239,75 @@ function VariantC({ view, onAgain, onHome }: VariantProps) {
   )
 }
 
+// ---------- Variante D: Anker-Kreis + Übungszeit + „Mehr" (Wunsch 02.11.) ----------
+// Kreis aus A, darunter sichtbar: wie lange geübt (diese Übung + insgesamt mit
+// der App). Serie und Ankerpunkte eingeklappt wie in C. Kein Prozent, kein Ruhe-Satz.
+function VariantD({ view, onAgain, onHome }: VariantProps) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="min-h-[100dvh] bg-background flex flex-col items-center px-5 pt-12 pb-24">
+      <div className="w-full max-w-[420px] flex flex-col items-center gap-8 text-center">
+        <div className="font-label text-sm text-muted-foreground">{view.modeLabel}</div>
+
+        <div
+          className="grid place-items-center rounded-full text-white"
+          style={{
+            width: 'min(72vw, 300px)',
+            height: 'min(72vw, 300px)',
+            background:
+              'radial-gradient(circle at 35% 30%, var(--color-sapphire-light), var(--color-sapphire) 45%, var(--color-sapphire-deep))',
+            boxShadow: '0 0 60px 10px color-mix(in srgb, var(--color-sapphire) 35%, transparent)',
+          }}
+        >
+          <div className="flex flex-col items-center">
+            <div className="font-headline font-light tabular-nums leading-none text-[clamp(3.5rem,18vw,5.5rem)] tracking-[-0.03em]">
+              {view.anchorDurationStr}
+            </div>
+            <div className="mt-1 font-label text-sm opacity-85">Minuten im Anker</div>
+          </div>
+        </div>
+
+        <div className="flex w-full justify-center gap-6 font-label text-sm text-muted-foreground">
+          <div>
+            Diese Übung
+            <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
+          </div>
+          <div className="w-px bg-border" />
+          <div>
+            Mit Blue Anchor insgesamt
+            <div className="font-mono text-lg text-foreground">{hoursMinutes(demoLifetimeSeconds())}</div>
+          </div>
+        </div>
+
+        <Actions onAgain={onAgain} onHome={onHome} />
+
+        <button
+          className="flex items-center gap-1 font-label text-sm text-muted-foreground"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+          <ChevronDown className={cn('size-4 transition-transform', open && 'rotate-180')} />
+        </button>
+        {open && (
+          <dl className="grid w-full grid-cols-2 gap-3 text-left">
+            {[
+              ['Längste Serie', `${view.streakStr} min`],
+              ['Ankerpunkte', `${view.anchorPoints ?? 0}`],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-xl bg-secondary px-4 py-3">
+                <dt className="font-label text-xs text-muted-foreground">{k}</dt>
+                <dd className="font-mono text-base text-foreground">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const VARIANT_COMPONENTS: Record<Exclude<VariantKey, 'Jetzt'>, (p: VariantProps) => JSX.Element> = {
+  D: VariantD,
   A: VariantA,
   B: VariantB,
   C: VariantC,
@@ -247,7 +319,7 @@ export function PrototypeResults({ current, ...props }: VariantProps & { current
   const go = (dir: 1 | -1) => {
     setVariant((cur) => {
       const i = VARIANTS.indexOf(cur)
-      const next = VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length] ?? 'A'
+      const next = VARIANTS[(i + dir + VARIANTS.length) % VARIANTS.length] ?? 'D'
       writeParam('variant', next)
       return next
     })
