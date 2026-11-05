@@ -4,11 +4,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronDown, RotateCcw } from 'lucide-react'
 import { loadAllSessions } from '@/core/persistence/session-db'
 import { computeResultsView } from '@/core/session/results-view'
-import {
-  computePracticeTotals,
-  formatHoursMinutes,
-  type PracticeTotals,
-} from '@/core/session/practice-totals'
+import { computeTotalPracticeMs, formatHoursMinutes } from '@/core/session/practice-totals'
 import { cn } from '@/lib/utils'
 
 // Schlichte Ergebnis-Seite (Variante D, #127/#128): blauer Anker-Kreis mit der
@@ -21,11 +17,11 @@ export function ResultsScreen() {
 
   const [showMore, setShowMore] = useState(false)
 
-  // Übungszeit je Zeitraum aus den lokal gespeicherten Übungen (nur dieses Gerät).
-  const [totals, setTotals] = useState<PracticeTotals | null>(null)
+  // Übungszeit insgesamt aus den lokal gespeicherten Übungen (nur dieses Gerät).
+  const [totalPracticeMs, setTotalPracticeMs] = useState<number | null>(null)
   useEffect(() => {
     loadAllSessions()
-      .then((sessions) => setTotals(computePracticeTotals(sessions, new Date())))
+      .then((sessions) => setTotalPracticeMs(computeTotalPracticeMs(sessions)))
       .catch(console.error)
   }, [])
 
@@ -79,7 +75,7 @@ export function ResultsScreen() {
             <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
           </div>
 
-          {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit je Zeitraum */}
+          {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit insgesamt */}
           <Button
             variant="ghost"
             aria-expanded={showMore}
@@ -90,24 +86,19 @@ export function ResultsScreen() {
             <ChevronDown className={cn('size-4 transition-transform', showMore && 'rotate-180')} />
           </Button>
           {showMore && (
-            <div className="flex w-full flex-col gap-4 text-left">
-              <dl className="grid grid-cols-2 gap-3">
+            <div className="w-full text-left">
+              <dl className="grid grid-cols-3 gap-3">
                 <InfoTile label="Längste Serie" value={`${view.streakStr} min`} />
                 <InfoTile label="Ankerpunkte" value={String(view.anchorPoints)} />
+                {totalPracticeMs !== null && (
+                  <InfoTile label="Insgesamt" value={formatHoursMinutes(totalPracticeMs)} />
+                )}
               </dl>
-              {totals && (
-                <div>
-                  <div className="mb-2 font-label text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                    Geübt mit Blue Anchor
-                  </div>
-                  <dl className="grid grid-cols-3 gap-3">
-                    <InfoTile label="Diese Woche" value={formatHoursMinutes(totals.weekMs)} small />
-                    <InfoTile label="Dieser Monat" value={formatHoursMinutes(totals.monthMs)} small />
-                    <InfoTile label="Insgesamt" value={formatHoursMinutes(totals.totalMs)} small />
-                  </dl>
-                  {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
-                  <p className="mt-2 font-label text-xs text-muted-foreground">Gezählt auf diesem Gerät</p>
-                </div>
+              {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
+              {totalPracticeMs !== null && (
+                <p className="mt-2 font-label text-xs text-muted-foreground">
+                  Insgesamt: gezählt auf diesem Gerät
+                </p>
               )}
             </div>
           )}
@@ -137,11 +128,11 @@ export function ResultsScreen() {
 }
 
 /** Kleines Info-Kästchen unter „Mehr anzeigen". */
-function InfoTile({ label, value, small }: { label: string; value: string; small?: boolean }) {
+function InfoTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn('rounded-xl bg-secondary py-3', small ? 'px-3' : 'px-4')}>
+    <div className="rounded-xl bg-secondary px-3 py-3">
       <dt className="font-label text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn('font-mono text-foreground', small ? 'text-sm' : 'text-base')}>{value}</dd>
+      <dd className="font-mono text-sm text-foreground">{value}</dd>
     </div>
   )
 }
