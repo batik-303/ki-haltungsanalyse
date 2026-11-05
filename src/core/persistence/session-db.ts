@@ -18,19 +18,19 @@ export async function loadLatestSession(): Promise<StoredSession | null> {
 }
 
 /**
- * Query the personal best flow streak across all stored sessions.
- * Returns 0 if no sessions exist.
+ * Lädt alle gespeicherten Übungen (ohne den „latest"-Zeiger).
+ * Hinweis: Wird direkt nach `saveSession` aufgerufen, sieht es die neue Übung
+ * schon — idb-keyval legt Transaktionen in Aufruf-Reihenfolge an, und IndexedDB
+ * lässt eine spätere Lese-Transaktion auf die frühere Schreib-Transaktion warten.
  */
-export async function getPersonalBestStreak(): Promise<number> {
+export async function loadAllSessions(): Promise<StoredSession[]> {
   const all = await entries<string, StoredSession>(sessionStore)
-  let best = 0
+  const sessions: StoredSession[] = []
   for (const [key, session] of all) {
-    if (key === LATEST_KEY) continue
-    if (session?.maxFlowStreak && session.maxFlowStreak > best) {
-      best = session.maxFlowStreak
-    }
+    if (key === LATEST_KEY || typeof session !== 'object' || session === null) continue
+    sessions.push(session)
   }
-  return best
+  return sessions
 }
 
 const MILESTONES_KEY = 'total-hold-milestones'

@@ -1,20 +1,28 @@
 import { usePoseStore } from '@/store/pose-store'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Medal, RotateCcw, Share2 } from 'lucide-react'
-import { getPersonalBestStreak } from '@/core/persistence/session-db'
+import { ChevronDown, RotateCcw } from 'lucide-react'
+import { loadAllSessions } from '@/core/persistence/session-db'
 import { computeResultsView } from '@/core/session/results-view'
+import { computeTotalPracticeMs, formatHoursMinutes } from '@/core/session/practice-totals'
+import { cn } from '@/lib/utils'
 
+// Schlichte Ergebnis-Seite (Variante D, #127/#128): blauer Anker-Kreis mit der
+// Zeit im Anker in Worten, darunter nur „Diese Übung". Alles Weitere wartet
+// zugeklappt unter „Mehr anzeigen".
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
-  const focusMode = usePoseStore((s) => s.focusMode)
   const practiceAgain = usePoseStore((s) => s.practiceAgain)
   const goHome = usePoseStore((s) => s.goHome)
 
-  // Bestmarke asynchron laden; bis dahin 0 (kein Rekord fälschlich melden).
-  const [personalBest, setPersonalBest] = useState(0)
+  const [showMore, setShowMore] = useState(false)
+
+  // Übungszeit insgesamt aus den lokal gespeicherten Übungen (nur dieses Gerät).
+  const [totalPracticeMs, setTotalPracticeMs] = useState<number | null>(null)
   useEffect(() => {
-    getPersonalBestStreak().then(setPersonalBest)
+    loadAllSessions()
+      .then((sessions) => setTotalPracticeMs(computeTotalPracticeMs(sessions)))
+      .catch(console.error)
   }, [])
 
   if (!lastStats) {
@@ -26,72 +34,78 @@ export function ResultsScreen() {
     )
   }
 
-  const view = computeResultsView(lastStats, focusMode, personalBest)
+  const view = computeResultsView(lastStats)
+  const { anchorTime } = view
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-5 py-10">
-      <div className="w-full max-w-[560px] flex flex-col items-center gap-8 text-center">
-        {/* Mode-Chip: Instrument · Gesamtdauer */}
-        <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 font-label text-sm font-semibold text-secondary-foreground">
-          <span>{view.modeLabel}</span>
-          <span className="opacity-50">·</span>
-          <span className="font-mono font-medium tabular-nums">{view.totalDurationStr}</span>
-        </div>
-
-        {/* Hero: „Im Anker"-Dauer */}
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="font-label text-[0.78rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Im Anker
-          </div>
-          <div className="font-headline font-light leading-[0.92] tracking-[-0.03em] tabular-nums text-primary text-[clamp(4.5rem,22vw,8.5rem)]">
-            {view.anchorDurationStr}
-            <span className="ml-[0.1em] text-[0.32em] font-normal tracking-normal text-muted-foreground">
-              min
-            </span>
-          </div>
-          <div className="mt-1.5 text-base text-muted-foreground">
-            {view.flowPercent}% der Zeit in ruhiger Haltung
-          </div>
-        </div>
-
-        {/* Erfolgs-Karte: sanfter Amber-Verlauf, Medaille in accent */}
+    <div className="min-h-screen bg-background flex flex-col items-center px-5 py-12">
+      <div className="w-full max-w-[420px] flex flex-col items-center gap-8 text-center">
+        {/* Blauer Anker-Kreis: Zeit im Anker in Worten */}
         <div
-          className="flex w-full items-center gap-4 rounded-2xl p-6 text-left shadow-sm"
-          style={{ background: 'linear-gradient(160deg, var(--color-card), var(--color-accent-soft))' }}
+          className="grid place-items-center rounded-full text-white"
+          style={{
+            width: 'min(72vw, 300px)',
+            height: 'min(72vw, 300px)',
+            background:
+              'radial-gradient(circle at 35% 30%, var(--color-sapphire-light), var(--color-sapphire) 45%, var(--color-sapphire-deep))',
+            boxShadow: '0 0 60px 10px color-mix(in srgb, var(--color-sapphire) 35%, transparent)',
+          }}
         >
-          <div className="grid size-12 flex-none place-items-center rounded-full bg-accent text-accent-foreground shadow-md">
-            <Medal className="size-6" />
-          </div>
-          <div>
-            <div className="font-headline text-base font-bold text-foreground">{view.successTitle}</div>
-            <div className="mt-0.5 text-sm text-muted-foreground">
-              Längste Serie am Stück:{' '}
-              <b className="font-mono font-medium text-foreground">{view.streakStr}</b> min
+          <div className="flex flex-col items-center">
+            <div className="font-headline leading-none">
+              <span className="font-light tabular-nums tracking-[-0.03em] text-[clamp(3.5rem,18vw,5.5rem)]">
+                {anchorTime.big}
+              </span>
+              <span className="ml-1.5 text-[clamp(1.25rem,6vw,1.9rem)]">{anchorTime.unit}</span>
             </div>
+            {anchorTime.rest && (
+              <div className="mt-1 font-headline text-[clamp(1.1rem,5vw,1.5rem)] opacity-90">
+                {anchorTime.rest}
+              </div>
+            )}
+            <div className="mt-2 font-label text-sm opacity-85">im Anker</div>
           </div>
         </div>
 
-        {/* Ruhe-Impuls-Karte: secondary auf secondary-foreground */}
-        <div className="w-full rounded-2xl bg-secondary px-6 py-5 text-left text-secondary-foreground">
-          <div className="font-label text-[0.72rem] font-semibold uppercase tracking-[0.08em] opacity-80">
-            Ruhe-Impuls
+        {/* Infos zur Übung: „Diese Übung“ und darunter „Mehr anzeigen“ */}
+        <div className="flex w-full flex-col items-center gap-3">
+          {/* Diese Übung — bewusst als Zahl (Nebenangabe) */}
+          <div className="font-label text-sm text-muted-foreground">
+            Diese Übung
+            <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
           </div>
-          <p className="mt-2 font-headline text-[1.02rem] font-medium leading-relaxed">
-            {view.calmMessage}
-          </p>
+
+          {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit insgesamt */}
+          <Button
+            variant="ghost"
+            aria-expanded={showMore}
+            className="h-auto gap-1 font-label text-sm font-normal text-muted-foreground"
+            onClick={() => setShowMore((open) => !open)}
+          >
+            {showMore ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+            <ChevronDown className={cn('size-4 transition-transform', showMore && 'rotate-180')} />
+          </Button>
+          {showMore && (
+            <div className="w-full text-left">
+              <dl className="grid grid-cols-3 gap-3">
+                <InfoTile label="Längste Serie" value={`${view.streakStr} min`} />
+                <InfoTile label="Ankerpunkte" value={String(view.anchorPoints)} />
+                {totalPracticeMs !== null && (
+                  <InfoTile label="Insgesamt" value={formatHoursMinutes(totalPracticeMs)} />
+                )}
+              </dl>
+              {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
+              {totalPracticeMs !== null && (
+                <p className="mt-2 font-label text-xs text-muted-foreground">
+                  Insgesamt: gezählt auf diesem Gerät
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Zähler-Hinweis: Ankerpunkte, Zahl in flow-Blau (mono) */}
-        {view.anchorPoints !== undefined && (
-          <div className="font-label text-[0.82rem] text-muted-foreground">
-            Zähler heute:{' '}
-            <b className="font-mono font-medium text-layer-flow">{view.anchorPoints}</b> Ankerpunkte
-            · je 5 s ruhig = 1 Punkt
-          </div>
-        )}
-
-        {/* Aktionen: gestapelt, volle Breite */}
-        <div className="flex w-full flex-col gap-3">
+        {/* Aktionen */}
+        <div className="flex w-full flex-col items-center gap-2">
           <Button
             className="h-12 w-full gap-2 rounded-full text-base font-semibold"
             onClick={practiceAgain}
@@ -99,24 +113,26 @@ export function ResultsScreen() {
             <RotateCcw className="size-[18px]" />
             Neue Übung starten
           </Button>
-          {/* „Ergebnis teilen" bleibt Nebel — nur Slot, kein Verhalten (#44). */}
-          <Button
-            variant="outline"
-            className="h-12 w-full gap-2 rounded-full border-[1.5px] text-base font-semibold text-primary"
-          >
-            <Share2 className="size-[18px]" />
-            Ergebnis teilen
-          </Button>
           {/* Navigations-Affordanz aus #30/#34 erhalten: zurück ins Hauptmenü. */}
           <Button
             variant="link"
-            className="mt-1 h-auto text-sm font-normal text-muted-foreground"
+            className="h-auto text-sm font-normal text-muted-foreground"
             onClick={goHome}
           >
             Zum Hauptmenü
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Kleines Info-Kästchen unter „Mehr anzeigen". */
+function InfoTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-secondary px-3 py-3">
+      <dt className="font-label text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-mono text-sm text-foreground">{value}</dd>
     </div>
   )
 }

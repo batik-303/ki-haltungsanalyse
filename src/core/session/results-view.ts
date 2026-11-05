@@ -1,45 +1,32 @@
-import type { FocusMode, SessionStats } from '../types'
+import type { SessionStats } from '../types'
 
-// Sichtbare Mode-Labels für die Kopf-Chip des Results-Screens.
-const MODE_LABELS: Record<FocusMode, string> = {
-  violin: '🎻 Geige',
-  wrist: '🤚 Handgelenk',
-  shoulder: '💪 Schulter',
+/** Zeit in Worten: große Zahl + Einheit, optional die Sekunden als zweite Zeile. */
+export interface AnchorTimeWords {
+  big: string
+  unit: 'Min.' | 'Sek.'
+  rest?: string
 }
 
-// Ruhe-Impuls je Modus — bewusst als Einladung formuliert (Präsens/Futur),
-// nicht als Behauptung über die gerade gemessene Haltung. So bleibt die
-// Botschaft positiv und trifft, ohne ein Ergebnis zu unterstellen, das den
-// Daten widersprechen könnte (Feedback-Philosophie).
-const MODE_CALM_MESSAGES: Record<FocusMode, string> = {
-  violin:
-    'Lass die Geige leicht auf der Schulter ruhen — ohne festzuhalten. Nimm dieses Gefühl mit in die nächste Übung.',
-  wrist:
-    'Lass dein Handgelenk locker und getragen. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.',
-  shoulder:
-    'Lass deine Schultern weich und tief. Nimm dieses Gefühl mit — beim nächsten Mal einfach dort weiterspielen.',
-}
-
-/** Aufbereitete Werte für den „Anker-Fokus"-Results-Screen (Variante A, #21/#44). */
+/** Aufbereitete Werte für die schlichte Ergebnis-Seite (Variante D, #127/#128). */
 export interface ResultsView {
-  /** Mode-Chip, z. B. „🎻 Geige". */
-  modeLabel: string
-  /** Gesamtdauer als mm:ss. */
+  /** Dauer dieser Übung als mm:ss. */
   totalDurationStr: string
-  /** „Im Anker"-Dauer (Flow-Anteil der Gesamtzeit) als mm:ss. */
-  anchorDurationStr: string
-  /** Gerundeter Flow-Anteil in Prozent. */
-  flowPercent: number
+  /** „Im Anker"-Dauer (Flow-Anteil der Gesamtzeit) in Worten für den blauen Kreis. */
+  anchorTime: AnchorTimeWords
   /** Längste ununterbrochene ruhige Serie als mm:ss. */
   streakStr: string
-  /** Neue persönliche Bestmarke erreicht? */
-  isNewRecord: boolean
-  /** Überschrift der Erfolgs-Karte — immer positiv formuliert. */
-  successTitle: string
-  /** Modusgerechter Ruhe-Impuls (Einladung, keine Ergebnis-Behauptung). */
-  calmMessage: string
-  /** Ankerpunkte der Session (fehlt, wenn keine erfasst wurden). */
-  anchorPoints?: number
+  /** Ankerpunkte der Session (0, wenn keine erfasst wurden). */
+  anchorPoints: number
+}
+
+/** „8 Min." + „32 Sek."; unter einer Minute nur „41 Sek."; glatte Minuten ohne Sekunden-Zeile. */
+function formatAnchorTimeWords(totalSeconds: number): AnchorTimeWords {
+  const safe = Math.max(0, Math.floor(totalSeconds))
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  if (minutes === 0) return { big: String(seconds), unit: 'Sek.' }
+  if (seconds === 0) return { big: String(minutes), unit: 'Min.' }
+  return { big: String(minutes), unit: 'Min.', rest: `${seconds} Sek.` }
 }
 
 /** Formatiert Sekunden als mm:ss ohne führende Minuten-Null. */
@@ -51,32 +38,17 @@ function formatMmSs(totalSeconds: number): string {
 }
 
 /**
- * Leitet aus rohen Session-Statistiken das View-Modell des Results-Screens ab.
+ * Leitet aus rohen Session-Statistiken das View-Modell der Ergebnis-Seite ab.
  * Reine Funktion — keine React-, DOM- oder Persistenz-Abhängigkeit.
- *
- * @param stats Statistiken der beendeten Session
- * @param focusMode Aktiver Fokus-Modus (Instrument/Körperteil)
- * @param personalBestStreak Bisherige Bestmarke der längsten Serie (Sekunden)
  */
-export function computeResultsView(
-  stats: SessionStats,
-  focusMode: FocusMode,
-  personalBestStreak: number,
-): ResultsView {
+export function computeResultsView(stats: SessionStats): ResultsView {
   const totalSeconds = stats.durationMs / 1000
   const anchorSeconds = totalSeconds * (stats.zonePercentages.flow / 100)
 
-  const isNewRecord = stats.maxFlowStreak > 0 && stats.maxFlowStreak >= personalBestStreak
-
   return {
-    modeLabel: MODE_LABELS[focusMode],
     totalDurationStr: formatMmSs(totalSeconds),
-    anchorDurationStr: formatMmSs(anchorSeconds),
-    flowPercent: Math.round(stats.zonePercentages.flow),
+    anchorTime: formatAnchorTimeWords(anchorSeconds),
     streakStr: formatMmSs(stats.maxFlowStreak),
-    isNewRecord,
-    successTitle: isNewRecord ? 'Neue persönliche Bestmarke' : 'Deine längste ruhige Serie',
-    calmMessage: MODE_CALM_MESSAGES[focusMode],
-    anchorPoints: stats.anchorPoints,
+    anchorPoints: stats.anchorPoints ?? 0,
   }
 }
