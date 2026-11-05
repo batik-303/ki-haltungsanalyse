@@ -126,6 +126,8 @@ export function ResultsScreen() {
                   <InfoTile label="Dieser Monat" value={formatHoursMinutes(totals.monthMs)} small />
                   <InfoTile label="Insgesamt" value={formatHoursMinutes(totals.totalMs)} small />
                 </dl>
+                {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
+                <p className="mt-2 font-label text-xs text-muted-foreground">Gezählt auf diesem Gerät</p>
               </div>
             )}
           </div>
