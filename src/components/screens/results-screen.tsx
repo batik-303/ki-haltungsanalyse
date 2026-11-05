@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 // zugeklappt unter „Mehr anzeigen".
 export function ResultsScreen() {
   const lastStats = usePoseStore((s) => s.lastSessionStats)
-  const focusMode = usePoseStore((s) => s.focusMode)
   const practiceAgain = usePoseStore((s) => s.practiceAgain)
   const goHome = usePoseStore((s) => s.goHome)
 
@@ -39,15 +38,12 @@ export function ResultsScreen() {
     )
   }
 
-  const view = computeResultsView(lastStats, focusMode)
+  const view = computeResultsView(lastStats)
   const { anchorTime } = view
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-5 py-12">
       <div className="w-full max-w-[420px] flex flex-col items-center gap-8 text-center">
-        {/* Modus klein oben */}
-        <div className="font-label text-sm text-muted-foreground">{view.modeLabel}</div>
-
         {/* Blauer Anker-Kreis: Zeit im Anker in Worten */}
         <div
           className="grid place-items-center rounded-full text-white"

@@ -23,60 +23,56 @@ function baseStats(overrides: Partial<SessionStats> = {}): SessionStats {
 }
 
 describe('computeResultsView', () => {
-  it('bildet das Mode-Label aus dem FocusMode', () => {
-    const v = computeResultsView(baseStats(), 'violin')
-    expect(v.modeLabel).toBe('🎻 Geige')
-  })
 
   it('formatiert die Gesamtdauer als mm:ss ohne führende Minuten-Null', () => {
-    const v = computeResultsView(baseStats(), 'violin')
+    const v = computeResultsView(baseStats())
     expect(v.totalDurationStr).toBe('12:34')
   })
 
   it('formatiert die längste Serie als mm:ss', () => {
-    const v = computeResultsView(baseStats(), 'violin')
+    const v = computeResultsView(baseStats())
     expect(v.streakStr).toBe('2:23')
   })
 
   it('reicht die Ankerpunkte durch', () => {
-    const v = computeResultsView(baseStats(), 'violin')
+    const v = computeResultsView(baseStats())
     expect(v.anchorPoints).toBe(105)
   })
 
   it('zeigt 0 Ankerpunkte, wenn keine erfasst wurden', () => {
-    const v = computeResultsView(baseStats({ anchorPoints: undefined }), 'violin')
+    const v = computeResultsView(baseStats({ anchorPoints: undefined }))
     expect(v.anchorPoints).toBe(0)
   })
 
   it('zeigt die Zeit im Anker in Worten: Minuten groß, Sekunden darunter (#128)', () => {
     // 68 % von 754 s = 512 s = 8 Min. 32 Sek.
-    const v = computeResultsView(baseStats(), 'violin')
+    const v = computeResultsView(baseStats())
     expect(v.anchorTime).toEqual({ big: '8', unit: 'Min.', rest: '32 Sek.' })
   })
 
   it('zeigt unter einer Minute nur die Sekunden (z. B. „41 Sek.“)', () => {
     // 50 % von 82 s = 41 s
-    const v = computeResultsView(baseStats({ durationMs: 82_000, zonePercentages: { flow: 50, bewusst: 50, achtung: 0, limit: 0 } }), 'violin')
+    const v = computeResultsView(baseStats({ durationMs: 82_000, zonePercentages: { flow: 50, bewusst: 50, achtung: 0, limit: 0 } }))
     expect(v.anchorTime).toEqual({ big: '41', unit: 'Sek.' })
   })
 
   it('lässt die Sekunden-Zeile bei glatten Minuten weg (10 Min., nicht „0 Sek.“)', () => {
-    const v = computeResultsView(baseStats({ durationMs: 600_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    const v = computeResultsView(baseStats({ durationMs: 600_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }))
     expect(v.anchorTime).toEqual({ big: '10', unit: 'Min.' })
   })
 
   it('zeigt bei null Sekunden im Anker „0 Sek.“', () => {
-    const v = computeResultsView(baseStats({ zonePercentages: { flow: 0, bewusst: 100, achtung: 0, limit: 0 } }), 'violin')
+    const v = computeResultsView(baseStats({ zonePercentages: { flow: 0, bewusst: 100, achtung: 0, limit: 0 } }))
     expect(v.anchorTime).toEqual({ big: '0', unit: 'Sek.' })
   })
 
   it('zeigt glatte 1 Minute als „1 Min.“ (60 s)', () => {
-    const v = computeResultsView(baseStats({ durationMs: 60_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    const v = computeResultsView(baseStats({ durationMs: 60_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }))
     expect(v.anchorTime).toEqual({ big: '1', unit: 'Min.' })
   })
 
   it('zeigt 541 s als „9 Min.“ und „1 Sek.“', () => {
-    const v = computeResultsView(baseStats({ durationMs: 541_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }), 'violin')
+    const v = computeResultsView(baseStats({ durationMs: 541_000, zonePercentages: { flow: 100, bewusst: 0, achtung: 0, limit: 0 } }))
     expect(v.anchorTime).toEqual({ big: '9', unit: 'Min.', rest: '1 Sek.' })
   })
 })

@@ -1,11 +1,4 @@
-import type { FocusMode, SessionStats } from '../types'
-
-// Sichtbare Mode-Labels oben auf der Ergebnis-Seite.
-const MODE_LABELS: Record<FocusMode, string> = {
-  violin: '🎻 Geige',
-  wrist: '🤚 Handgelenk',
-  shoulder: '💪 Schulter',
-}
+import type { SessionStats } from '../types'
 
 /** Zeit in Worten: große Zahl + Einheit, optional die Sekunden als zweite Zeile. */
 export interface AnchorTimeWords {
@@ -16,8 +9,6 @@ export interface AnchorTimeWords {
 
 /** Aufbereitete Werte für die schlichte Ergebnis-Seite (Variante D, #127/#128). */
 export interface ResultsView {
-  /** Modus oben, z. B. „🎻 Geige". */
-  modeLabel: string
   /** Dauer dieser Übung als mm:ss. */
   totalDurationStr: string
   /** „Im Anker"-Dauer (Flow-Anteil der Gesamtzeit) in Worten für den blauen Kreis. */
@@ -50,12 +41,11 @@ function formatMmSs(totalSeconds: number): string {
  * Leitet aus rohen Session-Statistiken das View-Modell der Ergebnis-Seite ab.
  * Reine Funktion — keine React-, DOM- oder Persistenz-Abhängigkeit.
  */
-export function computeResultsView(stats: SessionStats, focusMode: FocusMode): ResultsView {
+export function computeResultsView(stats: SessionStats): ResultsView {
   const totalSeconds = stats.durationMs / 1000
   const anchorSeconds = totalSeconds * (stats.zonePercentages.flow / 100)
 
   return {
-    modeLabel: MODE_LABELS[focusMode],
     totalDurationStr: formatMmSs(totalSeconds),
     anchorTime: formatAnchorTimeWords(anchorSeconds),
     streakStr: formatMmSs(stats.maxFlowStreak),
