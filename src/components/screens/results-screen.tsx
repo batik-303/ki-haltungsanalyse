@@ -71,10 +71,46 @@ export function ResultsScreen() {
           </div>
         </div>
 
-        {/* Diese Übung — bewusst als Zahl (Nebenangabe) */}
-        <div className="font-label text-sm text-muted-foreground">
-          Diese Übung
-          <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
+        {/* Infos zur Übung: „Diese Übung“ und darunter „Mehr anzeigen“ */}
+        <div className="flex w-full flex-col items-center gap-3">
+          {/* Diese Übung — bewusst als Zahl (Nebenangabe) */}
+          <div className="font-label text-sm text-muted-foreground">
+            Diese Übung
+            <div className="font-mono text-lg text-foreground">{view.totalDurationStr} min</div>
+          </div>
+
+          {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit je Zeitraum */}
+          <Button
+            variant="ghost"
+            aria-expanded={showMore}
+            className="h-auto gap-1 font-label text-sm font-normal text-muted-foreground"
+            onClick={() => setShowMore((open) => !open)}
+          >
+            {showMore ? 'Weniger anzeigen' : 'Mehr anzeigen'}
+            <ChevronDown className={cn('size-4 transition-transform', showMore && 'rotate-180')} />
+          </Button>
+          {showMore && (
+            <div className="flex w-full flex-col gap-4 text-left">
+              <dl className="grid grid-cols-2 gap-3">
+                <InfoTile label="Längste Serie" value={`${view.streakStr} min`} />
+                <InfoTile label="Ankerpunkte" value={String(view.anchorPoints)} />
+              </dl>
+              {totals && (
+                <div>
+                  <div className="mb-2 font-label text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                    Geübt mit Blue Anchor
+                  </div>
+                  <dl className="grid grid-cols-3 gap-3">
+                    <InfoTile label="Diese Woche" value={formatHoursMinutes(totals.weekMs)} small />
+                    <InfoTile label="Dieser Monat" value={formatHoursMinutes(totals.monthMs)} small />
+                    <InfoTile label="Insgesamt" value={formatHoursMinutes(totals.totalMs)} small />
+                  </dl>
+                  {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
+                  <p className="mt-2 font-label text-xs text-muted-foreground">Gezählt auf diesem Gerät</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Aktionen */}
@@ -95,39 +131,6 @@ export function ResultsScreen() {
             Zum Hauptmenü
           </Button>
         </div>
-
-        {/* Mehr anzeigen: Serie, Ankerpunkte, Übungszeit je Zeitraum */}
-        <Button
-          variant="ghost"
-          aria-expanded={showMore}
-          className="h-auto gap-1 font-label text-sm font-normal text-muted-foreground"
-          onClick={() => setShowMore((open) => !open)}
-        >
-          {showMore ? 'Weniger anzeigen' : 'Mehr anzeigen'}
-          <ChevronDown className={cn('size-4 transition-transform', showMore && 'rotate-180')} />
-        </Button>
-        {showMore && (
-          <div className="flex w-full flex-col gap-4 text-left">
-            <dl className="grid grid-cols-2 gap-3">
-              <InfoTile label="Längste Serie" value={`${view.streakStr} min`} />
-              <InfoTile label="Ankerpunkte" value={String(view.anchorPoints)} />
-            </dl>
-            {totals && (
-              <div>
-                <div className="mb-2 font-label text-xs uppercase tracking-[0.08em] text-muted-foreground">
-                  Geübt mit Blue Anchor
-                </div>
-                <dl className="grid grid-cols-3 gap-3">
-                  <InfoTile label="Diese Woche" value={formatHoursMinutes(totals.weekMs)} small />
-                  <InfoTile label="Dieser Monat" value={formatHoursMinutes(totals.monthMs)} small />
-                  <InfoTile label="Insgesamt" value={formatHoursMinutes(totals.totalMs)} small />
-                </dl>
-                {/* Daten bleiben privat im Browser — darum zählt jedes Gerät für sich. */}
-                <p className="mt-2 font-label text-xs text-muted-foreground">Gezählt auf diesem Gerät</p>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
