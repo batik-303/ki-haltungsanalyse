@@ -1,5 +1,5 @@
 import type { MasterPrint, WristMasterPrint } from '../types'
-import { SIDE_TO_SCREEN } from '../analysis/wrist-bar'
+import { isKnickTowardNeck } from '../analysis/wrist-bar'
 
 // Ab diesem gespeicherten Knick (Grad, Hand-Pfad) kommt der Tipp, je Richtung.
 // Zur Schnecke streng (#97); zum Hals ist ein leichter Knick erlaubt —
@@ -51,7 +51,7 @@ export function computeSavedKnickLabel(input: StraightWristTipInput): string | n
  * Zuordnung wie die Hand in der Leiste (#94), von der Nutzerin bestätigt.
  */
 function isTowardNeck(mp: WristMasterPrint): boolean {
-  return mp.calibKnickSide * SIDE_TO_SCREEN < 0
+  return isKnickTowardNeck(mp.calibKnickSide)
 }
 
 /** Handgelenk-Kalibrierung, aber nur in den ersten Sekunden nach dem Speichern. */

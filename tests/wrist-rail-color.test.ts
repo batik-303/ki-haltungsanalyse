@@ -124,4 +124,42 @@ describe('createWristRailColor', () => {
       expect(blue).toBe(true)
     })
   })
+
+  describe('Hals-Grenze eigene Stufe (#130, Mini-Schritt 1)', () => {
+    // Geigen-Test 07.11.: zum Hals etwas mehr Spielraum, Schnecke bleibt bei 8°.
+    function callSide(fn: ReturnType<typeof createWristRailColor>, value: number, n: number, towardNeck: boolean): boolean {
+      let result = true
+      for (let i = 0; i < n; i++) result = fn(value, 0, 1, towardNeck)
+      return result
+    }
+
+    it('9° zum Hals bleibt blau', () => {
+      const railColor = createWristRailColor()
+      expect(callSide(railColor, 9, 20, true)).toBe(true)
+    })
+
+    it('9° zur Schnecke wird nach 8 Bildern gelb wie bisher', () => {
+      const railColor = createWristRailColor()
+      expect(callSide(railColor, 9, 8, false)).toBe(false)
+    })
+
+    it('über 10° zum Hals wird nach 8 Bildern gelb', () => {
+      const railColor = createWristRailColor()
+      for (let i = 0; i < 7; i++) expect(railColor(10.5, 0, 1, true)).toBe(true)
+      expect(railColor(10.5, 0, 1, true)).toBe(false)
+    })
+
+    it('ohne Richtungsangabe gilt die Schnecken-Grenze 8°', () => {
+      const railColor = createWristRailColor()
+      expect(callN(railColor, 9, 8)).toBe(false)
+    })
+
+    it('Rückkehr zu Blau bleibt unter 5° in 4 Bildern, auch zum Hals', () => {
+      const railColor = createWristRailColor()
+      expect(callSide(railColor, 12, 8, true)).toBe(false)
+      expect(callSide(railColor, 6, 20, true)).toBe(false)
+      expect(callSide(railColor, 3, 3, true)).toBe(false)
+      expect(railColor(3, 0, 1, true)).toBe(true)
+    })
+  })
 })

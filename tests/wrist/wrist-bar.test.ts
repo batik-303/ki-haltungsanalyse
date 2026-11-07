@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createWristBarTilt } from '../../src/core/analysis/wrist-bar'
+import { createWristBarTilt, isKnickTowardNeck } from '../../src/core/analysis/wrist-bar'
 import type { AnchorColor, KnickSide } from '../../src/core/types'
 
 // Periphere Leiste (#76/#94): Arm unten fest, Anker = Gelenk, Hand oben kippt.
@@ -178,5 +178,17 @@ describe('createWristBarTilt — Belohnung bei Korrektur', () => {
       glows.push(...run(bar, { color: 'blue', knickDiff: 3, knickSide: 1 }, 45, clock).map((o) => o.anchorGlow))
     }
     expect(pulses(glows)).toBe(2)
+  })
+})
+
+describe('isKnickTowardNeck (#130)', () => {
+  it('Seite +1 = zum Hals (links auf dem gespiegelten Bildschirm, wie die Leiste)', () => {
+    expect(isKnickTowardNeck(1)).toBe(true)
+  })
+  it('Seite -1 = zur Schnecke', () => {
+    expect(isKnickTowardNeck(-1)).toBe(false)
+  })
+  it('unbekannte Seite zählt nicht als Hals (strengere Grenze)', () => {
+    expect(isKnickTowardNeck(0)).toBe(false)
   })
 })
