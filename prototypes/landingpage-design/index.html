@@ -1,0 +1,608 @@
+<title>Blue Anchor Landingpage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- PROTOTYP #135 (Wegwerf-Code, nie mergen): drei Design-Richtungen der Landingpage,
+     umschaltbar über die Leiste unten bzw. #a / #b / #c in der Adresse. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: drei Varianten mit eigener, fester Bildwelt (A hell, B nachtblau, C hell-papier);
+   jede Variante setzt ihre Farben selbst, deshalb kein Hell/Dunkel-Umschalten. */
+:root {
+  /* App-Farbwelt „Marine Serenity" */
+  --navy: #002b49;
+  --ink: #101d24;
+  --ink-soft: #42474d;
+  --sky-1: #e0f2fe;
+  --sky-2: #edf7ff;
+  --sky-3: #f8fafc;
+  --mist: #e2f0fa;
+  --line: #c3c7ce;
+  --sapphire: #2196f3;
+  --sapphire-light: #64b5f6;
+  --sapphire-deep: #1565c0;
+  --sapphire-darkest: #0d47a1;
+  --night: #0a1628;
+  --night-2: #112240;
+  --night-3: #1e3a5f;
+  --night-text: #ccdde8;
+  /* Geigenholz-Gold (Akzent) */
+  --gold: #b07a24;
+  --gold-text: #2b1a00;
+  --gold-light: #d9a855;
+  --flow-yellow: #f1c40f;
+  --font-head: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-label: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-head); font-size: 16px; line-height: 1.6; color: var(--ink); background: var(--sky-3); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+a { color: inherit; }
+.wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.label { font-family: var(--font-label); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.soon { font-family: var(--font-label); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; opacity: .75; white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--sapphire); outline-offset: 3px; }
+.variant[hidden] { display: none !important; }
+
+/* ── Logo-Lockup (aus der App, #48) ── */
+.lockup { display: inline-flex; align-items: center; gap: 10px; }
+.lockup.stacked { flex-direction: column; gap: 12px; }
+.lockup .words { display: inline-flex; flex-direction: column; line-height: 1; }
+.lockup.stacked .words { align-items: center; }
+.lockup .ba { font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.lockup .music { margin-top: 4px; display: flex; justify-content: space-between; width: 100%; font-family: var(--font-label); font-weight: 700; color: var(--ink-soft); }
+.mark { display: block; overflow: visible; }
+
+/* ── Formular (Warteliste) ── */
+.signup { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.signup .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.signup input { flex: 1 1 220px; min-width: 0; font: inherit; font-size: 17px; padding: 15px 18px; border-radius: 14px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); }
+.signup input::placeholder { color: #6b7380; }
+.btn-gold { flex: 0 0 auto; font: inherit; font-weight: 800; font-size: 16px; padding: 15px 22px; border-radius: 14px; border: 0; cursor: pointer; color: var(--gold-text); background: linear-gradient(180deg, #c99718, var(--gold) 55%, #946905); box-shadow: 0 6px 18px -6px rgba(176,122,36,.55); }
+.btn-gold:hover { filter: brightness(1.06); }
+.signup .hint { font-size: 13px; color: var(--ink-soft); }
+.signup .done { font-weight: 700; color: var(--sapphire-deep); }
+.app-link { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; text-decoration: none; color: var(--sapphire-deep); }
+.app-link .arrow { transition: transform .2s; }
+.app-link:hover .arrow { transform: translateX(3px); }
+
+/* ── Demo-Spiegel (Platzhalter für Video/Animation) ── */
+.demo { position: relative; width: 100%; max-width: 100%; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; background: radial-gradient(120% 90% at 50% 20%, #1a3354, var(--night) 70%); box-shadow: 0 24px 60px -24px rgba(0,43,73,.55); }
+.demo svg { width: 100%; height: 100%; display: block; }
+.demo .tag { position: absolute; left: 12px; bottom: 12px; font-family: var(--font-label); font-size: 11px; font-weight: 600; color: var(--night-text); background: rgba(10,22,40,.7); padding: 4px 10px; border-radius: 999px; }
+.demo .rail-fill { animation: rail 8s ease-in-out infinite; transform-origin: 50% 100%; }
+.demo .anchor-core { animation: anchorColor 8s ease-in-out infinite; }
+.demo .anchor-halo { animation: anchorHalo 8s ease-in-out infinite; }
+.demo .edge { animation: edgeGlow 8s ease-in-out infinite; }
+.demo .hand { animation: tilt 8s ease-in-out infinite; transform-origin: 196px 262px; }
+@keyframes anchorColor { 0%,48%,78%,100% { fill: #2196f3; } 56%,70% { fill: #f1c40f; } }
+@keyframes anchorHalo { 0%,48%,78%,100% { fill: rgba(56,189,248,.35); } 56%,70% { fill: rgba(241,196,15,.35); } }
+@keyframes edgeGlow { 0%,48%,78%,100% { stroke: rgba(33,150,243,.55); } 56%,70% { stroke: rgba(241,196,15,.6); } }
+@keyframes rail { 0%,48% { transform: scaleY(.9); } 60%,70% { transform: scaleY(.62); } 85%,100% { transform: scaleY(.9); } }
+@keyframes tilt { 0%,48%,78%,100% { transform: rotate(0deg); } 56%,70% { transform: rotate(-11deg); } }
+@media (prefers-reduced-motion: reduce) { .demo * { animation: none !important; } }
+
+/* ════════ Variante A: „Notenständer" – hell, ruhig, zentriert wie die App ════════ */
+.va { background: linear-gradient(to bottom, var(--sky-1) 0%, var(--sky-2) 40%, var(--sky-3) 100%); }
+.va .top { display: flex; justify-content: space-between; align-items: center; padding-block: 16px; }
+.va .top .app-link { font-size: 15px; }
+.va .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; padding-block: 28px 40px; max-width: 640px; margin: 0 auto; }
+.va .hero .ba { font-size: clamp(30px, 8vw, 46px); }
+.va .hero .music { font-size: clamp(12px, 3vw, 15px); }
+.va h1 { font-size: clamp(26px, 6.4vw, 40px); font-weight: 800; line-height: 1.15; color: var(--navy); }
+.va .lead { font-size: 18px; color: var(--ink-soft); max-width: 34em; }
+.va .formcard { width: 100%; background: #fff; border: 1px solid #dbe6ef; border-radius: 22px; padding: 20px; box-shadow: 0 18px 40px -26px rgba(0,43,73,.45); text-align: left; }
+.va .formcard .label { color: var(--sapphire-deep); margin-bottom: 8px; display: block; }
+.va .demo-sec { display: flex; justify-content: center; padding-block: 8px 48px; }
+.va .demo-sec .demo { max-width: 360px; }
+.va .three { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding-block: 8px 48px; }
+.va .three > div { background: #fff; border-radius: 18px; padding: 20px; border: 1px solid #e3edf5; }
+.va .three h3 { font-size: 18px; color: var(--navy); margin-bottom: 6px; }
+.va .three p { color: var(--ink-soft); font-size: 15px; }
+.va .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sapphire); box-shadow: 0 0 0 6px rgba(33,150,243,.15); margin-bottom: 14px; }
+.va .privacy { background: var(--navy); color: #fff; border-radius: 24px; padding: 28px 22px; display: grid; gap: 10px; margin-bottom: 40px; }
+.va .privacy h2 { font-size: 22px; }
+.va .privacy p { color: #c9dbea; }
+.va .foot { display: grid; gap: 14px; padding-block: 8px 120px; color: var(--ink-soft); font-size: 15px; }
+.va .foot .trust { display: flex; gap: 12px; align-items: flex-start; }
+.va .foot .trust .badge { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--gold-text); font-weight: 800; }
+.va .foot .soonrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ════════ Variante B: „Bühnenlicht" – nachtblau, geteilt, Demo groß ════════ */
+.vb { background: var(--night); color: #fff; }
+.vb .lockup .music { color: var(--sapphire-light); }
+.vb .top { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; border-bottom: 1px solid rgba(204,221,232,.12); }
+.vb .top .app-link { color: var(--gold-light); font-size: 15px; }
+.vb .hero { display: grid; gap: 32px; padding-block: 32px 48px; align-items: center; }
+@media (min-width: 860px) { .vb .hero { grid-template-columns: 1.1fr .9fr; gap: 56px; padding-block: 64px 72px; } }
+.vb .hero > * { min-width: 0; }
+.vb .hero .text { display: grid; gap: 20px; }
+.vb .eyebrow { color: var(--gold-light); }
+.vb h1 { font-size: clamp(30px, 7.5vw, 54px); line-height: 1.08; font-weight: 800; letter-spacing: -.01em; }
+.vb h1 em { font-style: normal; color: var(--sapphire-light); }
+.vb .lead { font-size: 18px; color: var(--night-text); max-width: 32em; }
+.vb .signup input { background: var(--night-2); border-color: var(--night-3); color: #fff; }
+.vb .signup input::placeholder { color: #8ea3b8; }
+.vb .signup .hint { color: #8ea3b8; }
+.vb .signup .done { color: var(--sapphire-light); }
+.vb .demo { max-width: 440px; justify-self: center; box-shadow: 0 0 0 1px rgba(100,181,246,.25), 0 30px 80px -30px rgba(33,150,243,.55); }
+.vb .steps { border-top: 1px solid rgba(204,221,232,.12); padding-block: 40px; display: grid; gap: 24px; }
+.vb .steps h2 { font-size: 24px; }
+.vb .steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); counter-reset: s; }
+.vb .steps li { counter-increment: s; display: grid; gap: 6px; padding-top: 16px; border-top: 2px solid var(--gold); }
+.vb .steps li::before { content: "Schritt " counter(s); font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
+.vb .steps li strong { font-size: 18px; }
+.vb .steps li span { color: var(--night-text); font-size: 15px; }
+.vb .band { background: var(--night-2); }
+.vb .band .wrap { padding-block: 36px; display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.vb .band h3 { font-size: 18px; margin-bottom: 4px; }
+.vb .band p { color: var(--night-text); font-size: 15px; }
+.vb .band .soon { color: var(--sapphire-light); margin-left: 6px; }
+.vb .foot { padding-block: 32px 120px; display: grid; gap: 10px; color: var(--night-text); font-size: 15px; }
+.vb .foot strong { color: #fff; }
+
+/* ════════ Variante C: „Anker-Violine" – Papier, Line-Art, Instrument im Mittelpunkt ════════ */
+.vc { background: #fbfdff; }
+.vc .top { display: flex; justify-content: center; padding-block: 22px 6px; }
+.vc .hero { display: grid; gap: 28px; padding-block: 18px 40px; }
+@media (min-width: 900px) { .vc .hero { grid-template-columns: 1fr 300px 1fr; align-items: center; gap: 40px; padding-block: 40px 64px; } }
+.vc .hero > * { min-width: 0; }
+.vc .intro { display: grid; gap: 18px; text-align: center; }
+@media (min-width: 900px) { .vc .intro { text-align: left; } }
+.vc .eyebrow { color: var(--gold); }
+.vc h1 { font-size: clamp(28px, 7vw, 44px); line-height: 1.12; font-weight: 800; color: var(--navy); }
+.vc .lead { color: var(--ink-soft); font-size: 17px; }
+.vc .violin { justify-self: center; width: min(240px, 70vw); }
+.vc .violin svg { width: 100%; height: auto; display: block; overflow: visible; }
+.vc .violin .part { transition: stroke .2s, stroke-width .2s; }
+.vc .violin.hl-scroll .p-scroll, .vc .violin.hl-f .p-f, .vc .violin.hl-tail .p-tail { stroke: var(--gold); stroke-width: 3.2; }
+.vc .zones { display: grid; gap: 12px; }
+.vc .zone { text-align: left; font: inherit; background: #fff; border: 1.5px solid #dbe6ef; border-radius: 16px; padding: 14px 16px; cursor: pointer; display: grid; gap: 2px; color: var(--ink); }
+.vc .zone[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,122,36,.18); }
+.vc .zone .label { color: var(--gold); }
+.vc .zone strong { font-size: 17px; color: var(--navy); }
+.vc .zone span { font-size: 14px; color: var(--ink-soft); }
+.vc .zones .note { font-size: 12px; color: #6b7380; text-align: center; }
+.vc .signup-band { background: var(--navy); color: #fff; }
+.vc .signup-band .wrap { padding-block: 36px; display: grid; gap: 18px; max-width: 760px; text-align: center; justify-items: center; }
+.vc .signup-band h2 { font-size: clamp(22px, 5vw, 30px); }
+.vc .signup-band .signup input { border-color: transparent; }
+.vc .signup-band .signup .hint { color: #c9dbea; }
+.vc .signup-band .signup .done { color: var(--sapphire-light); }
+.vc .signup-band .app-link { color: var(--sapphire-light); }
+.vc .mirror { display: grid; gap: 28px; padding-block: 48px; align-items: center; }
+@media (min-width: 860px) { .vc .mirror { grid-template-columns: 340px 1fr; gap: 56px; } }
+.vc .mirror > * { min-width: 0; }
+.vc .mirror .demo { max-width: 340px; justify-self: center; }
+.vc .mirror h2 { font-size: 26px; color: var(--navy); margin-bottom: 10px; }
+.vc .mirror ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.vc .mirror li { display: flex; gap: 10px; align-items: baseline; }
+.vc .mirror li::before { content: ""; flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--sapphire); transform: translateY(-1px); }
+.vc .foot { border-top: 1px solid #e3edf5; padding-block: 28px 120px; display: grid; gap: 10px; font-size: 15px; color: var(--ink-soft); text-align: center; justify-items: center; }
+.vc .foot .soonrow { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+/* ════════ Variante D: Mischung – hell wie A, Kopf geteilt wie B, Bänder hell/blau im Wechsel, Geige unten ════════ */
+.vd { background: var(--sky-3); }
+.vd .band-sky { background: linear-gradient(to bottom, var(--sky-1) 0%, var(--sky-2) 100%); }
+.vd .band-white { background: #fff; }
+.vd .band-navy { background: var(--navy); color: #fff; }
+.vd .band-mist { background: var(--mist); }
+.vd .top { display: flex; justify-content: space-between; align-items: center; padding-block: 16px; }
+.vd .top .lockup .ba { font-size: 19px; }
+.vd .top .lockup .music { font-size: 9px; }
+.vd .top .app-link { font-size: 15px; }
+.vd .hero { display: grid; gap: 22px; padding-block: 8px 48px; grid-template-areas: "head" "media" "form"; }
+@media (min-width: 860px) {
+  .vd .hero { grid-template-columns: 1.05fr .95fr; grid-template-areas: "head media" "form media"; column-gap: 56px; row-gap: 26px; padding-block: 40px 72px; align-content: center; }
+}
+.vd .hero > * { min-width: 0; }
+.vd .hero .head { grid-area: head; display: grid; gap: 14px; align-self: end; }
+.vd .hero .media { grid-area: media; display: grid; gap: 12px; justify-items: center; align-self: center; }
+.vd .hero .demo { max-width: 400px; }
+.vd .privacy-chip { display: flex; gap: 10px; align-items: center; max-width: 400px; width: 100%; background: var(--navy); color: #fff; border-radius: 16px; padding: 12px 16px; }
+.vd .privacy-chip svg { flex: 0 0 auto; }
+.vd .privacy-chip strong { display: block; font-size: 15px; }
+.vd .privacy-chip span { display: block; font-size: 13px; color: #c9dbea; }
+.vd .hero .form { grid-area: form; display: grid; gap: 14px; align-self: start; }
+.vd h1 { font-size: clamp(26px, 6.4vw, 42px); font-weight: 800; line-height: 1.13; color: var(--navy); }
+.vd .lead { font-size: 18px; color: var(--ink-soft); max-width: 34em; }
+.vd .formcard { background: #fff; border: 1px solid #dbe6ef; border-radius: 22px; padding: 20px; box-shadow: 0 18px 40px -26px rgba(0,43,73,.45); }
+.vd .formcard .label { color: var(--sapphire-deep); margin-bottom: 8px; display: block; }
+.vd .steps { padding-block: 48px; display: grid; gap: 20px; }
+.vd .sec-h { font-size: 24px; color: var(--navy); }
+.vd .steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); counter-reset: s; }
+.vd .steps li { counter-increment: s; display: grid; gap: 4px; padding-top: 14px; border-top: 3px solid var(--gold); }
+.vd .steps li::before { content: "Schritt " counter(s); font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.vd .steps li strong { font-size: 17px; color: var(--navy); }
+.vd .steps li span { color: var(--ink-soft); font-size: 15px; }
+.vd .flowtext { padding-block: 48px; display: grid; gap: 14px; max-width: 760px; }
+.vd .flowtext h2 { font-size: clamp(24px, 5vw, 30px); }
+.vd .flowtext p { color: #c9dbea; font-size: 18px; }
+.vd .flowtext ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.vd .flowtext li { display: flex; gap: 12px; align-items: baseline; font-weight: 700; font-size: 17px; }
+.vd .flowtext li::before { content: ""; flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%; background: var(--sapphire-light); box-shadow: 0 0 0 5px rgba(100,181,246,.2); transform: translateY(-1px); }
+.vd .anchor-violin { display: grid; gap: 24px; padding-block: 48px; align-items: center; }
+@media (min-width: 760px) { .vd .anchor-violin { grid-template-columns: 180px 1fr; gap: 48px; } }
+.vd .anchor-violin > * { min-width: 0; }
+.vd .anchor-violin .violin { justify-self: center; width: min(150px, 42vw); }
+.vd .anchor-violin .intro { color: var(--ink-soft); margin: 6px 0 14px; }
+.vd .zones.pyramid { list-style: none; margin: 0; padding: 0 0 0 26px; display: grid; gap: 10px; max-width: 520px; position: relative; }
+.vd .zones.pyramid::before { content: ""; position: absolute; left: 8px; top: 14px; bottom: 6px; width: 3px; border-radius: 2px; background: linear-gradient(to top, var(--gold), var(--sapphire-light)); }
+.vd .zones.pyramid::after { content: ""; position: absolute; left: 3px; top: 2px; border: 6.5px solid transparent; border-bottom: 10px solid var(--sapphire-light); border-top: 0; }
+.vd .zones.pyramid li { display: grid; }
+.vd .zones.pyramid li:nth-child(1) { margin-inline: 24px; }
+.vd .zones.pyramid li:nth-child(2) { margin-inline: 12px; }
+.vd .zone { text-align: left; font: inherit; background: var(--sky-3); border: 1.5px solid #dbe6ef; border-radius: 16px; padding: 14px 16px; cursor: pointer; display: grid; gap: 2px; color: var(--ink); }
+.vd .zone[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,122,36,.18); }
+.vd .zone .label { color: var(--gold); }
+.vd .zone strong { font-size: 16px; color: var(--navy); }
+.vd .zone span { font-size: 14px; color: var(--ink-soft); }
+.vd .note { font-size: 12px; color: #6b7380; margin-top: 10px; }
+.violin svg { width: 100%; height: auto; display: block; overflow: visible; }
+.violin .part { transition: stroke .2s, stroke-width .2s; }
+.violin.hl-scroll .p-scroll, .violin.hl-f .p-f, .violin.hl-tail .p-tail { stroke: var(--gold); stroke-width: 3.2; }
+.vd .teachers { padding-block: 48px; display: grid; gap: 22px; }
+@media (min-width: 860px) { .vd .teachers { grid-template-columns: 1fr 1.1fr; column-gap: 56px; align-items: start; } .vd .t-vip { grid-column: 1 / -1; } }
+.vd .teachers > * { min-width: 0; }
+.vd .t-head { display: grid; gap: 10px; }
+.vd .t-head p { color: var(--ink-soft); font-size: 17px; }
+.vd .t-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vd .t-list li { background: #fff; border-radius: 16px; padding: 14px 18px; display: grid; gap: 4px; border: 1px solid #d3e4f1; }
+.vd .t-list strong { color: var(--navy); font-size: 16px; }
+.vd .t-list > li > span { color: var(--ink-soft); font-size: 15px; }
+.vd .t-list .soon { color: var(--sapphire-deep); margin-right: 4px; }
+.vd .t-vip { font-weight: 700; color: var(--navy); }
+.vd .feedback { padding-block: 48px; display: grid; gap: 20px; }
+@media (min-width: 860px) { .vd .feedback { grid-template-columns: 1fr 1.1fr; column-gap: 56px; } }
+.vd .feedback > * { min-width: 0; }
+.vd .feedback p { color: var(--ink-soft); margin-top: 8px; }
+.vd .fb-form { display: grid; gap: 10px; }
+.vd .fb-form .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.vd .fb-form textarea, .vd .fb-form input { font: inherit; font-size: 16px; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--sky-3); color: var(--ink); width: 100%; min-width: 0; resize: vertical; }
+.vd .fb-form input { flex: 1 1 220px; width: auto; }
+.vd .fb-form .hint { font-size: 13px; margin: 0; }
+.vd .fb-form .hint.done { color: var(--sapphire-deep); font-weight: 700; }
+.vd .foot .fine { font-size: 12px; color: #6b7380; max-width: 60em; }
+.vd .foot { display: grid; gap: 14px; padding-block: 32px 120px; color: var(--ink-soft); font-size: 15px; }
+.vd .foot .trust { display: flex; gap: 12px; align-items: flex-start; }
+.vd .foot .trust .badge { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--gold-text); font-weight: 800; }
+.vd .foot .soonrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── Umschalt-Leiste (nur Prototyp) ── */
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
+.switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
+.switcher button:hover { background: #333; }
+.switcher .cur { font-size: 14px; font-weight: 600; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 50; background: #111; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); text-align: center; }
+</style>
+
+<!-- Wiederverwendbare Bausteine werden per Skript eingesetzt: Logo (data-mark), Demo-Spiegel (data-demo), Formular (data-signup) -->
+
+<!-- ═════════════ Variante A ═════════════ -->
+<div class="variant va" id="var-a" data-name="Notenständer (hell, zentriert)">
+  <header class="wrap top">
+    <span class="lockup"><span data-mark="28"></span><span class="words"><span class="ba" style="font-size:16px">Blue Anchor</span><span class="music" style="font-size:8px"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+    <a class="app-link js-app" href="#app">App öffnen <span class="arrow">→</span></a>
+  </header>
+  <main>
+    <section class="wrap hero">
+      <span class="lockup stacked"><span data-mark="64"></span><span class="words"><span class="ba">Blue Anchor</span><span class="music"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+      <h1>Geigenhaltung im Blick, direkt beim Üben</h1>
+      <p class="lead">Das Handy auf dem Notenständer wird zum Spiegel. Ein blauer Anker am Handgelenk zeigt, wann die linke Hand locker sitzt. Korrektur im Spielfluss, ohne das Stück zu unterbrechen.</p>
+      <div class="formcard">
+        <span class="label">Warteliste</span>
+        <div data-signup="a"></div>
+      </div>
+      <a class="app-link js-app" href="#app">Oder gleich ausprobieren: App im Browser öffnen <span class="arrow">→</span></a>
+    </section>
+    <section class="wrap demo-sec"><div data-demo></div></section>
+    <section class="wrap three">
+      <div><div class="dot"></div><h3>Entspannter spielen</h3><p>Die Hand findet ihren lockeren Platz, während die Musik weiterläuft.</p></div>
+      <div><div class="dot"></div><h3>Verspannungen früh bewusst wahrnehmen</h3><p>Ein sanfter Farbwechsel lenkt die Aufmerksamkeit, bevor sich etwas festsetzt.</p></div>
+      <div><div class="dot"></div><h3>Mehr Körperwahrnehmung beim Üben</h3><p>Das Gefühl für die eigene Haltung wächst mit jeder Übe-Einheit.</p></div>
+    </section>
+    <section class="wrap"><div class="privacy">
+      <span class="label" style="color:var(--gold-light)">Datenschutz für Kinder</span>
+      <h2>Ihr Kamerabild verlässt nie Ihr Gerät.</h2>
+      <p>Die Auswertung läuft direkt im Browser. Kein Video wird hochgeladen oder gespeichert, und für den Start braucht es kein Konto.</p>
+    </div></section>
+    <footer class="wrap foot">
+      <div class="trust"><span class="badge">♪</span><p><strong style="color:var(--ink)">Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p></div>
+      <div class="soonrow"><span class="soon">bald</span> Kopfhaltung · Instrumentenhöhe · Fortschritt über Wochen</div>
+      <p>Sie unterrichten Geige? Lehrkräfte bekommen frühen VIP-Zugang für ihre Klasse.</p>
+    </footer>
+  </main>
+</div>
+
+<!-- ═════════════ Variante B ═════════════ -->
+<div class="variant vb" id="var-b" data-name="Bühnenlicht (nachtblau, Demo groß)" hidden>
+  <header class="wrap top">
+    <span class="lockup"><span data-mark="30"></span><span class="words"><span class="ba" style="font-size:17px">Blue Anchor</span><span class="music" style="font-size:8px"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+    <a class="app-link js-app" href="#app">App öffnen <span class="arrow">→</span></a>
+  </header>
+  <main>
+    <section class="wrap hero">
+      <div class="text">
+        <span class="label eyebrow">Geigenhaltung · linke Hand</span>
+        <h1>Spielen. Der <em>blaue Anker</em> hält die Hand im Blick.</h1>
+        <p class="lead">Ihr Handy auf dem Notenständer wird zum Spiegel. Bleibt das Handgelenk locker, leuchtet der Anker blau. Knickt es ab, wird er gelb. So korrigiert man sich im Spielfluss.</p>
+        <div data-signup="b"></div>
+        <a class="app-link js-app" href="#app" style="color:var(--gold-light)">App im Browser öffnen <span class="arrow">→</span></a>
+      </div>
+      <div data-demo></div>
+    </section>
+    <section class="wrap steps">
+      <h2>So läuft eine Übe-Einheit</h2>
+      <ol>
+        <li><strong>Handy auf den Notenständer</strong><span>Kamera an, Abstand passt, wenn der Rand ruhig leuchtet.</span></li>
+        <li><strong>Haltung speichern</strong><span>Einmal locker hinstellen, „Start“ sagen. Das ist Ihr persönlicher Anker.</span></li>
+        <li><strong>Einfach spielen</strong><span>Blau heißt: alles im Fluss. Gelb lädt ein, kurz nachzuspüren.</span></li>
+      </ol>
+    </section>
+    <section class="band"><div class="wrap">
+      <div><h3>Entspannter spielen</h3><p>Weniger Druck in der linken Hand, mehr Raum für den Klang.</p></div>
+      <div><h3>Ihr Kamerabild verlässt nie Ihr Gerät</h3><p>Alles wird im Browser ausgewertet. Nichts wird hochgeladen.</p></div>
+      <div><h3>Kopf und Instrumentenhöhe <span class="soon">bald</span></h3><p>Weitere Haltungs-Bereiche folgen nach dem Handgelenk.</p></div>
+    </div></section>
+    <footer class="wrap foot">
+      <p><strong>Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p>
+      <p>Lehrkräfte: Fragen Sie nach dem VIP-Zugang für Ihre Klasse.</p>
+    </footer>
+  </main>
+</div>
+
+<!-- ═════════════ Variante C ═════════════ -->
+<div class="variant vc" id="var-c" data-name="Anker-Violine (Instrument im Mittelpunkt)" hidden>
+  <header class="wrap top">
+    <span class="lockup"><span data-mark="40"></span><span class="words"><span class="ba" style="font-size:24px">Blue Anchor</span><span class="music" style="font-size:10px"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+  </header>
+  <main>
+    <section class="wrap hero">
+      <div class="intro">
+        <span class="label eyebrow">Für Geigenschüler, Eltern und Lehrkräfte</span>
+        <h1>Gute Geigenhaltung beginnt mit einem Anker</h1>
+        <p class="lead">Ein Spiegel auf dem Notenständer, der mitdenkt: Er zeigt beim Spielen, wann die linke Hand locker sitzt.</p>
+      </div>
+      <div class="violin" id="violin" aria-hidden="true"></div>
+      <div class="zones">
+        <button class="zone" data-hl="scroll" aria-pressed="false"><span class="label">Schnecke</span><strong>Musikalischer Aufschwung</strong><span>Freude am Üben, die nach oben trägt.</span></button>
+        <button class="zone" data-hl="f" aria-pressed="false"><span class="label">F-Löcher</span><strong>Motivation</strong><span>Rückmeldung beim Üben, die Mut macht.</span></button>
+        <button class="zone" data-hl="tail" aria-pressed="false"><span class="label">Saitenhalter</span><strong>Körperliche Verankerung</strong><span>Ein ruhiger, lockerer Halt für den ganzen Körper.</span></button>
+        <p class="note">Platzhalter: Die klickbare Anker-Violine wird in #136 ausgearbeitet.</p>
+      </div>
+    </section>
+    <section class="signup-band"><div class="wrap">
+      <h2>Auf die Warteliste</h2>
+      <div data-signup="c" style="width:100%"></div>
+      <a class="app-link js-app" href="#app">Oder gleich die App im Browser öffnen <span class="arrow">→</span></a>
+    </div></section>
+    <section class="wrap mirror">
+      <div data-demo></div>
+      <div>
+        <h2>Korrektur im Spielfluss</h2>
+        <p class="lead" style="color:var(--ink-soft)">Kein Anhalten, keine Liste mit Fehlern. Nur ein Anker, der blau leuchtet, solange das Handgelenk entspannt bleibt.</p>
+        <ul>
+          <li>Entspannter spielen</li>
+          <li>Verspannungen früh bewusst wahrnehmen</li>
+          <li>Mehr Körperwahrnehmung beim Üben</li>
+          <li>Ihr Kamerabild verlässt nie Ihr Gerät</li>
+        </ul>
+      </div>
+    </section>
+    <footer class="wrap foot">
+      <p><strong style="color:var(--ink)">Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p>
+      <div class="soonrow"><span class="soon">bald</span> Kopfhaltung · Instrumentenhöhe · Fortschritt über Wochen</div>
+    </footer>
+  </main>
+</div>
+
+<!-- ═════════════ Variante D (Mischung) ═════════════ -->
+<div class="variant vd" id="var-d" data-name="Mischung (hell + Demo rechts + blaue Bänder)" hidden>
+  <div class="band-sky">
+    <header class="wrap top">
+      <span class="lockup"><span data-mark="34"></span><span class="words"><span class="ba">Blue Anchor</span><span class="music"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+      <a class="app-link js-app" href="#app">App öffnen <span class="arrow">→</span></a>
+    </header>
+    <section class="wrap hero">
+      <div class="head">
+        <span class="label" style="color:var(--gold)">Für Geigenschüler, Eltern und Lehrkräfte</span>
+        <h1>Gute Geigenhaltung beginnt mit einem Anker</h1>
+        <p class="lead">Ihr Handy auf dem Notenständer wird zum Spiegel, der mitdenkt. Bleibt das Handgelenk locker, leuchtet der Anker blau. Knickt es ab, wird er gelb. So korrigiert man sich im Spielfluss.</p>
+      </div>
+      <div class="media">
+        <div data-demo></div>
+        <div class="privacy-chip">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64b5f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <div><strong>Ihr Kamerabild verlässt nie Ihr Gerät.</strong><span>Die Auswertung läuft direkt im Browser. Nichts wird hochgeladen.</span></div>
+        </div>
+      </div>
+      <div class="form">
+        <div class="formcard"><span class="label">Warteliste</span><div data-signup="d"></div></div>
+        <a class="app-link js-app" href="#app">Oder gleich ausprobieren: App im Browser öffnen <span class="arrow">→</span></a>
+      </div>
+    </section>
+  </div>
+  <section class="band-white"><div class="wrap steps">
+    <h2 class="sec-h">So läuft eine Übe-Einheit</h2>
+    <ol>
+      <li><strong>Handy auf den Notenständer</strong><span>Kamera an, Abstand passt, wenn der Rand ruhig leuchtet.</span></li>
+      <li><strong>Haltung speichern</strong><span>Einmal locker hinstellen, „Start“ sagen. Das ist Ihr persönlicher Anker.</span></li>
+      <li><strong>Einfach spielen</strong><span>Blau heißt: alles im Fluss. Gelb lädt ein, kurz nachzuspüren.</span></li>
+    </ol>
+  </div></section>
+  <section class="band-navy"><div class="wrap flowtext">
+    <span class="label" style="color:var(--gold-light)">Korrektur im Spielfluss</span>
+    <h2>Kein Anhalten. Keine Liste mit Fehlern.</h2>
+    <p>Nur ein Anker, der blau leuchtet, solange das Handgelenk entspannt bleibt.</p>
+    <ul>
+      <li>Entspannter spielen</li>
+      <li>Verspannungen früh bewusst wahrnehmen</li>
+      <li>Mehr Körperwahrnehmung beim Üben</li>
+    </ul>
+  </div></section>
+  <section class="band-white"><div class="wrap anchor-violin">
+    <div class="violin" aria-hidden="true"></div>
+    <div>
+      <h2 class="sec-h">Die Anker-Violine</h2>
+      <p class="intro">Wofür Blue Anchor steht. Von unten nach oben gelesen, wie die Geige selbst: Erst der feste Halt, dann trägt die Musik.</p>
+      <ol class="zones pyramid">
+        <li><button class="zone" data-hl="scroll" aria-pressed="false"><span class="label">3 · Schnecke</span><strong>Musikalischer Aufschwung</strong><span>Freude am Üben, die nach oben trägt.</span></button></li>
+        <li><button class="zone" data-hl="f" aria-pressed="false"><span class="label">2 · F-Löcher</span><strong>Motivation</strong><span>Rückmeldung beim Üben, die Mut macht.</span></button></li>
+        <li><button class="zone" data-hl="tail" aria-pressed="false"><span class="label">1 · Saitenhalter</span><strong>Körperliche Verankerung</strong><span>Das Fundament: ein ruhiger, lockerer Halt für den ganzen Körper.</span></button></li>
+      </ol>
+      <p class="note">Platzhalter: Zeichnung und Verhalten der Geige werden in #136 neu gestaltet.</p>
+    </div>
+  </div></section>
+  <section class="band-mist"><div class="wrap teachers">
+    <div class="t-head">
+      <span class="label" style="color:var(--gold)">Für Lehrkräfte</span>
+      <h2 class="sec-h">Ein Werkzeug für den Unterricht. Die Lehrkraft bleibt.</h2>
+      <p>Blue Anchor bringt niemandem die Geigenhaltung bei. Die Grundlagen lernt man im Unterricht. Die App hilft, das Gelernte in der Übe-Woche wach zu halten.</p>
+    </div>
+    <ul class="t-list">
+      <li><strong>Im Unterricht</strong><span>Die Lehrkraft stellt mit dem Schüler die beste Haltung ein und speichert sie als persönlichen Anker.</span></li>
+      <li><strong>Zu Hause</strong><span>Der Anker erinnert beim Üben, wie es sich im Unterricht angefühlt hat. <span class="soon">bald</span> Der Anker aus dem Unterricht bleibt für die ganze Woche gespeichert.</span></li>
+      <li><strong>Fortgeschrittene</strong><span>Wer seine Haltung schon gut kennt, speichert den eigenen Anker selbst.</span></li>
+    </ul>
+    <p class="t-vip">Sie unterrichten Geige? Lehrkräfte bekommen frühen VIP-Zugang für ihre Klasse.</p>
+  </div></section>
+  <section class="band-white"><div class="wrap feedback">
+    <div>
+      <span class="label" style="color:var(--gold)">Rückmeldung</span>
+      <h2 class="sec-h">Helfen Sie uns, Blue Anchor zu verbessern</h2>
+      <p>Was gefällt Ihnen, was fehlt Ihnen beim Üben? Jede Rückmeldung von Eltern, Schülern und Lehrkräften hilft.</p>
+    </div>
+    <form class="fb-form" novalidate>
+      <textarea id="fb-text" rows="4" placeholder="Ihre Nachricht" aria-label="Ihre Nachricht"></textarea>
+      <div class="row"><input id="fb-mail" type="email" autocomplete="email" placeholder="E-Mail (freiwillig, falls Sie eine Antwort möchten)" aria-label="E-Mail, freiwillig"><button class="btn-gold" type="submit">Senden</button></div>
+      <p class="hint">Ihre Nachricht geht nur an die Gründerin und wird nicht weitergegeben.</p>
+    </form>
+  </div></section>
+  <footer class="band-mist"><div class="wrap foot">
+    <div class="trust"><span class="badge">♪</span><p><strong style="color:var(--ink)">Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p></div>
+    <div class="soonrow"><span class="soon">bald</span> Kopfhaltung · Instrumentenhöhe · Fortschritt über Wochen</div>
+    <p class="fine">Für Kinder und Jugendliche: Bitte gemeinsam mit Eltern oder Lehrkraft einrichten und beim Üben in der Nähe bleiben.</p>
+    <p class="fine">Blue Anchor ist ein Übe-Werkzeug für Musikerinnen und Musiker. Es ersetzt keine ärztliche oder physiotherapeutische Untersuchung.</p>
+  </div></footer>
+</div>
+
+<nav class="switcher" aria-label="Variante wechseln (nur Prototyp)">
+  <button id="prev" aria-label="Vorherige Variante">←</button>
+  <span class="cur" id="cur">A</span>
+  <button id="next" aria-label="Nächste Variante">→</button>
+</nav>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// PROTOTYP – Logo, Demo, Formular und Umschalter.
+(function () {
+  let uid = 0;
+  // Logo-Marke wie src/components/brand/anchor-mark.tsx (viewBox 120×150).
+  function markSvg(size) {
+    const id = 'm' + (uid++);
+    const compact = size <= 32;
+    return `<svg class="mark" width="${size}" height="${size * 1.25}" viewBox="0 0 120 150" aria-hidden="true">
+      <defs><radialGradient id="${id}d" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#e0f2fe"/><stop offset="35%" stop-color="#38bdf8"/><stop offset="75%" stop-color="#0284c7"/><stop offset="100%" stop-color="#0369a1"/></radialGradient>
+      <filter id="${id}g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="${compact ? 4 : 8}" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <circle cx="60" cy="112" r="30" fill="rgba(56,189,248,0.4)" filter="url(#${id}g)"/>
+      <line x1="60" y1="22" x2="60" y2="94" stroke="#0284c7" stroke-width="${compact ? 11 : 8}" stroke-linecap="round"/>
+      <circle cx="60" cy="112" r="22" fill="url(#${id}d)"/>
+      ${size >= 48 ? '<circle cx="52" cy="104" r="6" fill="#fff" opacity=".85"/>' : ''}
+    </svg>`;
+  }
+  // Demo-Spiegel: stilisierter Unterarm + Hand, Anker am Handgelenk, Flow-Leiste links.
+  function demoSvg() {
+    return `<svg viewBox="0 0 320 400" role="img" aria-label="Animation: Anker am Handgelenk leuchtet blau, kurz gelb, dann wieder blau">
+      <rect class="edge" x="6" y="6" width="308" height="388" rx="18" fill="none" stroke-width="3"/>
+      <rect x="20" y="40" width="8" height="320" rx="4" fill="rgba(204,221,232,.12)"/>
+      <rect class="rail-fill" x="20" y="40" width="8" height="320" rx="4" fill="#2196f3"/>
+      <g stroke="#ccdde8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".85">
+        <path d="M110 395 C 130 340 160 300 186 270"/>
+        <path d="M150 400 C 168 350 192 312 208 280"/>
+        <g class="hand">
+          <path d="M186 270 C 196 240 204 214 214 190 C 220 176 236 176 238 192 C 240 206 232 226 226 246"/>
+          <path d="M214 190 C 214 168 222 140 234 124 M222 186 C 228 160 244 140 256 132 M230 196 C 242 176 258 164 270 160"/>
+          <path d="M208 280 C 222 266 234 256 246 250"/>
+        </g>
+      </g>
+      <line x1="120" y1="60" x2="300" y2="130" stroke="#b07a24" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+      <circle class="anchor-halo" cx="196" cy="268" r="22"/>
+      <circle class="anchor-core" cx="196" cy="268" r="11" stroke="#fff" stroke-width="2"/>
+      <text x="160" y="28" text-anchor="middle" fill="#ccdde8" font-family="Geist, sans-serif" font-size="12" font-weight="600" letter-spacing="1.5">SPIEGEL</text>
+    </svg><span class="tag">Platzhalter für Demo-Video</span>`;
+  }
+  // Line-Art-Violine von vorne (Grobentwurf für Variante C).
+  const violin = `<svg viewBox="0 0 200 520" fill="none" stroke="#002b49" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <g class="part p-scroll"><circle cx="100" cy="34" r="16"/><path d="M100 34 m-6 0 a6 6 0 1 1 6 6 a10 10 0 0 1 -10 -10"/><path d="M90 50 L88 98 M110 50 L112 98"/><path d="M84 62 h-10 M84 78 h-10 M116 62 h10 M116 78 h10"/></g>
+    <path d="M92 98 L90 185 M108 98 L110 185"/>
+    <path class="part" d="M100 182 C 60 182 40 192 42 220 C 44 244 62 254 62 274 C 62 294 36 304 34 344 C 32 412 60 466 100 470 C 140 466 168 412 166 344 C 164 304 138 294 138 274 C 138 254 156 244 158 220 C 160 192 140 182 100 182 Z"/>
+    <g class="part p-f"><path d="M72 300 c 8 6 -8 30 2 40 c 6 8 -6 26 0 34"/><path d="M128 300 c -8 6 8 30 -2 40 c -6 8 6 26 0 34"/><circle cx="72" cy="300" r="2.5"/><circle cx="74" cy="374" r="2.5"/><circle cx="128" cy="300" r="2.5"/><circle cx="126" cy="374" r="2.5"/></g>
+    <path d="M84 344 L116 344" stroke-width="3"/>
+    <g class="part p-tail"><path d="M90 392 L110 392 L106 462 L94 462 Z"/></g>
+    <g stroke-width="1" opacity=".55"><path d="M95 50 L95 392 M98.5 50 L98.5 392 M101.5 50 L101.5 392 M105 50 L105 392"/></g>
+    <circle cx="100" cy="434" r="7" fill="#2196f3" stroke="none" opacity=".9"/>
+  </svg>`;
+
+  function signup(key) {
+    return `<form class="signup" novalidate>
+      <div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit">Auf die Warteliste</button></div>
+      <p class="hint">Sie bekommen eine Bestätigungs-Mail. Abmelden geht jederzeit.</p>
+    </form>`;
+  }
+
+  document.querySelectorAll('[data-mark]').forEach(el => { el.outerHTML = markSvg(+el.dataset.mark); });
+  document.querySelectorAll('[data-demo]').forEach(el => { el.className = 'demo'; el.innerHTML = demoSvg(); });
+  document.querySelectorAll('[data-signup]').forEach(el => { el.innerHTML = signup(el.dataset.signup); });
+  document.querySelectorAll('.violin').forEach(el => { el.innerHTML = violin; });
+
+  const toast = document.getElementById('toast');
+  let tt;
+  function say(msg) { toast.textContent = msg; toast.hidden = false; clearTimeout(tt); tt = setTimeout(() => { toast.hidden = true; }, 2600); }
+
+  document.addEventListener('submit', e => {
+    e.preventDefault();
+    const hint = e.target.querySelector('.hint');
+    hint.textContent = 'Danke! (Prototyp: Hier käme die Bestätigungs-Mail.)';
+    hint.classList.add('done');
+  });
+  document.querySelectorAll('.js-app').forEach(a => a.addEventListener('click', e => { e.preventDefault(); say('Prototyp: Hier öffnet sich später direkt die App.'); }));
+
+  // Violinen-Zonen (Variante C): Antippen hebt die Stelle hervor.
+  document.querySelectorAll('.zone').forEach(b => b.addEventListener('click', () => {
+    const sec = b.closest('section');
+    const vio = sec.querySelector('.violin');
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    sec.querySelectorAll('.zone').forEach(o => o.setAttribute('aria-pressed', 'false'));
+    vio.className = 'violin';
+    if (on) { b.setAttribute('aria-pressed', 'true'); vio.classList.add('hl-' + b.dataset.hl); }
+  }));
+
+  // Umschalter A/B/C über #a, #b, #c.
+  const keys = ['a', 'b', 'c', 'd'];
+  const cur = document.getElementById('cur');
+  function show(k) {
+    if (!keys.includes(k)) k = 'a';
+    keys.forEach(x => { document.getElementById('var-' + x).hidden = x !== k; });
+    cur.textContent = k.toUpperCase() + ' · ' + document.getElementById('var-' + k).dataset.name;
+    return k;
+  }
+  let current = show((location.hash || '#d').slice(1));
+  function go(step) {
+    current = keys[(keys.indexOf(current) + step + keys.length) % keys.length];
+    show(current);
+    try { history.replaceState(null, '', '#' + current); } catch (_) {}
+    window.scrollTo(0, 0);
+  }
+  document.getElementById('prev').onclick = () => go(-1);
+  document.getElementById('next').onclick = () => go(1);
+  window.addEventListener('hashchange', () => { current = show(location.hash.slice(1)); });
+  document.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t.matches && t.matches('input, textarea, [contenteditable]')) return;
+    if (e.key === 'ArrowLeft') go(-1);
+    if (e.key === 'ArrowRight') go(1);
+  });
+})();
+</script>
