@@ -209,6 +209,12 @@ a { color: inherit; }
 .vd .demo-wrap { position: relative; width: 100%; max-width: 400px; }
 .vd .play { position: absolute; top: 12px; right: 12px; font: inherit; font-size: 14px; font-weight: 700; color: var(--navy); background: #fff; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(0,0,0,.45); }
 .vd .lead-short { display: none; }
+.vd .device { position: absolute; top: 12px; left: 12px; display: flex; background: rgba(10,22,40,.75); border-radius: 999px; padding: 3px; gap: 2px; }
+.vd .device button { font: inherit; font-family: var(--font-label); font-size: 13px; font-weight: 600; color: var(--night-text); background: transparent; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.vd .device button[aria-pressed="true"] { background: #fff; color: var(--navy); }
+.vd .demo-wrap[data-device="tablet"] .demo { aspect-ratio: 4 / 3; }
+.vd .demo-wrap[data-device="tablet"] { max-width: 460px; }
+@media (max-width: 859px) { .vd .demo-wrap[data-device="tablet"] .demo { aspect-ratio: 16 / 10; } }
 /* Handy: Titel + Feld zusammen, Demo direkt darunter sichtbar */
 @media (max-width: 859px) {
   .vd .top { padding-block: 10px; }
@@ -436,7 +442,7 @@ a { color: inherit; }
         <p class="lead lead-short">Das Handy auf dem Notenständer wird zum Spiegel: Der Anker leuchtet blau, solange das Handgelenk locker bleibt.</p>
       </div>
       <div class="media">
-        <div class="demo-wrap"><div data-demo></div><button class="play js-demo" type="button">▶ Demo ansehen</button></div>
+        <div class="demo-wrap" data-device="handy"><div data-demo></div><div class="device" role="group" aria-label="Demo-Gerät"><button type="button" data-dev="handy" aria-pressed="true">Handy</button><button type="button" data-dev="tablet" aria-pressed="false">Tablet</button></div><button class="play js-demo" type="button">▶ Demo ansehen</button></div>
         <div class="privacy-chip">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64b5f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <div><strong>Ihr Kamerabild verlässt nie Ihr Gerät.</strong><span>Die Auswertung läuft direkt im Browser. Nichts wird hochgeladen.</span></div>
@@ -591,6 +597,14 @@ a { color: inherit; }
     hint.textContent = 'Danke! (Prototyp: Hier käme die Bestätigungs-Mail.)';
     hint.classList.add('done');
   });
+  // Demo-Gerät umschalten (Handy/Tablet): gleicher Platz, anderes Video.
+  document.querySelectorAll('.device button').forEach(b => b.addEventListener('click', () => {
+    const wrap = b.closest('.demo-wrap');
+    wrap.dataset.device = b.dataset.dev;
+    wrap.querySelectorAll('.device button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+    const tag = wrap.querySelector('.tag');
+    if (tag) tag.textContent = b.dataset.dev === 'tablet' ? 'Platzhalter für Tablet-Video' : 'Platzhalter für Handy-Video';
+  }));
   document.querySelectorAll('.js-demo').forEach(b => b.addEventListener('click', () => say('Prototyp: Hier startet später das Demo-Video.')));
   document.querySelectorAll('.js-app').forEach(a => a.addEventListener('click', e => { e.preventDefault(); say('Prototyp: Hier öffnet sich später direkt die App.'); }));
 
