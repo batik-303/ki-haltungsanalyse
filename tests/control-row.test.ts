@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { computeControlRow } from '../src/core/layout/control-row'
+import { computeControlRow, MAIN_BUTTON_LABEL } from '../src/core/layout/control-row'
+import { matchVoiceCommand } from '../src/core/voice/voice-commands'
 
 // Knopf-Zeile unter dem Rahmen (#114, Entscheidung 4 aus #104): feste Plätze
 // [🎤] [Hauptknopf] [Ansicht], auf allen Geräten gleich. Namen/Texte stellt
@@ -29,5 +30,19 @@ describe('computeControlRow', () => {
   it('während des Countdowns führt das Kalibrier-Kärtchen — Knöpfe weg, Mikro bleibt', () => {
     expect(computeControlRow({ phase: 'ready-to-calibrate', viewMode: 'analyse', calibrating: true }))
       .toEqual({ mic: true, main: null, view: null, discreet: false })
+  })
+})
+
+// #132: Hauptknopf heißt „Start" statt „Haltung speichern" — Regel aus #105:
+// Knopf-Wort = Sprach-Wort, also muss jedes Knopf-Wort den passenden Befehl auslösen.
+describe('MAIN_BUTTON_LABEL', () => {
+  it('vor dem Speichern steht „Start" auf dem Hauptknopf', () => {
+    expect(MAIN_BUTTON_LABEL.save).toBe('Start')
+    expect(MAIN_BUTTON_LABEL.stop).toBe('Beenden')
+  })
+
+  it('Knopf-Wort = Sprach-Wort: das Wort auf dem Knopf löst denselben Befehl aus', () => {
+    expect(matchVoiceCommand(MAIN_BUTTON_LABEL.save)).toBe('kalibrieren')
+    expect(matchVoiceCommand(MAIN_BUTTON_LABEL.stop)).toBe('stop')
   })
 })

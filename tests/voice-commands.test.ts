@@ -28,6 +28,19 @@ describe('matchVoiceCommand', () => {
     expect(matchVoiceCommand('bereit')).toBe('kalibrieren')
   })
 
+  // #132: „Start" ersetzt „speichern" als sichtbares Wort (kurz, harte Laute,
+  // sicherer erkannt). „speichern"/„bereit" bleiben still gültig.
+  it('„Start" löst Haltung-Speichern aus, auch gebeugt', () => {
+    expect(matchVoiceCommand('Start')).toBe('kalibrieren')
+    expect(matchVoiceCommand('start')).toBe('kalibrieren')
+    expect(matchVoiceCommand('starten')).toBe('kalibrieren')
+  })
+
+  it('„neu starten"/„Neustart" heißt „neu" (neu speichern, #101), nicht einfach speichern', () => {
+    expect(matchVoiceCommand('neu starten')).toBe('neu')
+    expect(matchVoiceCommand('Neustart')).toBe('neu')
+  })
+
   it('„neu speichern" heißt weiterhin „neu", nicht „speichern"', () => {
     expect(matchVoiceCommand('neu speichern')).toBe('neu')
     expect(matchVoiceCommand('Neu speichern')).toBe('neu')

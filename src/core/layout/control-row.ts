@@ -18,12 +18,21 @@ export interface ControlRowInput {
 
 export interface ControlRow {
   mic: boolean
-  /** Hauptknopf in der Mitte: Haltung speichern / Beenden. */
+  /** Hauptknopf in der Mitte: Start (Haltung speichern) / Beenden. */
   main: 'save' | 'stop' | null
   /** Ansicht-Knopf rechts: zum Flow / zurück zum Spiegel. */
   view: 'to-flow' | 'to-mirror' | null
   /** Flow: farblos, ohne Hintergrund. */
   discreet: boolean
+}
+
+/**
+ * Wörter auf dem Hauptknopf. Regel aus #105: Knopf-Wort = Sprach-Wort —
+ * „Start" speichert die Haltung (#132), „Beenden" beendet die Übung.
+ */
+export const MAIN_BUTTON_LABEL: Record<'save' | 'stop', string> = {
+  save: 'Start',
+  stop: 'Beenden',
 }
 
 /** Was an welchem Platz der Knopf-Zeile steht. */

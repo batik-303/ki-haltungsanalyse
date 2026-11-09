@@ -625,8 +625,8 @@ export function usePoseDetection(
     return sessionRef.current.stop()
   }, [])
 
-  // Bewusster Kalibrier-Auslöser (#59): Stimme „bereit" / Knopf „Haltung
-  // speichern" (T4) rufen dies auf. Latcht den Wunsch im Auslöse-Tor; der
+  // Bewusster Kalibrier-Auslöser (#59): Stimme / Knopf „Start" (#132)
+  // rufen dies auf. Latcht den Wunsch im Auslöse-Tor; der
   // Countdown feuert automatisch, sobald der Abstand passt (Distanz-Gate).
   const armReadiness = useCallback(() => {
     readinessGateRef.current.requestArm()

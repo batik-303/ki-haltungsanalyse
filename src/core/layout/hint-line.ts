@@ -4,7 +4,7 @@ import type { ViewMode } from '../types'
 //  HINWEIS-ZEILE UNTER DER KNOPF-ZEILE (#111, Entscheidungen 9/10 aus #105)
 // ─────────────────────────────────────────────────────────────
 //  Sprache ist eine Abkürzung, nie der einzige Weg — die Zeile erinnert
-//  leise daran: vor dem Speichern „Oder sag ‚speichern'", nach dem Speichern
+//  leise daran: vor dem Speichern „… sag ‚Start'" (#132), nach dem Speichern
 //  kurz „was auf den Knöpfen steht", danach ruhig. Im Flow nie.
 //  Hört das Mikro nicht zu, sagt die Zeile das ehrlich (tippen = Neustart).
 // ─────────────────────────────────────────────────────────────

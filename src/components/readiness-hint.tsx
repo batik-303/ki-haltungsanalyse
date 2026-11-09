@@ -5,8 +5,8 @@ import { HintCard } from '@/components/hint-card'
 /**
  * Dezentes Auslöser-Feedback oben mittig im Rahmen (#59, #114).
  *
- * Erscheint erst, wenn bewusst ausgelöst wurde (Stimme „speichern" / Knopf
- * „Haltung speichern") und der Abstand noch nicht passt („waiting") bzw. kurz
+ * Erscheint erst, wenn bewusst ausgelöst wurde (Stimme / Knopf „Start",
+ * #132) und der Abstand noch nicht passt („waiting") bzw. kurz
  * beim Scharfschalten („armed"). Im ruhigen Ausgangszustand („idle") führt das
  * Abstands-Kärtchen — hier bleibt es still.
  *

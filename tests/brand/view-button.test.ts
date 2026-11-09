@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest'
  * - Ansicht-Knopf als Text mit dem **Ziel**: im Spiegel „Flow", im Flow
  *   „Spiegel". 🌊-Knopf (Handy) und zweiteiliger Umschalter (Tablet/Laptop)
  *   entfallen — auf allen Geräten gleich.
- * - Speicher-Knopf überall „Haltung speichern" (früher am Handy „Speichern").
+ * - Speicher-Knopf überall „Start" (#132; vorher „Haltung speichern", früher
+ *   am Handy „Speichern") — Wort aus `MAIN_BUTTON_LABEL`, auf allen Geräten gleich.
  * - Kein Layer-Blau am Bedienelement: Sapphire `#2196F3` ist die Flow-Farbe
  *   auf dem Canvas, ein Knopf darin läse sich wie ein Haltungssignal (#29).
  *
@@ -44,9 +45,10 @@ describe('Ansicht-Knopf — Text mit dem Ziel', () => {
   })
 })
 
-describe('Speicher-Knopf — überall „Haltung speichern"', () => {
-  it('kein verkürztes „Speichern" nur fürs Handy', () => {
-    expect(controlRowSource()).toMatch(/Haltung speichern/)
+describe('Speicher-Knopf — überall „Start" (#132)', () => {
+  it('nimmt das Knopf-Wort aus MAIN_BUTTON_LABEL, keine Geräte-Variante', () => {
+    expect(controlRowSource()).toMatch(/\{MAIN_BUTTON_LABEL\.save\}/)
+    expect(controlRowSource()).not.toMatch(/Haltung speichern/)
     expect(controlRowSource()).not.toMatch(/>Speichern</)
   })
 })
