@@ -206,6 +206,30 @@ a { color: inherit; }
 .vd .privacy-chip strong { display: block; font-size: 15px; }
 .vd .privacy-chip span { display: block; font-size: 13px; color: #c9dbea; }
 .vd .hero .form { grid-area: form; display: grid; gap: 14px; align-self: start; }
+.vd .demo-wrap { position: relative; width: 100%; max-width: 400px; }
+.vd .play { position: absolute; top: 12px; right: 12px; font: inherit; font-size: 14px; font-weight: 700; color: var(--navy); background: #fff; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(0,0,0,.45); }
+.vd .lead-short { display: none; }
+/* Handy: Titel + Feld zusammen, Demo direkt darunter sichtbar */
+@media (max-width: 859px) {
+  .vd .top { padding-block: 10px; }
+  .vd .hero { grid-template-areas: "head" "form" "media"; gap: 16px; padding-block: 4px 40px; }
+  .vd .hero .head { gap: 8px; }
+  .vd h1 { font-size: clamp(25px, 7vw, 32px); }
+  .vd .lead-long { display: none; }
+  .vd .lead-short { display: block; font-size: 16px; line-height: 1.5; }
+  .vd .formcard { padding: 12px; border-radius: 18px; }
+  .vd .formcard .label { display: none; }
+  .vd .formcard .signup { gap: 6px; }
+  .vd .formcard .signup .row { flex-wrap: nowrap; gap: 6px; }
+  .vd .formcard .signup input { flex: 1 1 auto; padding: 13px 14px; font-size: 16px; }
+  .vd .formcard .btn-gold { padding: 13px 14px; font-size: 15px; }
+  .vd .formcard .btn-gold .long { display: none; }
+  .vd .formcard .signup .hint { font-size: 12px; }
+  .vd .hero-app { display: none; }
+  .vd .hero .demo { aspect-ratio: 4 / 3; }
+  .vd .privacy-chip span { display: none; }
+  .vd .privacy-chip { padding: 10px 14px; }
+}
 .vd h1 { font-size: clamp(26px, 6.4vw, 42px); font-weight: 800; line-height: 1.13; color: var(--navy); }
 .vd .lead { font-size: 18px; color: var(--ink-soft); max-width: 34em; }
 .vd .formcard { background: #fff; border: 1px solid #dbe6ef; border-radius: 22px; padding: 20px; box-shadow: 0 18px 40px -26px rgba(0,43,73,.45); }
@@ -408,10 +432,11 @@ a { color: inherit; }
       <div class="head">
         <span class="label" style="color:var(--gold)">Für Geigenschüler, Eltern und Lehrkräfte</span>
         <h1>Gute Geigenhaltung beginnt mit einem Anker</h1>
-        <p class="lead">Ihr Handy auf dem Notenständer wird zum Spiegel, der mitdenkt. Bleibt das Handgelenk locker, leuchtet der Anker blau. Knickt es ab, wird er gelb. So korrigiert man sich im Spielfluss.</p>
+        <p class="lead lead-long">Ihr Handy auf dem Notenständer wird zum Spiegel, der mitdenkt. Bleibt das Handgelenk locker, leuchtet der Anker blau. Knickt es ab, wird er gelb. So korrigiert man sich im Spielfluss.</p>
+        <p class="lead lead-short">Das Handy auf dem Notenständer wird zum Spiegel: Der Anker leuchtet blau, solange das Handgelenk locker bleibt.</p>
       </div>
       <div class="media">
-        <div data-demo></div>
+        <div class="demo-wrap"><div data-demo></div><button class="play js-demo" type="button">▶ Demo ansehen</button></div>
         <div class="privacy-chip">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64b5f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
           <div><strong>Ihr Kamerabild verlässt nie Ihr Gerät.</strong><span>Die Auswertung läuft direkt im Browser. Nichts wird hochgeladen.</span></div>
@@ -419,7 +444,7 @@ a { color: inherit; }
       </div>
       <div class="form">
         <div class="formcard"><span class="label">Warteliste</span><div data-signup="d"></div></div>
-        <a class="app-link js-app" href="#app">Oder gleich ausprobieren: App im Browser öffnen <span class="arrow">→</span></a>
+        <a class="app-link js-app hero-app" href="#app">Oder gleich ausprobieren: App im Browser öffnen <span class="arrow">→</span></a>
       </div>
     </section>
   </div>
@@ -546,7 +571,7 @@ a { color: inherit; }
 
   function signup(key) {
     return `<form class="signup" novalidate>
-      <div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit">Auf die Warteliste</button></div>
+      <div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit"><span class="long">Auf die </span>Warteliste</button></div>
       <p class="hint">Sie bekommen eine Bestätigungs-Mail. Abmelden geht jederzeit.</p>
     </form>`;
   }
@@ -566,6 +591,7 @@ a { color: inherit; }
     hint.textContent = 'Danke! (Prototyp: Hier käme die Bestätigungs-Mail.)';
     hint.classList.add('done');
   });
+  document.querySelectorAll('.js-demo').forEach(b => b.addEventListener('click', () => say('Prototyp: Hier startet später das Demo-Video.')));
   document.querySelectorAll('.js-app').forEach(a => a.addEventListener('click', e => { e.preventDefault(); say('Prototyp: Hier öffnet sich später direkt die App.'); }));
 
   // Violinen-Zonen (Variante C): Antippen hebt die Stelle hervor.
