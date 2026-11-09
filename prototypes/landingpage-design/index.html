@@ -276,13 +276,19 @@ a { color: inherit; }
 @media (min-width: 860px) { .vd .teachers { grid-template-columns: 1fr 1.1fr; column-gap: 56px; align-items: start; } .vd .t-vip { grid-column: 1 / -1; } }
 .vd .teachers > * { min-width: 0; }
 .vd .t-head { display: grid; gap: 10px; }
-.vd .t-head p { color: var(--ink-soft); font-size: 17px; }
+.vd .t-head .t-h { color: #fff; }
+.vd .t-head p { color: #c9dbea; font-size: 17px; }
 .vd .t-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.vd .t-list li { background: #fff; border-radius: 16px; padding: 14px 18px; display: grid; gap: 4px; border: 1px solid #d3e4f1; }
-.vd .t-list strong { color: var(--navy); font-size: 16px; }
-.vd .t-list > li > span { color: var(--ink-soft); font-size: 15px; }
-.vd .t-list .soon { color: var(--sapphire-deep); margin-right: 4px; }
-.vd .t-vip { font-weight: 700; color: var(--navy); }
+.vd .t-list li { background: rgba(255,255,255,.06); border-radius: 16px; padding: 14px 18px; display: grid; gap: 4px; border: 1px solid rgba(204,221,232,.18); }
+.vd .t-list strong { color: #fff; font-size: 16px; }
+.vd .t-list > li > span { color: #c9dbea; font-size: 15px; }
+.vd .t-list .soon { color: var(--sapphire-light); margin-right: 4px; }
+.vd .t-vip { font-weight: 700; color: var(--gold-light); }
+.vd .band-night { background: var(--night); }
+.vd .band-night .foot { color: #c9dbea; }
+.vd .band-night .foot strong { color: #fff; }
+.vd .band-night .foot .soon { color: var(--sapphire-light); }
+.vd .band-night .foot .fine { color: #8ea3b8; }
 .vd .feedback { padding-block: 48px; display: grid; gap: 20px; }
 @media (min-width: 860px) { .vd .feedback { grid-template-columns: 1fr 1.1fr; column-gap: 56px; } }
 .vd .feedback > * { min-width: 0; }
@@ -486,10 +492,10 @@ a { color: inherit; }
       <p class="note">Platzhalter: Zeichnung und Verhalten der Geige werden in #136 neu gestaltet.</p>
     </div>
   </div></section>
-  <section class="band-mist"><div class="wrap teachers">
+  <section class="band-navy"><div class="wrap teachers">
     <div class="t-head">
-      <span class="label" style="color:var(--gold)">Für Lehrkräfte</span>
-      <h2 class="sec-h">Ein Werkzeug für den Unterricht. Die Lehrkraft bleibt.</h2>
+      <span class="label" style="color:var(--gold-light)">Für Lehrkräfte</span>
+      <h2 class="sec-h t-h">Ein Werkzeug für den Unterricht. Die Lehrkraft bleibt.</h2>
       <p>Blue Anchor bringt niemandem die Geigenhaltung bei. Die Grundlagen lernt man im Unterricht. Die App hilft, das Gelernte in der Übe-Woche wach zu halten.</p>
     </div>
     <ul class="t-list">
@@ -511,8 +517,8 @@ a { color: inherit; }
       <p class="hint">Ihre Nachricht geht nur an die Gründerin und wird nicht weitergegeben.</p>
     </form>
   </div></section>
-  <footer class="band-mist"><div class="wrap foot">
-    <p><strong style="color:var(--ink)">Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p>
+  <footer class="band-night"><div class="wrap foot">
+    <p><strong>Von einer Geigenpädagogin entwickelt</strong>, mit eigenen Schülerinnen und Schülern erprobt.</p>
     <div class="soonrow"><span class="soon">bald</span> Kopfhaltung · Instrumentenhöhe · Fortschritt über Wochen</div>
     <p class="fine">Für Kinder und Jugendliche: Bitte gemeinsam mit Eltern oder Lehrkraft einrichten und beim Üben in der Nähe bleiben.</p>
     <p class="fine">Blue Anchor ist ein Übe-Werkzeug für Musikerinnen und Musiker. Es ersetzt keine ärztliche oder physiotherapeutische Untersuchung.</p>
