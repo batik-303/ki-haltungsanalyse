@@ -208,7 +208,7 @@ function StepTwo({
             style={{ background: CTA_GRADIENT, color: 'var(--ui-accent-foreground)' }}
             className="h-14 flex-1 gap-2 rounded-2xl text-base font-bold shadow-md hover:brightness-[1.04]"
           >
-            Haltung speichern &amp; los
+            Haltung speichern &amp; Start
             <ArrowRight className="size-5" />
           </Button>
         </div>

@@ -18,11 +18,11 @@ describe('selectPhaseHint', () => {
     expect(selectPhaseHint(state({ distanceOk: false }))).toBe('Positioniere dich vor der Kamera')
   })
 
-  // #111 (Entscheidungen 8/9 aus #105): Knopf-Wort = Sprach-Wort — sichtbar
-  // steht „speichern", „bereit" funktioniert nur noch still.
-  it('lädt bei passendem Abstand mit „speichern" ein (kein „bereit", kein „kalibrieren")', () => {
+  // #111 (Entscheidungen 8/9 aus #105): Knopf-Wort = Sprach-Wort.
+  // #132: sichtbar steht „Start"; „speichern"/„bereit" funktionieren still.
+  it('lädt bei passendem Abstand mit „Start" ein (kein „bereit", kein „kalibrieren")', () => {
     const hint = selectPhaseHint(state({ distanceOk: true }))
-    expect(hint).toBe('Oder sag „speichern“')
+    expect(hint).toBe('Nimm deine Spielhaltung ein und sag „Start“')
     expect(hint).not.toContain('bereit')
     expect(hint.toLowerCase()).not.toContain('kalibr')
   })

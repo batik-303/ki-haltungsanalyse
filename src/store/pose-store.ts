@@ -48,7 +48,7 @@ export interface PoseState {
   // Kante: Tor ist scharf → Countdown auslösen. Wird vom Verbraucher quittiert.
   readinessArmed: boolean
   // Warten auf den Abstand dauert ungewöhnlich lange — sanfter Hinweis auf den
-  // Knopf „Haltung speichern", **kein** Sperren (kein Festhängen).
+  // Knopf „Start", **kein** Sperren (kein Festhängen).
   readinessTimedOut: boolean
 
   // Ruhiges Speichern (#118): Schnappschuss fürs Kärtchen/Glühen/Zahl, `null`

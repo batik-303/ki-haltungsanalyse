@@ -14,7 +14,7 @@ describe('computeReadinessView', () => {
   it('idle: ruhig, lädt zum bewussten Auslöser ein', () => {
     const view = computeReadinessView({ phase: 'idle', timedOut: false })
     expect(view.tone).toBe('blue')
-    expect(view.hint).toBe('Sag „speichern“, wenn du so weit bist')
+    expect(view.hint).toBe('Sag „Start“, wenn du so weit bist')
   })
 
   it('waiting: führt sanft zum Abstand und verspricht den Auto-Start', () => {
@@ -23,9 +23,9 @@ describe('computeReadinessView', () => {
     expect(view.hint.length).toBeGreaterThan(0)
   })
 
-  it('waiting + timedOut: bleibt freundlich, lenkt sanft auf „Haltung speichern“', () => {
+  it('waiting + timedOut: bleibt freundlich, lenkt sanft auf den Knopf „Start“ (#132)', () => {
     const view = computeReadinessView({ phase: 'waiting', timedOut: true })
-    expect(view.hint).toMatch(/Haltung speichern/)
+    expect(view.hint).toBe('Klappt der Abstand nicht? Tippe auf „Start“')
     expect(view.tone).toBe('yellow')
   })
 

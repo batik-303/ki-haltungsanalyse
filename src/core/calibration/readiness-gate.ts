@@ -2,7 +2,7 @@
  * Kalibrier-Auslöser: Distanz-Gate mit Auto-Start (Ticket #59, Karte #56).
  *
  * Kein Auto-Arm: der Countdown startet **nur auf bewussten Auslöser**
- * (`requestArm()` — aus Stimme „bereit" / Knopf „Haltung speichern"). Das Tor
+ * (`requestArm()` — aus Stimme „Start" / Knopf „Start", #132). Das Tor
  * ist ein Distanz-Gate: löst man bei nicht passendem Abstand aus, **wartet** es
  * (sanfte Führung) und feuert **automatisch**, sobald der Abstand passt — kein
  * erneutes Drücken.
@@ -98,7 +98,7 @@ export interface ReadinessGateOptions {
 
 export interface ReadinessGate {
   /**
-   * Bewusster Auslöser (Stimme „speichern"/„bereit" / Knopf „Haltung speichern", T4).
+   * Bewusster Auslöser (Stimme „Start", still auch „speichern"/„bereit" / Knopf „Start", #132).
    * Latcht den Wunsch; `update` schaltet scharf, sobald der Abstand passt.
    * Einmal scharf, ist ein weiterer Aufruf wirkungslos (idempotent bis `reset`).
    */
@@ -192,7 +192,7 @@ export interface ReadinessView {
  * **kein Rot**, kein Grün: Gelb führt, Blau bestätigt (#115).
  *
  * Bei `timedOut` (der Abstand passt ungewöhnlich lange nicht) lenkt der Hinweis
- * sanft auf den Knopf „Haltung speichern" — kein Druck, kein Einsperren, nur ein
+ * sanft auf den Knopf „Start" — kein Druck, kein Einsperren, nur ein
  * freundlicher Ausweg.
  */
 export function computeReadinessView(
@@ -201,13 +201,13 @@ export function computeReadinessView(
   switch (state.phase) {
     case 'idle':
       return {
-        hint: 'Sag „speichern“, wenn du so weit bist',
+        hint: 'Sag „Start“, wenn du so weit bist',
         tone: 'blue',
       }
     case 'waiting':
       return {
         hint: state.timedOut
-          ? 'Klappt der Abstand nicht? Tippe auf „Haltung speichern“'
+          ? 'Klappt der Abstand nicht? Tippe auf „Start“'
           : 'Rück dich in den guten Abstand — es startet dann von selbst',
         tone: 'yellow',
       }

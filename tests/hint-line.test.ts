@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest'
 import { computeHintLine, VOICE_TIP_DURATION_MS } from '../src/core/layout/hint-line'
 
 // Hinweis-Zeile unter der Knopf-Zeile (#111, Entscheidungen 9/10 aus #105):
-// vor dem Speichern „🎤 Oder sag ‚speichern‘“, nach dem Speichern ≈ 8 s
+// vor dem Speichern „🎤 Nimm deine Spielhaltung ein und sag ‚Start‘“ (#132), nach dem Speichern ≈ 8 s
 // „🎤 Du kannst auch sagen, was auf den Knöpfen steht.", danach ruhig.
 // Im Flow nie. Hört das Mikro nicht zu, sagt die Zeile das ehrlich.
 
 const base = {
   phase: 'ready-to-calibrate' as const,
-  phaseHint: 'Oder sag „speichern“',
+  phaseHint: 'Nimm deine Spielhaltung ein und sag „Start“',
   viewMode: 'analyse' as const,
   calibrating: false,
   voiceStatus: 'listening' as const,
@@ -18,8 +18,8 @@ const base = {
 }
 
 describe('computeHintLine', () => {
-  it('vor dem Speichern: „🎤 Oder sag ‚speichern‘“', () => {
-    expect(computeHintLine(base)).toBe('🎤 Oder sag „speichern“')
+  it('vor dem Speichern: „🎤 Nimm deine Spielhaltung ein und sag ‚Start‘“', () => {
+    expect(computeHintLine(base)).toBe('🎤 Nimm deine Spielhaltung ein und sag „Start“')
   })
 
   it('nach dem Speichern ≈ 8 s: Knopf-Wörter gehen auch per Sprache', () => {

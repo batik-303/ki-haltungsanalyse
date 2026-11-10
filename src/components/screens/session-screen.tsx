@@ -17,7 +17,7 @@ import { Home } from 'lucide-react'
 import type { StoredSession } from '@/core/types'
 import { cn } from '@/lib/utils'
 import { computeSessionFrame } from '@/core/layout/session-frame'
-import { computeControlRow } from '@/core/layout/control-row'
+import { computeControlRow, MAIN_BUTTON_LABEL } from '@/core/layout/control-row'
 import { computeHintLine, VOICE_TIP_DURATION_MS } from '@/core/layout/hint-line'
 
 const MODE_LABELS: Record<string, string> = {
@@ -121,7 +121,7 @@ export function SessionScreen() {
     }
   }, [saveCaptureDue, landmarkerRef, doCapture, startTracking, resetAnalysisState])
 
-  // Bewusster Kalibrier-Auslöser (#59): „bereit"/„Haltung speichern" (T4) und
+  // Bewusster Kalibrier-Auslöser (#59): „Start" (Stimme + Knopf, #132) und
   // der Rückfall-Knopf laufen hierüber. Kein Sofort-Countdown mehr — das
   // Distanz-Gate feuert automatisch, sobald der Abstand passt.
   const handleArm = useCallback(() => {
@@ -204,8 +204,8 @@ export function SessionScreen() {
   }, [])
 
   const voiceCommands: VoiceCommandMap = useMemo(() => ({
-    // #59: „kalibrieren"/„bereit" armiert das Distanz-Gate (kein Sofort-
-    // Countdown). #58: der „start"-Befehl entfällt — es gibt keinen Start-Schritt.
+    // #59: „Start"/„speichern"/„bereit" armiert das Distanz-Gate (kein Sofort-
+    // Countdown). #132: „Start" gehört jetzt zum Speichern.
     kalibrieren: handleArm,
     stop: handleStop,
     neu: handleRecalibrate,
@@ -369,9 +369,9 @@ export function SessionScreen() {
           {row.mic && <MicToggle status={voiceStatus} discreet={row.discreet} onClick={handleToggleMic} />}
         </div>
         <div className="flex min-h-[44px] justify-center">
-          {row.main === 'save' && <RowButton onClick={handleArm} primary>Haltung speichern</RowButton>}
+          {row.main === 'save' && <RowButton onClick={handleArm} primary>{MAIN_BUTTON_LABEL.save}</RowButton>}
           {row.main === 'stop' && (
-            <RowButton onClick={handleStop} primary={!row.discreet} discreet={row.discreet}>Beenden</RowButton>
+            <RowButton onClick={handleStop} primary={!row.discreet} discreet={row.discreet}>{MAIN_BUTTON_LABEL.stop}</RowButton>
           )}
         </div>
         <div className="flex justify-start">
