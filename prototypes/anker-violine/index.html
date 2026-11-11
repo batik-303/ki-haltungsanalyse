@@ -87,7 +87,9 @@ button { font: inherit; color: inherit; }
 .vio .weg { stroke-dasharray: 100 100; stroke-dashoffset: 0; transition: stroke-dashoffset 1.2s var(--ease); }
 .vio .weg-pulse { stroke-dasharray: 3 97; animation: travel 4.5s cubic-bezier(.45,0,.25,1) infinite; }
 @keyframes travel { from { stroke-dashoffset: 3; } to { stroke-dashoffset: -100; } }
-.vc .vio:not([data-active="3"]) .weg-tip, .vc .vio:not([data-active="3"]) .weg-pulse { opacity: 0; }
+.vc .vio:not([data-active="3"]) .weg-tip { opacity: 0; }
+/* Entscheidung 11.11.: in C kein gleitender Lichtpunkt, nur der Anker wandert nach oben */
+.vc .vio .weg-pulse { display: none; }
 /* blauer Ankerpunkt am Saitenhalter: atmet ruhig */
 .vio .anchor-halo { fill: rgba(56,189,248,.35); transform-box: fill-box; transform-origin: center; animation: breathe 3.2s ease-in-out infinite; }
 @keyframes breathe { 0%,100% { transform: scale(.8); opacity: .55; } 50% { transform: scale(1.25); opacity: 1; } }
