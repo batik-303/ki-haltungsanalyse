@@ -256,6 +256,15 @@ a { color: inherit; }
 .vd .steps li::before { content: "Schritt " counter(s); font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
 .vd .steps li strong { font-size: 17px; color: var(--navy); }
 .vd .steps li span { color: var(--ink-soft); font-size: 15px; }
+.vd .stages li::before { content: "Stufe " counter(s); }
+.vd .stages .soon { color: var(--gold); font-size: 10px; margin-left: 6px; vertical-align: middle; }
+.vd details.more { margin-top: 4px; }
+.vd details.more summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-label); font-size: 13px; font-weight: 700; color: var(--sapphire-deep); }
+.vd details.more summary::-webkit-details-marker { display: none; }
+.vd details.more summary::after { content: "+"; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; font-size: 13px; line-height: 1; }
+.vd details.more[open] summary::after { content: "−"; }
+.vd details.more p { margin: 8px 0 0; color: var(--ink-soft); font-size: 15px; }
+.vd .teachers details.more p { color: #2f4a63; }
 .vd .flowtext { padding-block: 48px; display: grid; gap: 14px; max-width: 760px; }
 .vd .flowtext h2 { font-size: clamp(24px, 5vw, 30px); }
 .vd .flowtext p { color: #c9dbea; font-size: 18px; }
@@ -475,15 +484,18 @@ a { color: inherit; }
     <blockquote lang="en">Let the music create you.</blockquote>
     <p class="sub">Die Technik steht im Dienst der Musik.</p>
     <span class="rule" aria-hidden="true"></span>
-    <p class="metro">Ein Metronom läuft auch nicht die ganze Übezeit mit. Man nimmt es, wenn man es braucht. Genauso ist Blue Anchor gedacht: ein ruhiger Spiegel für den Moment, in dem man auf die Haltung schauen möchte – ein paar Minuten oder länger. Ohne Pflicht, ohne Druck.</p>
+    <p class="metro">Wie ein Metronom: Man nimmt es, wenn man es braucht – kurz oder länger. Ohne Pflicht, ohne Druck.</p>
     <p class="by">Von einer Geigerin entwickelt · Master of Music</p>
   </div></section>
-  <section class="band-white"><div class="wrap steps">
-    <h2 class="sec-h">So läuft eine Übe-Einheit</h2>
+  <section class="band-white"><div class="wrap steps stages">
+    <h2 class="sec-h">Drei Stufen zur eigenen Haltung</h2>
     <ol>
-      <li><strong>Handy auf den Notenständer</strong><span>Kamera an, Abstand passt, wenn der Rand ruhig leuchtet.</span></li>
-      <li><strong>Haltung speichern</strong><span>Einmal locker hinstellen, „Start“ sagen. Das ist Ihr persönlicher Anker.</span></li>
-      <li><strong>Einfach spielen</strong><span>Blau heißt: alles im Fluss. Gelb lädt ein, kurz nachzuspüren.</span></li>
+      <li><strong>Spiegel</strong><span>Sie sehen sich selbst, mit dem Anker am Handgelenk.</span>
+        <details class="more"><summary>Mehr</summary><p>Handy auf den Notenständer, Kamera an. Einmal locker hinstellen und „Start“ sagen: Das ist Ihr persönlicher Anker. Blau heißt: alles im Fluss. Gelb lädt ein, kurz nachzuspüren.</p></details></li>
+      <li><strong>Flow</strong><span>Nur noch eine schmale Leiste am Rand. Der Blick bleibt bei den Noten.</span>
+        <details class="more"><summary>Mehr</summary><p>Sie spüren die Haltung selbst, die Leiste bestätigt nur. Kein Anhalten, keine Liste mit Fehlern.</p></details></li>
+      <li><strong>Dunkel <span class="soon">bald</span></strong><span>Der Bildschirm bleibt dunkel. Die Rückmeldung kommt am Ende.</span>
+        <details class="more"><summary>Mehr</summary><p>Das Ziel ist Selbstständigkeit: Sie spielen nach Gefühl, die App schaut im Hintergrund zu und zeigt danach, wie es lief.</p></details></li>
     </ol>
   </div></section>
   <section class="band-navy"><div class="wrap flowtext">
@@ -515,11 +527,13 @@ a { color: inherit; }
       <h2 class="sec-h t-h">Ein Werkzeug für den Unterricht. Die Lehrkraft bleibt.</h2>
       <p>Blue Anchor bringt niemandem die Geigenhaltung bei. Die Grundlagen lernt man im Unterricht. Die App hilft, das Gelernte in der Übe-Woche wach zu halten.</p>
     </div>
-    <ul class="t-list">
+    <details class="more"><summary>So nutzen Lehrkräfte Blue Anchor</summary>
+    <ul class="t-list" style="margin-top:12px">
       <li><strong>Im Unterricht</strong><span>Die Lehrkraft stellt mit dem Schüler die beste Haltung ein und speichert sie als persönlichen Anker.</span></li>
       <li><strong>Zu Hause</strong><span>Der Anker erinnert beim Üben, wie es sich im Unterricht angefühlt hat. <span class="soon">bald</span> Der Anker aus dem Unterricht bleibt für die ganze Woche gespeichert.</span></li>
       <li><strong>Fortgeschrittene</strong><span>Wer seine Haltung schon gut kennt, speichert den eigenen Anker selbst.</span></li>
     </ul>
+    </details>
     <p class="t-vip">Sie unterrichten Geige? Lehrkräfte bekommen frühen VIP-Zugang für ihre Klasse.</p>
   </div></section>
   <section class="band-white"><div class="wrap feedback">
