@@ -189,6 +189,14 @@ a { color: inherit; }
 .vd .band-white { background: #fff; }
 .vd .band-navy { background: var(--navy); color: #fff; }
 .vd .band-mist { background: var(--mist); }
+.vd .motto { text-align: center; padding-block: 56px 52px; display: grid; justify-items: center; gap: 14px; }
+.vd .motto blockquote { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: clamp(30px, 6vw, 44px); line-height: 1.15; color: var(--navy); }
+.vd .motto blockquote::before, .vd .motto blockquote::after { color: var(--gold); }
+.vd .motto blockquote::before { content: '„'; }
+.vd .motto blockquote::after { content: '“'; }
+.vd .motto .sub { font-weight: 700; font-size: 18px; color: var(--navy); }
+.vd .motto .rule { width: 56px; height: 2px; background: var(--gold); border-radius: 2px; }
+.vd .motto .metro { max-width: 560px; color: #3d5670; font-size: 16px; line-height: 1.6; }
 .vd .top { display: flex; justify-content: space-between; align-items: center; padding-block: 16px; }
 .vd .top .lockup .ba { font-size: 19px; }
 .vd .top .lockup .music { font-size: 9px; }
@@ -462,6 +470,12 @@ a { color: inherit; }
       </div>
     </section>
   </div>
+  <section class="band-mist"><div class="wrap motto">
+    <blockquote lang="en">Let the music create you.</blockquote>
+    <p class="sub">Die Technik steht im Dienst der Musik.</p>
+    <span class="rule" aria-hidden="true"></span>
+    <p class="metro">Ein Metronom läuft auch nicht die ganze Übezeit mit. Man nimmt es, wenn man es braucht. Genauso ist Blue Anchor gedacht: ein ruhiger Spiegel für den Moment, in dem man auf die Haltung schauen möchte – ein paar Minuten oder länger. Ohne Pflicht, ohne Druck.</p>
+  </div></section>
   <section class="band-white"><div class="wrap steps">
     <h2 class="sec-h">So läuft eine Übe-Einheit</h2>
     <ol>
