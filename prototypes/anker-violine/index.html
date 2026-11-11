@@ -1,9 +1,5 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Weg vom Anker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <!-- PROTOTYP #136 (Wegwerf-Code, nie mergen): Geigen-Zeichnung statt Pyramide auf der Landingpage (Variante D aus #135).
      Drei Verhaltens-Varianten, umschaltbar über die Leiste unten bzw. #a / #b / #c in der Adresse.
      Alle Varianten nutzen dieselbe neu gezeichnete Geige; nur Anordnung und Verhalten unterscheiden sich. -->
@@ -155,11 +151,9 @@ button { font: inherit; color: inherit; }
 .switcher button { background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
 .switcher button:hover { background: #333; }
 .switcher .cur { font-size: 14px; font-weight: 600; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.state { position: fixed; right: 12px; top: 12px; z-index: 50; background: #111; color: #fff; font: 12px/1.4 var(--font-label); padding: 6px 10px; border-radius: 8px; opacity: .85; }
+.state { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 50; background: #111; color: #fff; font: 12px/1.4 var(--font-label); padding: 6px 10px; border-radius: 8px; opacity: .85; }
 [hidden] { display: none !important; }
 </style>
-</head>
-<body>
 
 <section class="band-navy"><div class="wrap flowtext">
   <span class="label" style="color:var(--gold-light)">Korrektur im Spielfluss</span>
@@ -459,5 +453,3 @@ button { font: inherit; color: inherit; }
   });
 })();
 </script>
-</body>
-</html>
