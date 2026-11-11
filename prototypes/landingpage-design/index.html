@@ -256,8 +256,28 @@ a { color: inherit; }
 .vd .steps li::before { content: "Schritt " counter(s); font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
 .vd .steps li strong { font-size: 17px; color: var(--navy); }
 .vd .steps li span { color: var(--ink-soft); font-size: 15px; }
-.vd .stages li::before { content: "Stufe " counter(s); }
-.vd .stages .soon { color: var(--gold); font-size: 10px; margin-left: 6px; vertical-align: middle; }
+.vd .stagecards { padding-block: 48px; display: grid; gap: 10px; }
+.vd .stagecards ol { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.vd .sc { position: relative; border-radius: 20px; padding: 18px; display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: start; }
+.vd .sc .scr { width: 96px; height: auto; display: block; }
+.vd .sc > div { display: grid; gap: 4px; min-width: 0; }
+.vd .sc .n { font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.vd .sc strong { font-size: 19px; }
+.vd .sc .t { font-size: 15px; }
+.vd .sc-1 { background: #fff; border: 1px solid #d6e6f4; }
+.vd .sc-1 .n { color: var(--gold); } .vd .sc-1 strong { color: var(--navy); } .vd .sc-1 .t { color: var(--ink-soft); }
+.vd .sc-2 { background: #cfe5f7; }
+.vd .sc-2 .n { color: #8a5d14; } .vd .sc-2 strong { color: var(--navy); } .vd .sc-2 .t { color: #2f4a63; }
+.vd .sc-3 { background: var(--navy); }
+.vd .sc-3 .n { color: var(--gold-light); } .vd .sc-3 strong { color: #fff; } .vd .sc-3 .t { color: #c9dbea; }
+.vd .sc-3 details.more summary { color: var(--sapphire-light); } .vd .sc-3 details.more p { color: #c9dbea; }
+.vd .sc-2 details.more p { color: #2f4a63; }
+.vd .sc .soon { margin-left: 6px; font-size: 10px; vertical-align: middle; }
+@media (min-width: 860px) {
+  .vd .sc { grid-template-columns: 1fr; }
+  .vd .sc .scr { width: 100%; max-width: 160px; }
+  .vd .sc:not(:last-child)::after { content: "→"; position: absolute; right: -12px; top: 40px; color: var(--gold); font-weight: 700; font-size: 18px; z-index: 1; }
+}
 .vd details.more { margin-top: 4px; }
 .vd details.more summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-label); font-size: 13px; font-weight: 700; color: var(--sapphire-deep); }
 .vd details.more summary::-webkit-details-marker { display: none; }
@@ -495,15 +515,25 @@ a { color: inherit; }
       <li><strong>Einfach spielen</strong><span>Blau heißt: alles im Fluss. Gelb lädt ein, kurz nachzuspüren.</span></li>
     </ol>
   </div></section>
-  <section class="band-mist"><div class="wrap steps stages">
+  <section class="band-mist"><div class="wrap stagecards">
+    <span class="label" style="color:var(--gold)">Vom Sehen zum Spüren</span>
     <h2 class="sec-h">Drei Stufen zur eigenen Haltung</h2>
     <ol>
-      <li><strong>Spiegel</strong><span>Sie sehen sich selbst, mit dem Anker am Handgelenk.</span>
-        <details class="more"><summary>Mehr</summary><p>Der Anker leuchtet blau, solange das Handgelenk locker bleibt, und gelb, wenn es abknickt. So sieht man, wie sich gute Haltung anfühlt und aussieht.</p></details></li>
-      <li><strong>Flow</strong><span>Nur noch eine schmale Leiste am Rand. Der Blick bleibt bei den Noten.</span>
-        <details class="more"><summary>Mehr</summary><p>Sie spüren die Haltung selbst, die Leiste bestätigt nur. Kein Anhalten, keine Liste mit Fehlern.</p></details></li>
-      <li><strong>Dunkel <span class="soon">bald</span></strong><span>Der Bildschirm bleibt dunkel. Die Rückmeldung kommt am Ende.</span>
-        <details class="more"><summary>Mehr</summary><p>Das Ziel ist Selbstständigkeit: Sie spielen nach Gefühl, die App schaut im Hintergrund zu und zeigt danach, wie es lief.</p></details></li>
+      <li class="sc sc-1">
+        <svg class="scr" viewBox="0 0 80 56" aria-hidden="true"><rect x="1" y="1" width="78" height="54" rx="7" fill="#eaf4fd" stroke="#a9cdec"/><rect x="7" y="9" width="3" height="38" rx="1.5" fill="#64B5F6"/><path d="M18 46 L40 31 L64 22" fill="none" stroke="#0a2a4a" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="31" r="5" fill="#2196F3"/></svg>
+        <div><span class="n">Stufe 1</span><strong>Spiegel</strong><span class="t">Sie sehen sich selbst, mit dem Anker am Handgelenk.</span>
+        <details class="more"><summary>Mehr</summary><p>Der Anker leuchtet blau, solange das Handgelenk locker bleibt, und gelb, wenn es abknickt. So sieht man, wie sich gute Haltung anfühlt und aussieht.</p></details></div>
+      </li>
+      <li class="sc sc-2">
+        <svg class="scr" viewBox="0 0 80 56" aria-hidden="true"><rect x="1" y="1" width="78" height="54" rx="7" fill="#12305a" stroke="#2a5288"/><rect x="7" y="9" width="5" height="38" rx="2.5" fill="#64B5F6"/><rect x="5" y="7" width="9" height="42" rx="4.5" fill="none" stroke="#64B5F6" stroke-opacity=".3" stroke-width="2"/></svg>
+        <div><span class="n">Stufe 2</span><strong>Flow</strong><span class="t">Nur noch eine schmale Leiste am Rand. Der Blick bleibt bei den Noten.</span>
+        <details class="more"><summary>Mehr</summary><p>Sie spüren die Haltung selbst, die Leiste bestätigt nur. Kein Anhalten, keine Liste mit Fehlern.</p></details></div>
+      </li>
+      <li class="sc sc-3">
+        <svg class="scr" viewBox="0 0 80 56" aria-hidden="true"><rect x="1" y="1" width="78" height="54" rx="7" fill="#040b16" stroke="#1d3150"/><path d="M45 20 a9 9 0 1 0 6 15 a7 7 0 1 1 -6 -15z" fill="#d9a441" opacity=".85"/></svg>
+        <div><span class="n">Stufe 3 <span class="soon">bald</span></span><strong>Dunkel</strong><span class="t">Der Bildschirm bleibt dunkel. Die Rückmeldung kommt am Ende.</span>
+        <details class="more"><summary>Mehr</summary><p>Das Ziel ist Selbstständigkeit: Sie spielen nach Gefühl, die App schaut im Hintergrund zu und zeigt danach, wie es lief.</p></details></div>
+      </li>
     </ol>
   </div></section>
   <section class="band-navy"><div class="wrap flowtext">
