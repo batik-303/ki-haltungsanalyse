@@ -458,6 +458,9 @@ a { color: inherit; }
 .ve #e-ablauf details.more summary { border-top: 0; padding-top: 4px; }
 .ve .e-metro { margin-top: 28px; padding: 16px 20px; background: var(--sky-2); border-left: 3px solid var(--gold); border-radius: 0 14px 14px 0; line-height: 1.6; }
 
+/* Nur das geöffnete Kärtchen wächst; die anderen behalten ihre Höhe (JS setzt eine gemeinsame Mindesthöhe). */
+.ve .e-benefits ol.e-cols { align-items: start; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -786,11 +789,11 @@ a { color: inherit; }
     <!-- Darstellung 1: drei Spalten mit goldenem Strich -->
     <ol class="e-cols">
       <li><span class="e-who">Wenn du einfach gern spielst</span><strong>Du übst nicht mehr allein</strong><span>Blue Anchor schaut freundlich mit, und ungeduldig wird es nie. 😉</span>
-        <details class="more"><summary>Weiterlesen</summary><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></details></li>
+        <details class="more" name="nutzen"><summary>Weiterlesen</summary><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></details></li>
       <li><span class="e-who">Wenn du dein Kind begleitest</span><strong>Mehr Ruhe beim Üben</strong><span>Statt „Guck mal, dein Handgelenk!“ sieht dein Kind es selbst und übt selbstständiger, mit mehr Motivation.</span><span class="e-kid">Ob und wie lange dein Kind Blue Anchor nutzt, entscheidest du, gemeinsam mit der Lehrkraft.</span>
-        <details class="more"><summary>Weiterlesen</summary><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p></details></li>
+        <details class="more" name="nutzen"><summary>Weiterlesen</summary><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p></details></li>
       <li><span class="e-who">Wenn du unterrichtest</span><strong>Mehr Zeit für die Musik</strong><span>Im Geigenunterricht speichert ihr gemeinsam die passende Haltung, und unter der Woche wird zu Hause genau damit geübt.</span>
-        <details class="more"><summary>Weiterlesen</summary><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></details></li>
+        <details class="more" name="nutzen"><summary>Weiterlesen</summary><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></details></li>
     </ol>
     <!-- Darstellung 2: Reiter – man tippt auf seine Situation, der ganze Text erscheint -->
     <div class="e-tabs">
@@ -940,6 +943,7 @@ a { color: inherit; }
     current = keys[(keys.indexOf(current) + step + keys.length) % keys.length];
     show(current);
     try { history.replaceState(null, '', '#' + current); } catch (_) {}
+    window.dispatchEvent(new Event('resize'));
     window.scrollTo(0, 0);
   }
   // Schrift-Umschalter (Variante E): A Modern / B Tradition / C Edel.
@@ -953,6 +957,27 @@ a { color: inherit; }
     tabs.querySelectorAll('.e-tablist button').forEach(o => o.setAttribute('aria-selected', String(o === b)));
     tabs.querySelectorAll('.e-panel').forEach(p => { p.hidden = p.dataset.panel !== b.dataset.tab; });
   }));
+  // Kärtchen „Was es bringt“: gleiche Höhe im geschlossenen Zustand, nur das offene wächst, immer nur eines offen.
+  const cards = Array.from(document.querySelectorAll('#var-e .e-cols > li'));
+  function closedHeight(li) {
+    const d = li.querySelector('details');
+    const extra = d && d.open ? d.getBoundingClientRect().height - d.querySelector('summary').getBoundingClientRect().height - 6 : 0;
+    return li.getBoundingClientRect().height - extra;
+  }
+  function equalize() {
+    cards.forEach(li => { li.style.minHeight = ''; });
+    const max = Math.max(...cards.map(closedHeight));
+    cards.forEach(li => { li.style.minHeight = max + 'px'; });
+  }
+  cards.forEach(li => {
+    const d = li.querySelector('details');
+    d.addEventListener('toggle', () => {
+      if (d.open) cards.forEach(o => { const od = o.querySelector('details'); if (od !== d && od.open) od.open = false; });
+    });
+  });
+  window.addEventListener('resize', equalize);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(equalize);
+  setTimeout(equalize, 0);
   // Sprung-Navigation (Variante E): weich zum Abschnitt scrollen, Menü schließen.
   document.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
     ev.preventDefault();
