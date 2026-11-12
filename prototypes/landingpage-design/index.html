@@ -383,7 +383,9 @@ a { color: inherit; }
 .ve .e-story-text p { margin: 0; color: var(--ink-soft); font-size: 16px; }
 .ve .e-write { color: #3d5670; font-size: 15px; max-width: 34em; }
 .ve .e-write a { color: var(--sapphire-deep); font-weight: 700; }
-.ve .steps li details.more { margin-top: 6px; }
+/* „Mehr“-Knöpfe auf gleicher Höhe: Kärtchen als Spalte, „Mehr“ ganz unten. */
+.ve .steps li, .ve .e-cards li { display: flex; flex-direction: column; gap: 6px; }
+.ve .steps li details.more, .ve .e-cards li details.more { margin-top: auto; padding-top: 10px; }
 .ve .steps .dot-grey { background: #9aa5b1; box-shadow: 0 0 0 4px rgba(154,165,177,.3); }
 .ve .e-soon { display: flex; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 14px; margin-top: 6px; }
 .ve .e-soon .soon { color: var(--sapphire-deep); }
