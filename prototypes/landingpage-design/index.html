@@ -454,6 +454,10 @@ a { color: inherit; }
 .ve .e-benefits ol.e-cols li .e-kid { background: var(--sky-2); border-radius: 12px; padding: 8px 12px; }
 .ve .e-benefits ol.e-cols li details.more summary { border-top: 1px solid #e3edf5; }
 
+/* So läuft's: keine Extra-Linie über „Tipps zur Einrichtung“ (nur oben die goldenen Striche); Metronom-Satz mit Luft */
+.ve #e-ablauf details.more summary { border-top: 0; padding-top: 4px; }
+.ve .e-metro { margin-top: 28px; padding: 16px 20px; background: var(--sky-2); border-left: 3px solid var(--gold); border-radius: 0 14px 14px 0; line-height: 1.6; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
