@@ -417,6 +417,34 @@ a { color: inherit; }
 .fontpick button { font: inherit; border: 0; background: transparent; border-radius: 999px; padding: 6px 10px; cursor: pointer; color: #333; }
 .fontpick button[aria-pressed="true"] { background: var(--navy); color: #fff; }
 
+/* ── Variante E, Runde 2: einheitlich goldene Striche, „Weiterlesen“ statt „+ Mehr“, Sprachbefehle sichtbar ── */
+.ve .steps li > span { color: var(--ink-soft); font-size: 15px; }
+.ve .e-voice { display: flex; gap: 8px; align-items: center; color: var(--navy); font-size: 14px; background: var(--sky-2); border-radius: 10px; padding: 7px 10px; margin-top: 4px; }
+.ve .e-voice svg { flex: 0 0 auto; color: var(--sapphire-deep); }
+.ve .e-voice b { font-weight: 800; }
+.ve .e-benefits .e-who { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.ve .e-benefits ol.e-cols li::before { content: none; }
+.ve .e-benefits .e-kid { font-size: 14px; font-weight: 700; color: var(--navy); }
+/* „Weiterlesen“: goldener Text mit Pfeil, der sich beim Öffnen dreht */
+.ve details.more summary { font-family: var(--font-head); font-size: 14px; font-weight: 800; color: var(--navy); gap: 8px; padding-top: 10px; border-top: 1px solid rgba(176,122,36,.35); width: 100%; }
+.ve details.more summary::after { content: "›"; width: auto; height: auto; border: 0; border-radius: 0; font-size: 20px; line-height: 1; color: var(--gold); transition: transform .2s; }
+.ve details.more[open] summary::after { content: "›"; transform: rotate(90deg); }
+.ve .e-story details.more summary { border-top: 0; width: auto; }
+.ve .steps li details.more, .ve .e-benefits li details.more { padding-top: 6px; }
+/* Darstellung umschalten (nur Prototyp): Spalten oder Reiter */
+.ve .e-tabs { display: none; }
+.ve[data-more="tabs"] .e-benefits .e-cols { display: none; }
+.ve[data-more="tabs"] .e-tabs { display: grid; gap: 18px; }
+.ve .e-tablist { display: flex; gap: 6px 22px; flex-wrap: wrap; border-bottom: 1px solid rgba(176,122,36,.35); }
+.ve .e-tablist button { font: inherit; font-size: 15px; font-weight: 800; color: #3d5670; background: none; border: 0; padding: 10px 0; margin-bottom: -1px; border-bottom: 3px solid transparent; cursor: pointer; text-align: left; }
+.ve .e-tablist button[aria-selected="true"] { color: var(--navy); border-bottom-color: var(--gold); }
+.ve .e-panel { display: grid; gap: 10px; max-width: 46em; }
+.ve .e-panel[hidden] { display: none; }
+.ve .e-panel strong { font-size: 21px; color: var(--navy); }
+.ve .e-panel p { color: var(--ink-soft); font-size: 16px; }
+.ve .e-panel .e-kid { color: var(--navy); font-weight: 700; font-size: 15px; }
+@media (max-width: 859px) { .ve .e-tablist { flex-direction: column; gap: 0; } .ve .e-tablist button { padding: 10px 0; border-bottom-width: 0; border-left: 3px solid transparent; padding-left: 10px; } .ve .e-tablist button[aria-selected="true"] { border-left-color: var(--gold); } }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -666,7 +694,7 @@ a { color: inherit; }
   </div></footer>
 </div>
 
-<div class="variant vd ve" id="var-e" data-name="Version 1 (#152)" data-font="a" hidden>
+<div class="variant vd ve" id="var-e" data-name="Version 1 (#152)" data-font="a" data-more="cols" hidden>
   <header class="e-nav">
     <div class="wrap e-nav-in">
       <span class="lockup"><span data-mark="30"></span><span class="words"><span class="ba">Blue Anchor</span><span class="music"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
@@ -729,26 +757,39 @@ a { color: inherit; }
     <h2 class="sec-h">So läuft's</h2>
     <ol>
       <li><strong>Haltung speichern</strong><span>Deine gute Haltung lernst du im Geigenunterricht. Blue Anchor hilft dir, sie beim Üben zu behalten. Speichere sie gemeinsam mit deiner Lehrkraft oder selbst, wenn du sie schon sicher kennst.</span>
-        <details class="more"><summary>Mehr</summary><p>Die App führt dich durch die Einrichtung. Das Wichtigste: gutes Licht (im Dunkeln sieht die Kamera nichts), ein ruhiger Hintergrund, und dein Handy, Tablet oder Laptop auf Augenhöhe. Dann sagst du „Start“ oder tippst auf den Knopf, und deine Haltung wird gespeichert. Sie gilt für die ganze Übe-Einheit.</p></details></li>
+        <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Sag <b>„Start“</b> oder tippe auf den Knopf.</span></p>
+        <details class="more"><summary>Tipps zur Einrichtung</summary><p>Die App führt dich Schritt für Schritt. Das Wichtigste: gutes Licht (im Dunkeln sieht die Kamera nichts), ein ruhiger Hintergrund, und dein Handy, Tablet oder Laptop auf Augenhöhe. Deine Haltung gilt dann für die ganze Übe-Einheit.</p></details></li>
       <li><strong>Spielen, im Spiegel oder im Flow</strong><span>Im Spiegel siehst du dich und deinen Anker am Handgelenk. Im Flow verschwindet das Bild, und du siehst deine Haltung nur noch aus dem Augenwinkel, so wie den Dirigenten, wenn du im Orchester spielst.</span>
         <div class="dots"><p><i class="dot dot-blue" aria-hidden="true"></i>Deine schöne Haltung – im Anker</p><p><i class="dot dot-yellow" aria-hidden="true"></i>Hinweis: entspannen – zurück in den Anker</p><p><i class="dot dot-grey" aria-hidden="true"></i>Die Kamera sieht dein Handgelenk gerade nicht gut. Stell dich so hin, dass es sichtbar ist.</p></div>
-        <details class="more"><summary>Mehr</summary><p>Umschalten geht per Knopf oder per Sprachbefehl („Spiegel“, „Flow“). Die Knöpfe sind immer da, die Stimme ist nur eine Abkürzung.</p></details></li>
+        <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Umschalten per Knopf oder Sprachbefehl: <b>„Spiegel“</b> · <b>„Flow“</b></span></p></li>
       <li><strong>Dein Ergebnis</strong><span>Am Ende siehst du, wie lange du geübt hast und wie lange du im Anker geblieben bist, dazu deine Übezeit insgesamt.</span>
         <p class="e-soon"><span class="soon">bald</span> Deinen Fortschritt über Woche und Monat sehen.</p></li>
     </ol>
     <p class="e-metro">Nutze Blue Anchor wie ein Metronom: ab und zu, wenn du es brauchst, kurz oder länger. Ohne Pflicht, ohne Druck.</p>
   </div></section>
 
-  <section class="band-blue" id="e-nutzen"><div class="wrap e-cards">
+  <section class="band-mist" id="e-nutzen"><div class="wrap steps e-benefits">
     <h2 class="sec-h">Was Blue Anchor dir bringt</h2>
-    <ul>
-      <li><span class="label">Wenn du einfach gern spielst</span><strong>Du übst nicht mehr allein</strong><p>Blue Anchor schaut freundlich mit, und ungeduldig wird es nie. 😉</p>
-        <details class="more"><summary>Mehr</summary><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></details></li>
-      <li><span class="label">Wenn du dein Kind begleitest</span><strong>Mehr Ruhe beim Üben</strong><p>Statt „Guck mal, dein Handgelenk!“ sieht dein Kind es selbst und übt selbstständiger, mit mehr Motivation.</p><p class="e-kid">Ob und wie lange dein Kind Blue Anchor nutzt, entscheidest du, gemeinsam mit der Lehrkraft.</p>
-        <details class="more"><summary>Mehr</summary><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p></details></li>
-      <li><span class="label">Wenn du unterrichtest</span><strong>Mehr Zeit für die Musik</strong><p>Im Geigenunterricht speichert ihr gemeinsam die passende Haltung, und unter der Woche wird zu Hause genau damit geübt.</p>
-        <details class="more"><summary>Mehr</summary><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></details></li>
-    </ul>
+    <!-- Darstellung 1: drei Spalten mit goldenem Strich -->
+    <ol class="e-cols">
+      <li><span class="e-who">Wenn du einfach gern spielst</span><strong>Du übst nicht mehr allein</strong><span>Blue Anchor schaut freundlich mit, und ungeduldig wird es nie. 😉</span>
+        <details class="more"><summary>Weiterlesen</summary><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></details></li>
+      <li><span class="e-who">Wenn du dein Kind begleitest</span><strong>Mehr Ruhe beim Üben</strong><span>Statt „Guck mal, dein Handgelenk!“ sieht dein Kind es selbst und übt selbstständiger, mit mehr Motivation.</span><span class="e-kid">Ob und wie lange dein Kind Blue Anchor nutzt, entscheidest du, gemeinsam mit der Lehrkraft.</span>
+        <details class="more"><summary>Weiterlesen</summary><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p></details></li>
+      <li><span class="e-who">Wenn du unterrichtest</span><strong>Mehr Zeit für die Musik</strong><span>Im Geigenunterricht speichert ihr gemeinsam die passende Haltung, und unter der Woche wird zu Hause genau damit geübt.</span>
+        <details class="more"><summary>Weiterlesen</summary><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></details></li>
+    </ol>
+    <!-- Darstellung 2: Reiter – man tippt auf seine Situation, der ganze Text erscheint -->
+    <div class="e-tabs">
+      <div class="e-tablist" role="tablist" aria-label="Deine Situation">
+        <button type="button" role="tab" aria-selected="true" data-tab="0">Wenn du einfach gern spielst</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="1">Wenn du dein Kind begleitest</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="2">Wenn du unterrichtest</button>
+      </div>
+      <div class="e-panel" role="tabpanel" data-panel="0"><strong>Du übst nicht mehr allein</strong><p>Blue Anchor schaut freundlich mit, und ungeduldig wird es nie. 😉</p><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></div>
+      <div class="e-panel" role="tabpanel" data-panel="1" hidden><strong>Mehr Ruhe beim Üben</strong><p>Statt „Guck mal, dein Handgelenk!“ sieht dein Kind es selbst und übt selbstständiger, mit mehr Motivation.</p><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p><p class="e-kid">Ob und wie lange dein Kind Blue Anchor nutzt, entscheidest du, gemeinsam mit der Lehrkraft.</p></div>
+      <div class="e-panel" role="tabpanel" data-panel="2" hidden><strong>Mehr Zeit für die Musik</strong><p>Im Geigenunterricht speichert ihr gemeinsam die passende Haltung, und unter der Woche wird zu Hause genau damit geübt.</p><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></div>
+    </div>
   </div></section>
 
   <section class="band-navy" id="e-anmelden"><div class="wrap e-signup">
@@ -770,10 +811,9 @@ a { color: inherit; }
   <span class="cur" id="cur">A</span>
   <button id="next" aria-label="Nächste Variante">→</button>
 </nav>
-<div class="fontpick" id="fontpick" role="group" aria-label="Schrift vergleichen (nur Prototyp)" hidden>Schrift:
-  <button type="button" data-font="a" aria-pressed="true">A Modern</button>
-  <button type="button" data-font="b" aria-pressed="false">B Tradition</button>
-  <button type="button" data-font="c" aria-pressed="false">C Edel</button>
+<div class="fontpick" id="fontpick" role="group" aria-label="Darstellung vergleichen (nur Prototyp)" hidden>„Was es bringt“:
+  <button type="button" data-more="cols" aria-pressed="true">1 Spalten</button>
+  <button type="button" data-more="tabs" aria-pressed="false">2 Reiter</button>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -891,8 +931,14 @@ a { color: inherit; }
   }
   // Schrift-Umschalter (Variante E): A Modern / B Tradition / C Edel.
   document.querySelectorAll('#fontpick button').forEach(b => b.addEventListener('click', () => {
-    document.getElementById('var-e').dataset.font = b.dataset.font;
+    document.getElementById('var-e').dataset.more = b.dataset.more;
     document.querySelectorAll('#fontpick button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+  }));
+  // Reiter in „Was es bringt“ (Variante E, Darstellung 2).
+  document.querySelectorAll('.e-tablist button').forEach(b => b.addEventListener('click', () => {
+    const tabs = b.closest('.e-tabs');
+    tabs.querySelectorAll('.e-tablist button').forEach(o => o.setAttribute('aria-selected', String(o === b)));
+    tabs.querySelectorAll('.e-panel').forEach(p => { p.hidden = p.dataset.panel !== b.dataset.tab; });
   }));
   // Sprung-Navigation (Variante E): weich zum Abschnitt scrollen, Menü schließen.
   document.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
