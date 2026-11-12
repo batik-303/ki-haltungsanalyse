@@ -472,6 +472,9 @@ a { color: inherit; }
 .ve .e-tips li::before { letter-spacing: 0; content: ""; flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); transform: translateY(-2px); }
 .ve .e-tips b { color: var(--navy); font-weight: 800; }
 
+/* Laptop: Sprachbefehl-Zeilen in Schritt 1 und 2 unten auf einer Linie */
+@media (min-width: 860px) { .ve #e-ablauf .e-voice { margin-top: auto; } .ve #e-ablauf .e-tips { margin-bottom: 10px; } }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -782,14 +785,14 @@ a { color: inherit; }
       <li><strong>Haltung speichern</strong><span>Deine gute Haltung lernst du im Geigenunterricht. Blue Anchor hilft dir, sie beim Üben zu behalten. Speichere sie gemeinsam mit deiner Lehrkraft oder selbst, wenn du sie schon sicher kennst.</span>
         
         <ul class="e-tips" aria-label="So klappt es am besten">
-          <li><b>Gutes Licht</b> – im Dunkeln sieht die Kamera nichts</li>
+          <li><span><b>Gutes Licht</b> – im Dunkeln geht es nicht</span></li>
           <li><b>Ruhiger Hintergrund</b></li>
           <li>Handy, Tablet oder Laptop <b>auf Augenhöhe</b></li>
         </ul>
         <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Sag <b>„Start“</b> oder tippe auf den Knopf.</span></p></li>
       <li><strong>Spielen, im Spiegel oder im Flow</strong><span>Im Spiegel siehst du dich und deinen Anker am Handgelenk. Im Flow verschwindet das Bild, und du siehst deine Haltung nur noch aus dem Augenwinkel, so wie den Dirigenten, wenn du im Orchester spielst.</span>
         <div class="dots"><p><i class="dot dot-blue" aria-hidden="true"></i>Deine schöne Haltung – im Anker</p><p><i class="dot dot-yellow" aria-hidden="true"></i>Hinweis: entspannen – zurück in den Anker</p><p><i class="dot dot-grey" aria-hidden="true"></i>Die Kamera sieht dein Handgelenk gerade nicht gut. Stell dich so hin, dass es sichtbar ist.</p></div>
-        <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Umschalten per Knopf oder Sprachbefehl: <b>„Spiegel“</b> · <b>„Flow“</b></span></p></li>
+        <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Umschalten: Sag <b>„Spiegel“</b> oder <b>„Flow“</b>.</span></p></li>
       <li><strong>Dein Ergebnis</strong><span>Am Ende siehst du, wie lange du geübt hast und wie lange du im Anker geblieben bist, dazu deine Übezeit insgesamt.</span>
         <p class="e-soon"><span class="soon">bald</span> Deinen Fortschritt über Woche und Monat sehen.</p></li>
     </ol>
