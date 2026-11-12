@@ -4,7 +4,7 @@
      umschaltbar über die Leiste unten bzw. #a / #b / #c in der Adresse. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&family=Fraunces:ital,wght@0,600;0,700;1,500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap">
 <style>
 /* Layout: drei Varianten mit eigener, fester Bildwelt (A hell, B nachtblau, C hell-papier);
    jede Variante setzt ihre Farben selbst, deshalb kein Hell/Dunkel-Umschalten. */
@@ -402,12 +402,25 @@ a { color: inherit; }
 .ve .e-signup .formcard { width: 100%; max-width: 560px; text-align: left; margin-top: 8px; }
 .ve .e-legal a { color: var(--sapphire-deep); font-weight: 600; }
 
+/* ── Schrift-Vergleich in Variante E (nur Prototyp): zwei Schriften statt drei ── */
+.ve { --font-label: 'Manrope', ui-sans-serif, system-ui, sans-serif; --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif; }
+.ve[data-font="b"] { --font-display: 'Fraunces', Georgia, serif; }
+.ve[data-font="c"] { --font-display: 'Playfair Display', Georgia, serif; }
+.ve h1, .ve h2, .ve .motto blockquote, .ve .e-cards strong, .ve .steps li strong { font-family: var(--font-display); }
+.ve[data-font="a"] .motto blockquote { font-style: normal; font-weight: 700; }
+.ve[data-font="b"] h1, .ve[data-font="c"] h1 { font-weight: 700; letter-spacing: -.005em; }
+.ve[data-font="b"] h2, .ve[data-font="c"] h2, .ve[data-font="b"] .e-cards strong, .ve[data-font="c"] .e-cards strong, .ve[data-font="b"] .steps li strong, .ve[data-font="c"] .steps li strong { font-weight: 700; }
+.fontpick { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(68px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #fff; color: #111; border: 1px solid #ccd6e0; border-radius: 999px; padding: 4px 4px 4px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700; max-width: calc(100vw - 24px); white-space: nowrap; }
+.fontpick[hidden] { display: none; }
+.fontpick button { font: inherit; border: 0; background: transparent; border-radius: 999px; padding: 6px 10px; cursor: pointer; color: #333; }
+.fontpick button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
 .switcher button:hover { background: #333; }
 .switcher .cur { font-size: 14px; font-weight: 600; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 50; background: #111; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); text-align: center; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(120px + env(safe-area-inset-bottom, 0px)); z-index: 50; background: #111; color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); text-align: center; }
 </style>
 
 <!-- Wiederverwendbare Bausteine werden per Skript eingesetzt: Logo (data-mark), Demo-Spiegel (data-demo), Formular (data-signup) -->
@@ -651,7 +664,7 @@ a { color: inherit; }
   </div></footer>
 </div>
 
-<div class="variant vd ve" id="var-e" data-name="Version 1 (#152)" hidden>
+<div class="variant vd ve" id="var-e" data-name="Version 1 (#152)" data-font="b" hidden>
   <header class="e-nav">
     <div class="wrap e-nav-in">
       <span class="lockup"><span data-mark="30"></span><span class="words"><span class="ba">Blue Anchor</span><span class="music"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
@@ -755,6 +768,11 @@ a { color: inherit; }
   <span class="cur" id="cur">A</span>
   <button id="next" aria-label="Nächste Variante">→</button>
 </nav>
+<div class="fontpick" id="fontpick" role="group" aria-label="Schrift vergleichen (nur Prototyp)" hidden>Schrift:
+  <button type="button" data-font="a" aria-pressed="false">A Modern</button>
+  <button type="button" data-font="b" aria-pressed="true">B Tradition</button>
+  <button type="button" data-font="c" aria-pressed="false">C Edel</button>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -859,6 +877,7 @@ a { color: inherit; }
     if (!keys.includes(k)) k = 'a';
     keys.forEach(x => { document.getElementById('var-' + x).hidden = x !== k; });
     cur.textContent = k.toUpperCase() + ' · ' + document.getElementById('var-' + k).dataset.name;
+    document.getElementById('fontpick').hidden = k !== 'e';
     return k;
   }
   let current = show((location.hash || '#e').slice(1));
@@ -868,6 +887,11 @@ a { color: inherit; }
     try { history.replaceState(null, '', '#' + current); } catch (_) {}
     window.scrollTo(0, 0);
   }
+  // Schrift-Umschalter (Variante E): A Modern / B Tradition / C Edel.
+  document.querySelectorAll('#fontpick button').forEach(b => b.addEventListener('click', () => {
+    document.getElementById('var-e').dataset.font = b.dataset.font;
+    document.querySelectorAll('#fontpick button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+  }));
   // Sprung-Navigation (Variante E): weich zum Abschnitt scrollen, Menü schließen.
   document.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
     ev.preventDefault();
