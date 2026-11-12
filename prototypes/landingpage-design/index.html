@@ -475,6 +475,15 @@ a { color: inherit; }
 /* Laptop: Sprachbefehl-Zeilen in Schritt 1 und 2 unten auf einer Linie */
 @media (min-width: 860px) { .ve #e-ablauf .e-voice { margin-top: auto; } .ve #e-ablauf .e-tips { margin-bottom: 10px; } }
 
+/* Mini-Ergebnis wie in der App (#128): blauer Anker-Kreis, Zeit in Worten, keine Prozent */
+.ve .e-result { display: grid; justify-items: center; gap: 10px; margin: 14px 0 6px; }
+.ve .e-result-circle { width: 148px; height: 148px; border-radius: 50%; display: grid; place-content: center; justify-items: center; color: #fff; background: radial-gradient(circle at 35% 30%, var(--sapphire-light), var(--sapphire) 45%, var(--sapphire-deep)); box-shadow: 0 0 40px 6px rgba(33,150,243,.3); }
+.ve .e-result-big { font-size: 46px; font-weight: 300; line-height: 1; letter-spacing: -.03em; }
+.ve .e-result-big small { font-size: 18px; font-weight: 600; margin-left: 4px; letter-spacing: 0; }
+.ve .e-result-label { font-size: 13px; opacity: .9; margin-top: 4px; }
+.ve .e-result-sub { display: grid; justify-items: center; font-size: 13px; color: var(--ink-soft); }
+.ve .e-result-sub b { font-size: 16px; color: var(--ink); font-weight: 700; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -794,6 +803,10 @@ a { color: inherit; }
         <div class="dots"><p><i class="dot dot-blue" aria-hidden="true"></i>Deine schöne Haltung – im Anker</p><p><i class="dot dot-yellow" aria-hidden="true"></i>Hinweis: entspannen – zurück in den Anker</p><p><i class="dot dot-grey" aria-hidden="true"></i>Die Kamera sieht dein Handgelenk gerade nicht gut. Stell dich so hin, dass es sichtbar ist.</p></div>
         <p class="e-voice"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Umschalten: Sag <b>„Spiegel“</b> oder <b>„Flow“</b>.</span></p></li>
       <li><strong>Dein Ergebnis</strong><span>Am Ende siehst du, wie lange du geübt hast und wie lange du im Anker geblieben bist, dazu deine Übezeit insgesamt.</span>
+        <div class="e-result" role="img" aria-label="Beispiel Ergebnis-Seite: 8 Minuten im Anker, diese Übung 10 Minuten">
+          <div class="e-result-circle"><span class="e-result-big">8<small>Min.</small></span><span class="e-result-label">im Anker</span></div>
+          <span class="e-result-sub">Diese Übung<b>10 min</b></span>
+        </div>
         <p class="e-soon"><span class="soon">bald</span> Deinen Fortschritt über Woche und Monat sehen.</p></li>
     </ol>
     <p class="e-metro">Nutze Blue Anchor wie ein Metronom: ab und zu, wenn du es brauchst, kurz oder länger. Ohne Pflicht, ohne Druck.</p>
