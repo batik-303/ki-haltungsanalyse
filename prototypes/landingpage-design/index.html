@@ -461,6 +461,11 @@ a { color: inherit; }
 /* Nur das geöffnete Kärtchen wächst; die anderen behalten ihre Höhe (JS setzt eine gemeinsame Mindesthöhe). */
 .ve .e-benefits ol.e-cols { align-items: start; }
 
+/* „Warum Blue Anchor?“: goldener Titel größer, Leitsatz statt englischem Motto */
+.ve .e-story-h { color: var(--gold); font-size: clamp(24px, 5vw, 30px); font-weight: 800; }
+.ve .e-story blockquote { font-size: clamp(24px, 4.6vw, 34px); font-weight: 700; font-style: normal; }
+.ve .e-story blockquote::before, .ve .e-story blockquote::after { content: none; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -734,7 +739,6 @@ a { color: inherit; }
   <div class="band-sky">
     <section class="wrap hero">
       <div class="head">
-        <span class="label" style="color:var(--gold)">Entwickelt von einer Geigerin (Master of Music)</span>
         <h1><span class="e-h1-a">Deine Geigenhaltungs-App</span> <span class="e-h1-b">wie ein digitaler Spiegel</span></h1>
         <p class="lead">Sieh dein linkes Handgelenk live, während du spielst. Einmal im Geigenunterricht eingestellt, begleitet dich die App freundlich beim Üben zu Hause.</p>
       </div>
@@ -752,8 +756,8 @@ a { color: inherit; }
   </div>
 
   <section class="band-mist" id="e-geschichte"><div class="wrap motto e-story">
-    <span class="label" style="color:var(--gold)">Warum Blue Anchor?</span>
-    <blockquote lang="en">Let the music create you.</blockquote>
+    <h2 class="e-story-h">Warum Blue Anchor?</h2>
+    <blockquote>Die Technik steht im Dienst der Musik.</blockquote>
     <p class="e-story-lead">Im Unterricht gelingt die Haltung oft wunderbar. Zu Hause, mitten in der Musik, wird sie als Erstes vergessen. Blue Anchor erinnert ruhig daran, damit der Kopf frei bleibt für die Musik.</p>
     <details class="more"><summary>Meine Geschichte</summary>
       <div class="e-story-text">
@@ -763,9 +767,6 @@ a { color: inherit; }
         <p>Wenn dadurch auch nur ein Kind in der Woche einmal öfter seinen Geigenkasten öffnet, bin ich glücklich.</p>
       </div>
     </details>
-    <span class="rule" aria-hidden="true"></span>
-    <p class="sub">Die Technik steht im Dienst der Musik.</p>
-    <p class="e-write">Fragen, Ideen oder einfach Lust zu erzählen, wie es beim Üben läuft? Schreib mir: <a href="#e-kontakt" data-jump>hallo@blueanchormusic.com</a></p>
     <p class="by">— Vorname Nachname · Geigerin (Master of Music)</p>
   </div></section>
 
