@@ -467,6 +467,13 @@ a { color: inherit; }
 .ve .e-story blockquote::before, .ve .e-story blockquote::after { content: none; }
 
 /* Einrichtungs-Tipps direkt sichtbar, Stichworte dunkel hervorgehoben */
+/* #153: Abschnitt Geigenhaltung (navy Band zwischen „So läuft's“ und „Was es bringt“) */
+.ve .e-haltung { padding-block: 52px; display: grid; gap: 14px; max-width: 760px; }
+.ve .e-haltung-h { color: #fff; font-size: clamp(22px, 4.6vw, 30px); line-height: 1.25; margin: 0; }
+.ve .e-haltung-h span { display: block; color: var(--gold-light); font-size: .7em; margin-bottom: 6px; }
+.ve .e-haltung-lead { color: #e3eef8; font-size: 18px; line-height: 1.6; margin: 0; }
+.ve .e-haltung details.more summary { color: #fff; border-top: 1px solid rgba(217,168,85,.45); }
+.ve .e-haltung-more p { color: #c9dbea; font-size: 16px; line-height: 1.6; margin: 10px 0 0; }
 .ve .e-tips { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .ve .e-tips li { display: flex; flex-direction: row; gap: 10px; align-items: baseline; font-size: 15px; color: var(--ink-soft); border-top: 0; padding-top: 0; counter-increment: none; }
 .ve .e-tips li::before { letter-spacing: 0; content: ""; flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); transform: translateY(-2px); }
@@ -740,6 +747,7 @@ a { color: inherit; }
       <nav class="e-links" aria-label="Seitenabschnitte">
         <a href="#e-geschichte" data-jump>Geschichte</a>
         <a href="#e-ablauf" data-jump>So läuft's</a>
+<a href="#e-haltung" data-jump>Geigenhaltung</a>
         <a href="#e-nutzen" data-jump>Was es bringt</a>
         <a href="#e-kontakt" data-jump>Kontakt</a>
       </nav>
@@ -748,6 +756,7 @@ a { color: inherit; }
         <div class="e-menu-list">
           <a href="#e-geschichte" data-jump>Geschichte</a>
           <a href="#e-ablauf" data-jump>So läuft's</a>
+<a href="#e-haltung" data-jump>Geigenhaltung</a>
           <a href="#e-nutzen" data-jump>Was es bringt</a>
           <a href="#e-kontakt" data-jump>Kontakt</a>
         </div>
@@ -812,6 +821,18 @@ a { color: inherit; }
     <p class="e-metro">Nutze Blue Anchor wie ein Metronom: ab und zu, wenn du es brauchst, kurz oder länger. Ohne Pflicht, ohne Druck.</p>
   </div></section>
 
+  <section class="band-navy" id="e-haltung"><div class="wrap e-haltung">
+    <h2 class="e-haltung-h"><span>Geigenhaltung:</span> Was ein gerades, lockeres linkes Handgelenk dem Spiel bringt</h2>
+    <p class="e-haltung-lead">Bleibt das linke Handgelenk locker und in einer Linie mit dem Unterarm, greifen die Finger runder und sicherer, die Intonation wird sauberer und der Ton klar. Weil die Hand die Geige nicht tragen muss, spielst du mit weniger Kraft und bleibst länger entspannt.</p>
+    <details class="more"><summary>Weiterlesen</summary>
+      <div class="e-haltung-more">
+        <p>Bleibt das Handgelenk in der Linie, wird der kleine Finger runder und kräftiger, schnelle Passagen laufen leichter, und Lagenwechsel werden sicherer.</p>
+        <p>Gerade in schwierigen Takten, wenn Noten, Rhythmus und Intonation die ganze Aufmerksamkeit brauchen, knickt es leicht ab, oft ohne dass man es merkt. Blue Anchor zeigt dir beide Richtungen: wenn das Handgelenk zum Hals einknickt und wenn es sich nach außen, Richtung Schnecke, drückt.</p>
+        <p>So lernst du, das, was du im Körper fühlst, mit dem zu verbinden, was du siehst. Die gute Haltung aus dem Geigenunterricht festigt sich beim Üben zu Hause. Das Handgelenk ist der Anfang.</p>
+      </div>
+    </details>
+  </div></section>
+
   <section class="band-mist" id="e-nutzen"><div class="wrap steps e-benefits">
     <h2 class="sec-h">Was Blue Anchor dir bringt</h2>
     <!-- Darstellung 1: drei Spalten mit goldenem Strich -->
@@ -846,7 +867,7 @@ a { color: inherit; }
     <p><strong style="color:var(--ink)">Kontakt:</strong> hallo@blueanchormusic.com</p>
     <p class="e-legal"><a href="#e-kontakt">Impressum</a> · <a href="#e-kontakt">Datenschutz</a> · <a href="#e-kontakt">Mentions légales</a> · <a href="#e-kontakt">Français</a></p>
     <p class="fine">Für Kinder: Bitte gemeinsam mit Eltern oder Lehrkraft einrichten.</p>
-    <p class="fine">Blue Anchor ist ein Übe-Werkzeug für Musikerinnen und Musiker. Es ersetzt keine ärztliche oder physiotherapeutische Untersuchung.</p>
+    <p class="fine">Blue Anchor ist ein Übe-Werkzeug für Musikerinnen und Musiker. Es ersetzt keine ärztliche oder physiotherapeutische Untersuchung. Bei Beschwerden wende dich bitte an eine Ärztin oder einen Arzt. Spezialisierte Musikermedizin findest du z. B. über die Deutsche Gesellschaft für Musikphysiologie und Musikermedizin (DGfMM).</p>
   </div></footer>
 </div>
 
