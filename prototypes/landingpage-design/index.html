@@ -445,6 +445,15 @@ a { color: inherit; }
 .ve .e-panel .e-kid { color: var(--navy); font-weight: 700; font-size: 15px; }
 @media (max-width: 859px) { .ve .e-tablist { flex-direction: column; gap: 0; } .ve .e-tablist button { padding: 10px 0; border-bottom-width: 0; border-left: 3px solid transparent; padding-left: 10px; } .ve .e-tablist button[aria-selected="true"] { border-left-color: var(--gold); } }
 
+/* Kärtchen für „Was es bringt“ (Auswahl), goldene Striche bleiben nur bei „So läuft's“ (Ablauf) */
+.ve .e-benefits ol.e-cols { gap: 18px; }
+.ve .e-benefits ol.e-cols li { border-top: 0; padding: 22px 22px 18px; background: #fff; border-radius: 22px; border: 1px solid #d3e5f3; box-shadow: 0 14px 34px -24px rgba(0,43,73,.45); gap: 8px; }
+.ve .e-benefits ol.e-cols li strong { font-size: 19px; }
+.ve .e-benefits ol.e-cols li .e-who { display: inline-flex; align-items: center; gap: 8px; }
+.ve .e-benefits ol.e-cols li .e-who::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--sapphire); box-shadow: 0 0 0 4px rgba(100,181,246,.25); }
+.ve .e-benefits ol.e-cols li .e-kid { background: var(--sky-2); border-radius: 12px; padding: 8px 12px; }
+.ve .e-benefits ol.e-cols li details.more summary { border-top: 1px solid #e3edf5; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -812,7 +821,7 @@ a { color: inherit; }
   <button id="next" aria-label="Nächste Variante">→</button>
 </nav>
 <div class="fontpick" id="fontpick" role="group" aria-label="Darstellung vergleichen (nur Prototyp)" hidden>„Was es bringt“:
-  <button type="button" data-more="cols" aria-pressed="true">1 Spalten</button>
+  <button type="button" data-more="cols" aria-pressed="true">1 Kärtchen</button>
   <button type="button" data-more="tabs" aria-pressed="false">2 Reiter</button>
 </div>
 <div class="toast" id="toast" hidden></div>
