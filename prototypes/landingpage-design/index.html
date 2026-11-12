@@ -886,7 +886,6 @@ a { color: inherit; }
   function signup(key) {
     return `<form class="signup" novalidate>
       ${key.startsWith('e') ? `<div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Deine E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit">Kostenlos testen</button></div>
-      <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Ich unterrichte Geige</label>
       <p class="hint">Du bekommst eine Bestätigungs-Mail und danach deinen Zugangs-Link. Unter 16? Dann trägt sich ein Elternteil ein.</p>` : `<div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit"><span class="long">Auf die </span>Warteliste</button></div>
       <p class="hint">Sie bekommen eine Bestätigungs-Mail. Abmelden geht jederzeit.</p>`}
     </form>`;
