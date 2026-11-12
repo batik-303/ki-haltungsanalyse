@@ -350,6 +350,56 @@ a { color: inherit; }
 .vd .foot .trust .badge { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: var(--gold-text); font-weight: 800; }
 .vd .foot .soonrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
+/* ════════ Variante E: „Version 1" (#152) – baut auf D auf ════════ */
+.ve .e-nav { position: sticky; top: 0; z-index: 40; background: rgba(224,242,254,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid #d3e5f3; }
+.ve .e-nav-in { display: flex; align-items: center; gap: 16px; padding-block: 10px; }
+.ve .e-nav .lockup .ba { font-size: 17px; }
+.ve .e-nav .lockup .music { font-size: 8px; }
+.ve .e-links { display: flex; gap: 22px; margin-left: auto; }
+.ve .e-links a, .ve .e-menu-list a { text-decoration: none; font-weight: 700; font-size: 15px; color: var(--navy); }
+.ve .e-links a:hover { color: var(--sapphire-deep); }
+.ve .e-cta { padding: 10px 16px; font-size: 15px; text-decoration: none; }
+.ve .e-menu { display: none; position: relative; }
+.ve .e-menu summary { list-style: none; cursor: pointer; font-size: 22px; line-height: 1; padding: 6px 8px; color: var(--navy); }
+.ve .e-menu summary::-webkit-details-marker { display: none; }
+.ve .e-menu-list { position: absolute; right: 0; top: calc(100% + 8px); background: #fff; border: 1px solid #d3e5f3; border-radius: 14px; padding: 8px; display: grid; min-width: 180px; box-shadow: 0 16px 40px -20px rgba(0,43,73,.5); }
+.ve .e-menu-list a { padding: 10px 12px; border-radius: 10px; }
+.ve .e-menu-list a:hover { background: var(--sky-2); }
+@media (max-width: 859px) {
+  .ve .e-links { display: none; }
+  .ve .e-cta { margin-left: auto; padding: 9px 12px; font-size: 14px; }
+  .ve .e-menu { display: block; }
+  .ve .hero { grid-template-areas: "head" "media" "form"; }
+  .ve .hero .formcard .label { display: none; }
+}
+.ve [id^="e-"] { scroll-margin-top: 72px; }
+.ve .e-story { gap: 16px; max-width: 760px; }
+.ve .e-story-lead { font-size: 18px; color: #23405c; max-width: 36em; }
+.ve .e-story details.more { justify-self: center; }
+.ve .e-story details.more summary { font-size: 14px; }
+.ve .e-story-text { text-align: left; display: grid; gap: 12px; margin-top: 12px; background: #fff; border-radius: 18px; padding: 20px 22px; border: 1px solid #d3e5f3; }
+.ve .e-story-text p { margin: 0; color: var(--ink-soft); font-size: 16px; }
+.ve .e-write { color: #3d5670; font-size: 15px; max-width: 34em; }
+.ve .e-write a { color: var(--sapphire-deep); font-weight: 700; }
+.ve .steps li details.more { margin-top: 6px; }
+.ve .steps .dot-grey { background: #9aa5b1; box-shadow: 0 0 0 4px rgba(154,165,177,.3); }
+.ve .e-soon { display: flex; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 14px; margin-top: 6px; }
+.ve .e-soon .soon { color: var(--sapphire-deep); }
+.ve .e-metro { font-weight: 700; color: var(--navy); font-size: 17px; border-left: 3px solid var(--gold); padding-left: 14px; max-width: 40em; }
+.ve .e-cards { padding-block: 48px; display: grid; gap: 18px; }
+.ve .e-cards ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.ve .e-cards li { background: #eaf4fd; border: 1px solid #a9cdec; border-radius: 20px; padding: 18px; display: grid; gap: 6px; align-content: start; }
+.ve .e-cards .label { color: #8a5d14; }
+.ve .e-cards strong { font-size: 19px; color: var(--navy); }
+.ve .e-cards li > p { color: #2f4a63; font-size: 15px; }
+.ve .e-cards .e-kid { font-size: 14px; font-weight: 700; color: var(--navy); background: #fff; border-radius: 12px; padding: 8px 12px; }
+.ve .e-cards details.more p { color: #2f4a63; }
+.ve .e-signup { padding-block: 52px; display: grid; gap: 12px; justify-items: center; text-align: center; }
+.ve .e-signup h2 { font-size: clamp(24px, 5vw, 32px); }
+.ve .e-signup > p { color: #c9dbea; font-size: 17px; max-width: 34em; }
+.ve .e-signup .formcard { width: 100%; max-width: 560px; text-align: left; margin-top: 8px; }
+.ve .e-legal a { color: var(--sapphire-deep); font-weight: 600; }
+
 /* ── Umschalt-Leiste (nur Prototyp) ── */
 .switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: #111; color: #fff; border-radius: 999px; padding: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-family: var(--font-label); max-width: calc(100vw - 24px); }
 .switcher button { font: inherit; background: transparent; color: #fff; border: 0; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; flex: 0 0 auto; }
@@ -599,6 +649,105 @@ a { color: inherit; }
   </div></footer>
 </div>
 
+<div class="variant vd ve" id="var-e" data-name="Version 1 (#152)" hidden>
+  <header class="e-nav">
+    <div class="wrap e-nav-in">
+      <span class="lockup"><span data-mark="30"></span><span class="words"><span class="ba">Blue Anchor</span><span class="music"><span>M</span><span>U</span><span>S</span><span>I</span><span>C</span></span></span></span>
+      <nav class="e-links" aria-label="Seitenabschnitte">
+        <a href="#e-geschichte" data-jump>Geschichte</a>
+        <a href="#e-ablauf" data-jump>So läuft's</a>
+        <a href="#e-nutzen" data-jump>Was es bringt</a>
+        <a href="#e-kontakt" data-jump>Kontakt</a>
+      </nav>
+      <a class="btn-gold e-cta" href="#e-anmelden" data-jump>Kostenlos testen</a>
+      <details class="e-menu"><summary aria-label="Menü">☰</summary>
+        <div class="e-menu-list">
+          <a href="#e-geschichte" data-jump>Geschichte</a>
+          <a href="#e-ablauf" data-jump>So läuft's</a>
+          <a href="#e-nutzen" data-jump>Was es bringt</a>
+          <a href="#e-kontakt" data-jump>Kontakt</a>
+        </div>
+      </details>
+    </div>
+  </header>
+  <div class="band-sky">
+    <section class="wrap hero">
+      <div class="head">
+        <span class="label" style="color:var(--gold)">Entwickelt von einer Geigerin (Master of Music)</span>
+        <h1>Deine Geigenhaltungs-App – wie ein digitaler Spiegel, offline und privat</h1>
+        <p class="lead">Sieh dein linkes Handgelenk live, während du spielst. Einmal im Geigenunterricht eingestellt, begleitet dich die App freundlich beim Üben zu Hause.</p>
+      </div>
+      <div class="media">
+        <div class="demo-wrap" data-device="handy"><div data-demo></div><div class="device" role="group" aria-label="Demo-Gerät"><button type="button" data-dev="handy" aria-pressed="true">Handy</button><button type="button" data-dev="tablet" aria-pressed="false">Tablet</button></div><button class="play js-demo" type="button">▶ Demo ansehen</button></div>
+        <div class="privacy-chip">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64b5f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <div><strong>Dein Kamerabild verlässt nie dein Gerät.</strong><span>Nichts wird aufgenommen oder gespeichert.</span></div>
+        </div>
+      </div>
+      <div class="form">
+        <div class="formcard"><span class="label">Kostenlos testen</span><div data-signup="e1"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="band-mist" id="e-geschichte"><div class="wrap motto e-story">
+    <span class="label" style="color:var(--gold)">Warum Blue Anchor?</span>
+    <blockquote lang="en">Let the music create you.</blockquote>
+    <p class="e-story-lead">Im Unterricht gelingt die Haltung oft wunderbar. Zu Hause, mitten in der Musik, wird sie als Erstes vergessen. Blue Anchor erinnert ruhig daran, damit der Kopf frei bleibt für die Musik.</p>
+    <details class="more"><summary>Meine Geschichte</summary>
+      <div class="e-story-text">
+        <p>Ich bin Geigerin und Geigenlehrerin, und Mutter eines Kindes, das gerade mit der Geige anfängt. Im Unterricht gelingt die Haltung oft wunderbar. Zu Hause, mitten in der Musik, wird sie dann als Erstes vergessen.</p>
+        <p>Ich kenne das von mir selbst: Als Kind hatte ich absolutes Gehör und dachte, ich spiele doch sauber. Was mein Lehrer über die Haltung sagte, hatte ich vergessen, kaum war ich aus der Tür.</p>
+        <p>Blue Anchor erinnert ruhig an die Haltung, die man im Unterricht gespeichert hat. Es stört nicht beim Spielen, und man muss nicht auf den Bildschirm starren. Blue Anchor ist ein Herzensprojekt, das ich mit meinem Mann, einem Entwickler, in unserer freien Zeit begonnen habe. So verbinden wir unsere beiden Leidenschaften.</p>
+        <p>Wenn dadurch auch nur ein Kind in der Woche einmal öfter seinen Geigenkasten öffnet, bin ich glücklich.</p>
+      </div>
+    </details>
+    <span class="rule" aria-hidden="true"></span>
+    <p class="sub">Die Technik steht im Dienst der Musik.</p>
+    <p class="e-write">Fragen, Ideen oder einfach Lust zu erzählen, wie es beim Üben läuft? Schreib mir: <a href="#e-kontakt" data-jump>hallo@blueanchormusic.com</a></p>
+    <p class="by">— Vorname Nachname · Geigerin (Master of Music)</p>
+  </div></section>
+
+  <section class="band-white" id="e-ablauf"><div class="wrap steps">
+    <h2 class="sec-h">So läuft's</h2>
+    <ol>
+      <li><strong>Haltung speichern</strong><span>Deine gute Haltung lernst du im Geigenunterricht. Blue Anchor hilft dir, sie beim Üben zu behalten. Speichere sie gemeinsam mit deiner Lehrkraft oder selbst, wenn du sie schon sicher kennst.</span>
+        <details class="more"><summary>Mehr</summary><p>Die App führt dich durch die Einrichtung. Das Wichtigste: gutes Licht (im Dunkeln sieht die Kamera nichts), ein ruhiger Hintergrund, und dein Handy, Tablet oder Laptop auf Augenhöhe. Dann sagst du „Start“ oder tippst auf den Knopf, und deine Haltung wird gespeichert. Sie gilt für die ganze Übe-Einheit.</p></details></li>
+      <li><strong>Spielen, im Spiegel oder im Flow</strong><span>Im Spiegel siehst du dich und deinen Anker am Handgelenk. Im Flow verschwindet das Bild, und du siehst deine Haltung nur noch aus dem Augenwinkel, so wie den Dirigenten, wenn du im Orchester spielst.</span>
+        <div class="dots"><p><i class="dot dot-blue" aria-hidden="true"></i>Deine schöne Haltung – im Anker</p><p><i class="dot dot-yellow" aria-hidden="true"></i>Hinweis: entspannen – zurück in den Anker</p><p><i class="dot dot-grey" aria-hidden="true"></i>Die Kamera sieht dein Handgelenk gerade nicht gut. Stell dich so hin, dass es sichtbar ist.</p></div>
+        <details class="more"><summary>Mehr</summary><p>Umschalten geht per Knopf oder per Sprachbefehl („Spiegel“, „Flow“). Die Knöpfe sind immer da, die Stimme ist nur eine Abkürzung.</p></details></li>
+      <li><strong>Dein Ergebnis</strong><span>Am Ende siehst du, wie lange du geübt hast und wie lange du im Anker geblieben bist, dazu deine Übezeit insgesamt.</span>
+        <p class="e-soon"><span class="soon">bald</span> Deinen Fortschritt über Woche und Monat sehen.</p></li>
+    </ol>
+    <p class="e-metro">Nutze Blue Anchor wie ein Metronom: ab und zu, wenn du es brauchst, kurz oder länger. Ohne Pflicht, ohne Druck.</p>
+  </div></section>
+
+  <section class="band-blue" id="e-nutzen"><div class="wrap e-cards">
+    <h2 class="sec-h">Was Blue Anchor dir bringt</h2>
+    <ul>
+      <li><span class="label">Wenn du einfach gern spielst</span><strong>Du übst nicht mehr allein</strong><p>Blue Anchor schaut freundlich mit, und ungeduldig wird es nie. 😉</p>
+        <details class="more"><summary>Mehr</summary><p>Am Ende bekommst du eine freundliche Rückmeldung: wie lange du geübt hast und wie lange du im Anker geblieben bist.</p></details></li>
+      <li><span class="label">Wenn du dein Kind begleitest</span><strong>Mehr Ruhe beim Üben</strong><p>Statt „Guck mal, dein Handgelenk!“ sieht dein Kind es selbst und übt selbstständiger, mit mehr Motivation.</p><p class="e-kid">Ob und wie lange dein Kind Blue Anchor nutzt, entscheidest du, gemeinsam mit der Lehrkraft.</p>
+        <details class="more"><summary>Mehr</summary><p>Viele Eltern kennen das: Man sagt zum zehnten Mal „dein Handgelenk“, und schon gibt es Stress, und das Kind will nicht mehr weiter üben. Mit Blue Anchor sieht das Kind selbst, ob es in seiner besten Haltung bleibt, und findet allein dorthin zurück. Das bringt mehr Ruhe zu Hause, und mit der Zeit klappt es natürlich auch ohne App. Am Ende sieht man, wie lange man geübt hat und wie lange man im Anker geblieben ist. Das motiviert, es beim nächsten Mal noch ein bisschen länger zu schaffen.</p></details></li>
+      <li><span class="label">Wenn du unterrichtest</span><strong>Mehr Zeit für die Musik</strong><p>Im Geigenunterricht speichert ihr gemeinsam die passende Haltung, und unter der Woche wird zu Hause genau damit geübt.</p>
+        <details class="more"><summary>Mehr</summary><p>Man kann die App auch kurz im Unterricht einsetzen: Korrigiert sich das Kind selbst, wenn es sein Handgelenk im Flow nur aus dem Augenwinkel sieht? Das bringt auch ein bisschen Abwechslung in die Stunde. Wenn man weniger unterbrechen muss, bleibt mehr Zeit für Intonation, Rhythmus und Interpretation, also einfach dafür, gemeinsam schöne Musik zu machen. Ich finde es spannend, neugierig zu sein, was solche digitalen Werkzeuge Neues bringen können.</p></details></li>
+    </ul>
+  </div></section>
+
+  <section class="band-navy" id="e-anmelden"><div class="wrap e-signup">
+    <h2>Teste jetzt kostenlos</h2>
+    <p>Wer bis zum Verkaufsstart dabei ist, bekommt als Dankeschön einen Frühstarter-Preis.</p>
+    <div class="formcard"><div data-signup="e2"></div></div>
+  </div></section>
+
+  <footer class="band-mist" id="e-kontakt"><div class="wrap foot">
+    <p><strong style="color:var(--ink)">Kontakt:</strong> hallo@blueanchormusic.com</p>
+    <p class="e-legal"><a href="#e-kontakt">Impressum</a> · <a href="#e-kontakt">Datenschutz</a> · <a href="#e-kontakt">Mentions légales</a> · <a href="#e-kontakt">Français</a></p>
+    <p class="fine">Für Kinder: Bitte gemeinsam mit Eltern oder Lehrkraft einrichten.</p>
+    <p class="fine">Blue Anchor ist ein Übe-Werkzeug für Musikerinnen und Musiker. Es ersetzt keine ärztliche oder physiotherapeutische Untersuchung.</p>
+  </div></footer>
+</div>
+
 <nav class="switcher" aria-label="Variante wechseln (nur Prototyp)">
   <button id="prev" aria-label="Vorherige Variante">←</button>
   <span class="cur" id="cur">A</span>
@@ -658,8 +807,10 @@ a { color: inherit; }
 
   function signup(key) {
     return `<form class="signup" novalidate>
-      <div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit"><span class="long">Auf die </span>Warteliste</button></div>
-      <p class="hint">Sie bekommen eine Bestätigungs-Mail. Abmelden geht jederzeit.</p>
+      ${key.startsWith('e') ? `<div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Deine E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit">Kostenlos testen</button></div>
+      <label class="hint" style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Ich unterrichte Geige</label>
+      <p class="hint">Du bekommst eine Bestätigungs-Mail und danach deinen Zugangs-Link. Unter 16? Dann trägt sich ein Elternteil ein.</p>` : `<div class="row"><input id="mail-${key}" type="email" autocomplete="email" placeholder="Ihre E-Mail-Adresse" aria-label="E-Mail-Adresse"><button class="btn-gold" type="submit"><span class="long">Auf die </span>Warteliste</button></div>
+      <p class="hint">Sie bekommen eine Bestätigungs-Mail. Abmelden geht jederzeit.</p>`}
     </form>`;
   }
 
@@ -674,7 +825,7 @@ a { color: inherit; }
 
   document.addEventListener('submit', e => {
     e.preventDefault();
-    const hint = e.target.querySelector('.hint');
+    const hint = e.target.querySelector('p.hint');
     hint.textContent = 'Danke! (Prototyp: Hier käme die Bestätigungs-Mail.)';
     hint.classList.add('done');
   });
@@ -700,7 +851,7 @@ a { color: inherit; }
   }));
 
   // Umschalter A/B/C über #a, #b, #c.
-  const keys = ['a', 'b', 'c', 'd'];
+  const keys = ['a', 'b', 'c', 'd', 'e'];
   const cur = document.getElementById('cur');
   function show(k) {
     if (!keys.includes(k)) k = 'a';
@@ -708,13 +859,21 @@ a { color: inherit; }
     cur.textContent = k.toUpperCase() + ' · ' + document.getElementById('var-' + k).dataset.name;
     return k;
   }
-  let current = show((location.hash || '#d').slice(1));
+  let current = show((location.hash || '#e').slice(1));
   function go(step) {
     current = keys[(keys.indexOf(current) + step + keys.length) % keys.length];
     show(current);
     try { history.replaceState(null, '', '#' + current); } catch (_) {}
     window.scrollTo(0, 0);
   }
+  // Sprung-Navigation (Variante E): weich zum Abschnitt scrollen, Menü schließen.
+  document.querySelectorAll('[data-jump]').forEach(a => a.addEventListener('click', ev => {
+    ev.preventDefault();
+    const target = document.getElementById(a.getAttribute('href').slice(1));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const menu = a.closest('details.e-menu');
+    if (menu) menu.open = false;
+  }));
   document.getElementById('prev').onclick = () => go(-1);
   document.getElementById('next').onclick = () => go(1);
   window.addEventListener('hashchange', () => { current = show(location.hash.slice(1)); });
