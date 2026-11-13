@@ -70,7 +70,7 @@ Central in `src/core/types.ts`. `MasterPrint` and analyzer outputs use `mode` / 
 
 ### Selectors
 
-All store-derived values are pure functions in `src/store/selectors.ts` (`selectSessionPhase`, `selectStatusColor`, …). Session phase is **derived, not stored** — computed from `isCalibrating`, `masterPrint`, `distanceOk`, `sessionActive`. Components consume selectors; hooks/renderers use `getState()`.
+All store-derived values are pure functions in `src/store/selectors.ts` (`selectSessionPhase`, `selectStatusMessage`, …). Session phase is **derived, not stored** — computed from `isCalibrating`, `masterPrint`, `distanceOk`, `sessionActive`. Components consume selectors; hooks/renderers use `getState()`.
 
 ### Layout Store
 

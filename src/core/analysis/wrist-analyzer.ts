@@ -117,49 +117,6 @@ export function computeForeshorteningConfidence(
 }
 
 /**
- * Compute the angle at the wrist formed by elbow → wrist → index finger.
- * Uses 3D vectors (x, y, z) to capture depth movements (e.g. toward neck).
- * Straight line = 180°. Returns degrees.
- * @deprecated Use computeFlexionExtensionAngle() for isolated flex measurement.
- */
-export function computeWristAngle(elbow: Landmark, wrist: Landmark, index: Landmark): number {
-  const v1x = elbow.x - wrist.x
-  const v1y = elbow.y - wrist.y
-  const v1z = elbow.z - wrist.z
-  const v2x = index.x - wrist.x
-  const v2y = index.y - wrist.y
-  const v2z = index.z - wrist.z
-
-  const dot = v1x * v2x + v1y * v2y + v1z * v2z
-  const mag1 = Math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z)
-  const mag2 = Math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z)
-
-  if (mag1 === 0 || mag2 === 0) return 180
-  return Math.acos(Math.min(1, Math.max(-1, dot / (mag1 * mag2)))) * (180 / Math.PI)
-}
-
-/**
- * Determine bend direction via 3D cross product magnitude.
- * Returns the magnitude of the cross product vector — sign indicates
- * primary bend direction relative to the arm plane.
- */
-export function computeWristBendDirection(elbow: Landmark, wrist: Landmark, index: Landmark): number {
-  const v1x = elbow.x - wrist.x
-  const v1y = elbow.y - wrist.y
-  const v1z = elbow.z - wrist.z
-  const v2x = index.x - wrist.x
-  const v2y = index.y - wrist.y
-  const v2z = index.z - wrist.z
-  // Cross product components
-  const cx = v1y * v2z - v1z * v2y
-  const cy = v1z * v2x - v1x * v2z
-  const cz = v1x * v2y - v1y * v2x
-  // Signed magnitude: sign of cz preserves the dominant 2D bend sense
-  const mag = Math.sqrt(cx * cx + cy * cy + cz * cz)
-  return cz >= 0 ? mag : -mag
-}
-
-/**
  * Compute Flexion/Extension angle isolated from Radial/Ulnar deviation.
  * Projects the hand vector (wrist→MCP) onto the plane defined by forearm × gravity,
  * then measures the angle between the projected hand vector and the forearm vector.

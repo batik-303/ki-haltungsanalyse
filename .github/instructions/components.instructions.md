@@ -7,7 +7,7 @@ applyTo: "src/components/**/*.tsx"
 
 ## Store Access
 - **ALWAYS** use selector subscriptions: `usePoseStore((s) => s.field)` — never `getState()`
-- Selectors from `src/store/selectors.ts` for derived values: `selectSessionPhase`, `selectStatusColor`, etc.
+- Selectors from `src/store/selectors.ts` for derived values: `selectSessionPhase`, `selectStatusMessage`, etc.
 - Never put analysis state in components — they only read from the store
 
 ## UI Principles

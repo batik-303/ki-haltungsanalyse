@@ -24,16 +24,6 @@ export function selectPhaseHint(state: PoseState): string {
   }
 }
 
-// ── Status color from layer ──
-export function selectStatusColor(state: PoseState): string {
-  if (!state.masterPrint) return '#5b9bd5' // ready blue
-  switch (state.currentLayerInfo.statusType) {
-    case 'good': return '#2ecc71'
-    case 'yellow': return '#f1c40f'
-    case 'purple': return '#9b59b6'
-  }
-}
-
 // ── Status message ──
 export function selectStatusMessage(state: PoseState): string {
   if (state.isCalibrating) return 'Kalibrierung läuft...'
