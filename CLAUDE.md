@@ -99,17 +99,23 @@ Dieses Projekt wendet **strikt Test-Driven Development** an — ausnahmslos:
 
 ## Git-Workflow
 
-- **Branch-Basis**: Neue Features/Fixes **immer aus aktuellem `main`** abzweigen — zuerst `git checkout main && git pull --ff-only`, dann `git checkout -b <typ>/<kurzbeschreibung>` (z. B. `docs/…`, `feat/…`, `fix/…`, `chore/…`).
-- **Worktree je Implementierungs-Session**: Wird eine **Implementierungs-Session** gestartet (Produktionscode bauen, insb. ein `wayfinder:task`-Ticket), legt der Agent **einen eigenen Git-Worktree aus aktuellem `main`** an und arbeitet **ausschließlich darin** — **nie** im geteilten Haupt-Clone, damit parallel laufende Agenten die Umsetzung nicht stören.
+- **`main` bleibt linear**: Änderungen nur per **Pull Request mit Squash-Merge**. `main` ist per Ruleset „Protect main“ geschützt (kein direkter Push, kein Bypass, keine Force-Pushes, kein Löschen).
+- **Remote**: nur `origin` → `git@github.com:batik-303/ki-haltungsanalyse.git`. Kein `upstream`.
+- **Worktree je Agent-Sitzung**: Jede Sitzung, die Dateien im Repo ändert, arbeitet in einem **eigenen Worktree aus `origin/main`**, **nie** im geteilten Haupt-Clone:
   ```bash
-  git checkout main && git pull --ff-only
-  git worktree add ../ki-haltungsanalyse-<typ>-<kurzbeschreibung> -b <typ>/<kurzbeschreibung>
+  git fetch origin
+  git worktree add ../ki-haltungsanalyse-<typ>-<kurzbeschreibung> -b <typ>/<kurzbeschreibung> origin/main
   cd ../ki-haltungsanalyse-<typ>-<kurzbeschreibung>
   ```
-  Commits, Push und PR passieren im Worktree. **Nach dem Squash-Merge aufräumen**: `git worktree remove ../ki-haltungsanalyse-<typ>-<kurzbeschreibung>` (der Feature-Branch wird serverseitig automatisch gelöscht). In Claude Code alternativ die native Worktree-Isolation nutzen: `isolation: "worktree"` beim Agent-Tool bzw. `EnterWorktree`/`ExitWorktree`. Reine Lese-/Entscheidungs-Sessions (Wayfinder-Grilling/Research/Prototype, Doku) brauchen **keinen** Worktree.
-- **Kein direkter Push auf `main`**: `main` ist per Ruleset „Protect main" geschützt (kein Bypass, keine Force-Pushes, kein Löschen). Änderungen kommen **ausschließlich über einen Pull Request** rein.
-- **Review**: Jeder PR braucht **1 Approval** vom Code-Owner **@baxt5878** (`.github/CODEOWNERS`) vor dem Merge.
-- **Merge**: nur **Squash-Merge**; der Feature-Branch wird nach dem Merge **automatisch gelöscht**.
+  Branch-Typen: `feat/`, `fix/`, `docs/`, `chore/`, `research/`, `prototype/`. Commits, Push und PR passieren im Worktree. Nach dem Squash-Merge `git worktree remove …` (der Branch wird serverseitig automatisch gelöscht). Reine Lese-Sitzungen brauchen keinen Worktree.
+- **PR**: `gh pr create --repo batik-303/ki-haltungsanalyse --head <branch>`. Push und PR erst nach Rückfrage bei der Nutzerin.
+- **Review**: Jeder PR braucht **1 Approval** vom Code-Owner **@baxt5878** (`.github/CODEOWNERS`).
+- **Release-Ablauf**:
+  1. Stand auf `main` per `vite preview` über den Cloudflare-Tunnel bereitstellen; der Agent gibt der Nutzerin den Link.
+  2. Die Nutzerin testet durch normales Üben auf Handy/Tablet. **„Stabil“ entscheidet allein sie.**
+  3. Vor dem Tag liest der Agent die Diagnose-Logs (`logs/*.ndjson`) und meldet in einem Satz, ob etwas auffiel.
+- **Tags**: Semver `vMAJOR.MINOR.PATCH` (MAJOR = Breaking Change, MINOR = Feature, PATCH = Fix). Getaggt wird **nur auf Ansage der Nutzerin** („taggen“): Der Agent setzt den Tag auf `main` und pusht ihn.
+- **Deployment** (DigitalOcean App Platform): `deploy_on_push` ist **aus**. Deploy und Rollback startet die Nutzerin selbst in DigitalOcean; der Agent macht dazu keine Vorgaben.
 
 ## CI-Pipeline
 
