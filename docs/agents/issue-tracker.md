@@ -43,3 +43,15 @@ Wird von `/wayfinder` genutzt. Die **Map** ist ein einzelnes Issue mit **Kind-Is
 - **Frontier-Abfrage**: die offenen Kinder der Map auflisten (`gh issue list --state open`, auf die Sub-Issues / Task-Liste der Map eingegrenzt), alle mit offenem Blocker (`issue_dependencies_summary.blocked_by > 0` oder ein offenes Issue in der `Blocked by`-Zeile) oder mit Zuweisung verwerfen; das erste in Map-Reihenfolge gewinnt.
 - **Übernahme (Claim)**: `gh issue edit <n> --add-assignee @me`, der erste Schreibvorgang der Sitzung. Für **Implementierungs-Tickets** (`wayfinder:task`, die Produktionscode liefern) direkt nach dem Claim einen **eigenen Git-Worktree aus aktuellem `main`** anlegen und ausschließlich darin arbeiten (siehe `CLAUDE.md` → Git-Workflow → „Worktree je Implementierungs-Session") — so stören parallele Agenten die Umsetzung nicht.
 - **Auflösung**: `gh issue comment <n> --body "<antwort>"`, dann `gh issue close <n>`, dann einen Kontext-Verweis (Gist + Link) an die bisherigen Entscheidungen der Map anhängen.
+
+### Steuerung einer Karte über Herdr
+
+Eine Karte wird von **einer Orchestrator-Sitzung** aus gesteuert (`herdr`-Skill, Rückkanal über den **herdr-link**-MCP-Server). Gilt nur, wenn `HERDR_ENV=1`.
+
+- **Orchestrator**: liest die Karte, startet Frontier-Tickets, prüft Auflösungen und pflegt „Decisions so far“. Er übernimmt (claimt) selbst kein Ticket und arbeitet keins ab.
+- **Start**: je Ticket ein eigener Tab mit Label **„#<n> Kurzname“** (`herdr tab create --label "#<n> Kurzname" --cwd <Haupt-Clone> --no-focus`), darin eine Claude-Sitzung `t<n>`, Auftrag `/mattpocock-skills:wayfinder Karte #<karte>, Ticket #<n> …` samt Name des Orchestrators. Ein Ticket = eine Sitzung = ein Tab.
+- **Ticket-Sitzung**: arbeitet nur ihr Ticket ab (Claim, Worktree aus `origin/main`, sobald sie Dateien ändert, Auflösung wie oben). Sie meldet sich per `herdr_link_send` an den Orchestrator:
+  - `WARTET #<n>: <Frage in einem Satz>`: vor jeder Frage an die Nutzerin, dazu `herdr notification show "#<n> wartet auf dich" --sound request`.
+  - `FERTIG #<n>: <ein Satz Ergebnis, neue Tickets, PR-Link>` zum Schluss.
+  - `HÄNGT #<n>: <Grund>` bei Stillstand.
+- **Nach einer Rückmeldung**: Der Orchestrator liest die Karte neu, prüft die Auflösung und nennt bzw. startet die neue Frontier. Tabs schließt er nur auf ausdrücklichen Wunsch.
