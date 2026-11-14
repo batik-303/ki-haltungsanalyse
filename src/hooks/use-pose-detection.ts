@@ -7,6 +7,7 @@ import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
 import type { AnchorColor, KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
+import { mediapipeWasmPath, POSE_MODEL_PATH, HAND_MODEL_PATH } from '../core/config/mediapipe-assets'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
 import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
@@ -127,11 +128,11 @@ export function usePoseDetection(
     async function init() {
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+          mediapipeWasmPath(__MEDIAPIPE_VERSION__),
         )
         const landmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
-            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            modelAssetPath: POSE_MODEL_PATH,
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
@@ -186,11 +187,11 @@ export function usePoseDetection(
       handLandmarkerLoadingRef.current = true
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm'
+          mediapipeWasmPath(__MEDIAPIPE_VERSION__),
         )
         const hand = await HandLandmarker.createFromOptions(filesetResolver, {
           baseOptions: {
-            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+            modelAssetPath: HAND_MODEL_PATH,
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',

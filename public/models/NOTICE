@@ -1,0 +1,14 @@
+KI-Modelle in diesem Ordner
+
+Die folgenden Dateien stammen unverändert von Google MediaPipe und stehen unter
+der Apache License, Version 2.0 (siehe LICENSE in diesem Ordner):
+
+- pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+  Quelle: https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+  Model Card: https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazePose%20GHUM%203D.pdf
+
+- hand_landmarker/float16/1/hand_landmarker.task
+  Quelle: https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+  Model Card: https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Hand%20Tracking%20(Lite_Full)%20with%20Fairness%20Oct%202021.pdf
+
+Copyright Google LLC. Licensed under the Apache License, Version 2.0.
