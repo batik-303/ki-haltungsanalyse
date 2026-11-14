@@ -7,7 +7,7 @@ import { formatLogMessage } from './log-message'
 export type ErrorSource = 'onerror' | 'unhandledrejection' | 'console.error' | 'console.warn'
 
 export type DiagnosticEvent =
-  | { kind: 'error'; source: ErrorSource; message: string; stack?: string }
+  | { kind: 'error' | 'warning'; source: ErrorSource; message: string; stack?: string }
   | { kind: 'model-load'; model: 'pose' | 'hand'; ms: number; ok: boolean }
   | { kind: 'fps'; fps: number }
   | { kind: 'calibration-saved'; knick: number; flexAngle: number; side: 'hals' | 'schnecke' | 'gerade' }
@@ -19,10 +19,14 @@ export type DiagnosticEvent =
       orientation: string
     }
 
-export function createErrorEvent(source: ErrorSource, parts: readonly unknown[]): DiagnosticEvent {
+/**
+ * Fehler oder Warnung fürs Log. `console.warn` (z. B. die vielen MediaPipe-Hinweise)
+ * läuft als `warning`, damit echte Fehler (`error`) auffallen.
+ */
+export function createProblemEvent(source: ErrorSource, parts: readonly unknown[]): DiagnosticEvent {
   const error = parts.find((part): part is Error => part instanceof Error)
   return {
-    kind: 'error',
+    kind: source === 'console.warn' ? 'warning' : 'error',
     source,
     message: formatLogMessage(parts),
     ...(error?.stack !== undefined && { stack: formatLogMessage([error.stack]) }),

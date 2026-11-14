@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCalibrationSavedEvent, createErrorEvent } from '../../src/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createProblemEvent } from '../../src/core/diagnostics/log-events'
 import { formatLogMessage } from '../../src/core/diagnostics/log-message'
 import type { KnickSide, WristMasterPrint } from '../../src/core/types'
 
@@ -15,11 +15,11 @@ function wristPrint(calibKnick: number, calibKnickSide: KnickSide, flexAngle = 3
   }
 }
 
-describe('createErrorEvent – Fehler fürs Diagnose-Log', () => {
+describe('createProblemEvent – Fehler und Warnungen fürs Diagnose-Log', () => {
   it('nimmt Quelle, Text und den Stack des ersten Fehlers', () => {
     const error = new Error('Modell fehlt')
     error.stack = 'Error: Modell fehlt\n    at init (index-abc.js:1:200)'
-    expect(createErrorEvent('console.error', ['Laden:', error])).toEqual({
+    expect(createProblemEvent('console.error', ['Laden:', error])).toEqual({
       kind: 'error',
       source: 'console.error',
       message: 'Laden: Error: Modell fehlt',
@@ -28,15 +28,26 @@ describe('createErrorEvent – Fehler fürs Diagnose-Log', () => {
   })
 
   it('lässt den Stack weg, wenn kein Fehler-Objekt dabei ist', () => {
-    expect(createErrorEvent('console.warn', ['[Pose] Mikro fehlt'])).toEqual({
+    expect(createProblemEvent('console.error', ['[Pose] Mikro fehlt'])).toEqual({
       kind: 'error',
-      source: 'console.warn',
+      source: 'console.error',
       message: '[Pose] Mikro fehlt',
     })
   })
 
+  // Geräte-Log 14.11.: MediaPipe-Hinweise kamen über console.warn als „error“
+  // und verdeckten echte Fehler.
+  it('führt console.warn als eigene Art „warning“, nicht als Fehler', () => {
+    const warn = 'W1114 20:32:20.273999 2136208 gl_context.cc:1118] OpenGL error checking is disabled'
+    expect(createProblemEvent('console.warn', [warn])).toEqual({
+      kind: 'warning',
+      source: 'console.warn',
+      message: warn,
+    })
+  })
+
   it('filtert auch Fehler-Grund ohne Error-Objekt, z. B. Punkte bei unhandledrejection', () => {
-    expect(createErrorEvent('unhandledrejection', [{ x: 0.1, y: 0.2 }]).message).toBe('[Punkte ausgelassen]')
+    expect(createProblemEvent('unhandledrejection', [{ x: 0.1, y: 0.2 }]).message).toBe('[Punkte ausgelassen]')
   })
 })
 

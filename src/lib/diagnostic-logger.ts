@@ -6,7 +6,7 @@
 // `POST /__log` (Preview-Server). Nie Bilder, Video, Punkte je Bild, Personendaten.
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
-import { createCalibrationSavedEvent, createErrorEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createProblemEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
 import type { MasterPrint } from '@/core/types'
 
 const LOG_URL = '/__log'
@@ -47,7 +47,7 @@ export function installDiagnosticLogger(): void {
   }
 
   const recordError = (source: ErrorSource, parts: readonly unknown[]): void => {
-    record(createErrorEvent(source, parts))
+    record(createProblemEvent(source, parts))
   }
 
   for (const level of ['error', 'warn'] as const) {
