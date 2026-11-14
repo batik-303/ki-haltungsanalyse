@@ -21,6 +21,7 @@ import { createReadinessGate } from '../core/calibration/readiness-gate'
 import { createSaveSequence } from '../core/calibration/save-sequence'
 import type { PositioningStatus } from '../core/calibration/distance-guidance'
 import { createSessionTracker } from '../core/session/session-tracker'
+import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
 
@@ -65,7 +66,6 @@ export function usePoseDetection(
   const handednessScoreRef = useRef<number | undefined>(undefined)
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(performance.now())
-  const loadingRef = useRef(false)
 
   // Mutable analysis state (not in React, not in store — owned by rAF loop)
   // Moving Average für Arm-Hand-Winkel (Glättung, 30 Frames)
@@ -122,28 +122,40 @@ export function usePoseDetection(
   }, [])
 
   // Load MediaPipe model
+  // Lebenszyklus je Einhängen (#192): Modell und Kamera-Stream gehören zum
+  // Bereich dieses Effekts. Wird der Bildschirm abgebaut, während noch geladen
+  // wird (z. B. die kurze Überblend-Kopie in App.tsx), gibt der Bereich die
+  // spät fertigen Ressourcen sofort frei, statt sie liegen zu lassen.
   useEffect(() => {
-    if (loadingRef.current) return
-    loadingRef.current = true
+    const scope = createResourceScope()
+    let attachedVideo: HTMLVideoElement | null = null
 
     async function init() {
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
           mediapipeWasmPath(__MEDIAPIPE_VERSION__),
         )
-        const landmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
-          baseOptions: {
-            modelAssetPath: POSE_MODEL_PATH,
-            delegate: 'GPU',
-          },
-          runningMode: 'VIDEO',
-          numPoses: 1,
-        })
+        const landmarker = scope.adopt(
+          await PoseLandmarker.createFromOptions(filesetResolver, {
+            baseOptions: {
+              modelAssetPath: POSE_MODEL_PATH,
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numPoses: 1,
+          }),
+          (l) => l.close(),
+        )
+        if (!landmarker) return
         landmarkerRef.current = landmarker
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: 'user' },
-        })
+        const stream = scope.adopt(
+          await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' },
+          }),
+          (s) => s.getTracks().forEach((t) => t.stop()),
+        )
+        if (!stream) return
 
         // Pre-grant mic permission for voice commands (non-blocking)
         navigator.mediaDevices.getUserMedia({ audio: true })
@@ -153,13 +165,15 @@ export function usePoseDetection(
         const video = videoRef.current
         if (video) {
           video.srcObject = stream
+          attachedVideo = video
           video.addEventListener('loadeddata', () => {
+            if (scope.isDisposed()) return
             const canvas = canvasRef.current
             if (canvas) {
               canvas.width = video.videoWidth
               canvas.height = video.videoHeight
             }
-            startDetectionLoop()
+            startDetectionLoop(scope)
           })
         }
       } catch (e) {
@@ -171,7 +185,9 @@ export function usePoseDetection(
 
     return () => {
       cancelAnimationFrame(animFrameRef.current)
-      landmarkerRef.current?.close()
+      scope.dispose()
+      landmarkerRef.current = null
+      if (attachedVideo) attachedVideo.srcObject = null
       handLandmarkerRef.current?.close()
       handLandmarkerRef.current = null
       handLandmarksRef.current = null
@@ -183,6 +199,9 @@ export function usePoseDetection(
   // Subscribes to store; allocates on entry, releases on exit. PoseLandmarker
   // and other modes incur zero HandLandmarker overhead.
   useEffect(() => {
+    // Abgebaut während des Ladens (#192): spät fertiges Modell sofort schließen.
+    const scope = createResourceScope()
+
     async function loadHandLandmarker() {
       if (handLandmarkerRef.current || handLandmarkerLoadingRef.current) return
       handLandmarkerLoadingRef.current = true
@@ -198,8 +217,8 @@ export function usePoseDetection(
           runningMode: 'VIDEO',
           numHands: 2,
         })
-        // Guard: focus may have left wrist mode while loading.
-        if (usePoseStore.getState().focusMode === 'wrist') {
+        // Guard: focus may have left wrist mode or the screen unmounted while loading.
+        if (!scope.isDisposed() && usePoseStore.getState().focusMode === 'wrist') {
           handLandmarkerRef.current = hand
         } else {
           hand.close()
@@ -231,13 +250,16 @@ export function usePoseDetection(
     })
 
     return () => {
+      scope.dispose()
       unsubscribe()
       releaseHandLandmarker()
     }
   }, [])
 
-  function startDetectionLoop() {
+  function startDetectionLoop(scope: ResourceScope) {
     function detect() {
+      // Abgebaut (#192): Schleife endet, statt leer weiterzulaufen.
+      if (scope.isDisposed()) return
       const landmarker = landmarkerRef.current
       const video = videoRef.current
       const canvas = canvasRef.current
