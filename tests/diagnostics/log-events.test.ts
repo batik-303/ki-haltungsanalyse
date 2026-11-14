@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { createErrorEvent } from '../../src/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createErrorEvent } from '../../src/core/diagnostics/log-events'
+import { formatLogMessage } from '../../src/core/diagnostics/log-message'
+import type { KnickSide, WristMasterPrint } from '../../src/core/types'
+
+function wristPrint(calibKnick: number, calibKnickSide: KnickSide, flexAngle = 3.25): WristMasterPrint {
+  return {
+    mode: 'wrist',
+    flexAngle,
+    flexBendDir: 1,
+    calibArmLength2D: 0.3,
+    calibKnick,
+    calibKnickSide,
+    calibKnickFallback: 0,
+  }
+}
 
 describe('createErrorEvent – Fehler fürs Diagnose-Log', () => {
   it('nimmt Quelle, Text und den Stack des ersten Fehlers', () => {
@@ -23,5 +37,27 @@ describe('createErrorEvent – Fehler fürs Diagnose-Log', () => {
 
   it('filtert auch Fehler-Grund ohne Error-Objekt, z. B. Punkte bei unhandledrejection', () => {
     expect(createErrorEvent('unhandledrejection', [{ x: 0.1, y: 0.2 }]).message).toBe('[Punkte ausgelassen]')
+  })
+})
+
+describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)', () => {
+  // Hals = links auf dem Bildschirm = Seite +1 (wie in der Entwickler-Ansicht, #101).
+  it('nimmt den gespeicherten Knick, den Beuge-Winkel und die Richtung Hals', () => {
+    expect(createCalibrationSavedEvent(wristPrint(12.34, 1))).toEqual({
+      kind: 'calibration-saved',
+      knick: 12.3,
+      flexAngle: 3.3,
+      side: 'hals',
+    })
+  })
+
+  it('erkennt die Richtung Schnecke und die gerade Haltung', () => {
+    expect(createCalibrationSavedEvent(wristPrint(8, -1)).side).toBe('schnecke')
+    expect(createCalibrationSavedEvent(wristPrint(2, 0)).side).toBe('gerade')
+  })
+
+  it('enthält nur Zahlen und die Richtung, keine Punkte', () => {
+    expect(formatLogMessage([createCalibrationSavedEvent(wristPrint(12, 1))])).not.toBe('[Punkte ausgelassen]')
+    expect(Object.keys(createCalibrationSavedEvent(wristPrint(12, 1))).sort()).toEqual(['flexAngle', 'kind', 'knick', 'side'])
   })
 })

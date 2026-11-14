@@ -6,7 +6,8 @@
 // `POST /__log` (Preview-Server). Nie Bilder, Video, Punkte je Bild, Personendaten.
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
-import { createErrorEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createErrorEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import type { MasterPrint } from '@/core/types'
 
 const LOG_URL = '/__log'
 const MAX_BODY_BYTES = 64 * 1024
@@ -83,4 +84,9 @@ export function reportFrame(nowMs: number): void {
   if (!logger) return
   const fps = logger.frameRate.tick(nowMs)
   if (fps !== undefined) logger.record({ kind: 'fps', fps: Math.round(fps * 10) / 10 })
+}
+
+/** Gespeicherte Haltung (nur Handgelenk-Modus): Knick, Beuge-Winkel, Richtung. */
+export function reportCalibrationSaved(mp: MasterPrint): void {
+  if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp))
 }
