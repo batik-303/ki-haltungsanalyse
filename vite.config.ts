@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import fs from 'fs'
 import path from 'path'
+import { deviceLogPlugin } from './scripts/device-log-plugin.ts'
 
 const MEDIAPIPE_DIR = path.resolve(__dirname, 'node_modules/@mediapipe/tasks-vision')
 const MEDIAPIPE_VERSION: string = JSON.parse(
@@ -55,9 +56,12 @@ function mediapipeWasm(): Plugin {
 // Cloudflare-Tunnel das HTTPS; dann greift Vites Host-Prüfung, deshalb
 // sind Tunnel-Adressen in `allowedHosts` eingetragen.
 export default defineConfig(({ isPreview }) => ({
-  plugins: [react(), tailwindcss(), mediapipeWasm(), ...(isPreview ? [] : [basicSsl()])],
+  plugins: [react(), tailwindcss(), mediapipeWasm(), ...(isPreview ? [deviceLogPlugin()] : [basicSsl()])],
   define: {
     __MEDIAPIPE_VERSION__: JSON.stringify(MEDIAPIPE_VERSION),
+    // Diagnose-Logger nur im Test-Build (VITE_DIAGNOSE=1). Sonst ist der Wert
+    // `false` und Vite wirft den Logger beim Build komplett heraus.
+    __DIAGNOSE__: JSON.stringify(process.env.VITE_DIAGNOSE === '1'),
   },
   preview: {
     host: true,

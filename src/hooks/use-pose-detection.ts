@@ -24,6 +24,7 @@ import { createSessionTracker } from '../core/session/session-tracker'
 import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
+import { reportFrame, reportModelLoad } from '../lib/diagnostic-logger'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
 // Conservative values: smooth visual output without perceptible lag.
@@ -131,6 +132,7 @@ export function usePoseDetection(
     let attachedVideo: HTMLVideoElement | null = null
 
     async function init() {
+      const loadStart = performance.now()
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
           mediapipeWasmPath(__MEDIAPIPE_VERSION__),
@@ -148,6 +150,7 @@ export function usePoseDetection(
         )
         if (!landmarker) return
         landmarkerRef.current = landmarker
+        if (__DIAGNOSE__) reportModelLoad('pose', performance.now() - loadStart, true)
 
         const stream = scope.adopt(
           await navigator.mediaDevices.getUserMedia({
@@ -177,6 +180,7 @@ export function usePoseDetection(
           })
         }
       } catch (e) {
+        if (__DIAGNOSE__ && !landmarkerRef.current) reportModelLoad('pose', performance.now() - loadStart, false)
         console.error('Failed to initialize pose detection:', e)
       }
     }
@@ -205,6 +209,7 @@ export function usePoseDetection(
     async function loadHandLandmarker() {
       if (handLandmarkerRef.current || handLandmarkerLoadingRef.current) return
       handLandmarkerLoadingRef.current = true
+      const loadStart = performance.now()
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
           mediapipeWasmPath(__MEDIAPIPE_VERSION__),
@@ -217,6 +222,7 @@ export function usePoseDetection(
           runningMode: 'VIDEO',
           numHands: 2,
         })
+        if (__DIAGNOSE__) reportModelLoad('hand', performance.now() - loadStart, true)
         // Guard: focus may have left wrist mode or the screen unmounted while loading.
         if (!scope.isDisposed() && usePoseStore.getState().focusMode === 'wrist') {
           handLandmarkerRef.current = hand
@@ -224,6 +230,7 @@ export function usePoseDetection(
           hand.close()
         }
       } catch (e) {
+        if (__DIAGNOSE__) reportModelLoad('hand', performance.now() - loadStart, false)
         console.error('Failed to initialize hand landmarker:', e)
       } finally {
         handLandmarkerLoadingRef.current = false
@@ -275,6 +282,7 @@ export function usePoseDetection(
       }
 
       const now = performance.now()
+      if (__DIAGNOSE__) reportFrame(now)
       const dt = Math.min((now - lastTimeRef.current) / 1000, 0.1)
       lastTimeRef.current = now
 

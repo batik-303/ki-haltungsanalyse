@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { usePoseStore } from '../store/pose-store'
 import { createMasterPrint } from '../core/calibration/master-print'
+import { reportCalibrationSaved } from '../lib/diagnostic-logger'
 import { computeShoulderWidth } from '../core/calibration/distance-check'
 import { computeWristAxisOk } from '../core/calibration/readiness-gate'
 import type { Landmark } from '../core/types'
@@ -86,6 +87,7 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKn
     const shoulderWidth = computeShoulderWidth(landmarks[11]!.x, landmarks[12]!.x)
 
     store.calibrate(masterPrint, shoulderWidth)
+    if (__DIAGNOSE__) reportCalibrationSaved(masterPrint)
     onCalibrated?.()
     return { success: true }
   }, [videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated])

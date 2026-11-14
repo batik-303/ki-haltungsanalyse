@@ -33,3 +33,26 @@ describe('vite.config – Preview über Cloudflare-Tunnel', () => {
     expect(preview?.allowedHosts).toEqual(['.trycloudflare.com'])
   })
 })
+
+describe('vite.config – Diagnose-Logs (#170)', () => {
+  const withDiagnose = (value: string | undefined, fn: () => void): void => {
+    const before = process.env.VITE_DIAGNOSE
+    if (value === undefined) delete process.env.VITE_DIAGNOSE
+    else process.env.VITE_DIAGNOSE = value
+    try { fn() } finally {
+      if (before === undefined) delete process.env.VITE_DIAGNOSE
+      else process.env.VITE_DIAGNOSE = before
+    }
+  }
+
+  it('hängt den Log-Empfänger nur im Preview ein', () => {
+    expect(pluginNames(resolve(true).plugins)).toContain('device-log')
+    expect(pluginNames(resolve(false).plugins)).not.toContain('device-log')
+  })
+
+  it('schaltet den Client-Logger nur mit VITE_DIAGNOSE=1 ein', () => {
+    withDiagnose('1', () => expect(resolve(false).define?.__DIAGNOSE__).toBe('true'))
+    withDiagnose(undefined, () => expect(resolve(false).define?.__DIAGNOSE__).toBe('false'))
+    withDiagnose('0', () => expect(resolve(false).define?.__DIAGNOSE__).toBe('false'))
+  })
+})
