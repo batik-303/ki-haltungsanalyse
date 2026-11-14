@@ -25,6 +25,15 @@ const TILT_SMOOTH_TAU_MS = 150
 // Seite +1 dreht im ungespiegelten Kamerabild im Uhrzeigersinn; der
 // CSS-Spiegel macht daraus gegen den Uhrzeigersinn → Hand kippt nach links.
 export const SIDE_TO_SCREEN = -1
+
+/**
+ * Knick zum Hals? Hals = links auf dem (gespiegelten) Bildschirm — dieselbe
+ * Zuordnung wie die Hand in der Leiste (#94). Seite 0 (unbekannt) zählt
+ * nicht als Hals, damit dort die strengere Grenze gilt.
+ */
+export function isKnickTowardNeck(side: KnickSide): boolean {
+  return side * SIDE_TO_SCREEN < 0
+}
 // Ruhige Richtung: die Seite wechselt erst, wenn die andere Seite so lange
 // ohne Unterbrechung anhält. Kürzer als die 0,5 s bis Gelb, damit die Hand
 // beim Gelbwerden schon zur richtigen Seite zeigt.

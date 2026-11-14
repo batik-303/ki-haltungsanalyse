@@ -38,6 +38,8 @@ export function createWristRailColor(
   yellowToBlueDeg = 5,
   blueToYellowFrames = 8,
   yellowToBlueFrames = 4,
+  // Zum Hals etwas mehr Spielraum (#130, Mini-Schritt 1); Schnecke bleibt streng.
+  neckBlueToYellowDeg = 10,
 ) {
   let isBlue = true
   let counter = 0
@@ -47,10 +49,13 @@ export function createWristRailColor(
    *   den Weg nach Gelb: Rutschen hält Blau, macht aber nie Blau — sonst
    *   pendelt der Anker bei Korrektur-Rucken einer noch geknickten Hand
    *   (Geigen-Test 29.09.).
+   * @param towardNeck Knick zeigt zum Hals → eigene, großzügigere Grenze.
+   *   Ohne Richtung (Pose-Fallback) gilt die strengere Schnecken-Grenze.
    */
-  return function update(angleDeg: number, graceBufferDeg = 0, slideDamping = 1): boolean {
+  return function update(angleDeg: number, graceBufferDeg = 0, slideDamping = 1, towardNeck = false): boolean {
     if (isBlue) {
-      if (angleDeg * slideDamping > blueToYellowDeg + graceBufferDeg) {
+      const limitDeg = towardNeck ? neckBlueToYellowDeg : blueToYellowDeg
+      if (angleDeg * slideDamping > limitDeg + graceBufferDeg) {
         counter++
         if (counter >= blueToYellowFrames) {
           isBlue = false

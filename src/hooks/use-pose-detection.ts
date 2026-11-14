@@ -1,3 +1,4 @@
+import { isKnickTowardNeck } from '../core/analysis/wrist-bar'
 import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
@@ -419,7 +420,7 @@ export function usePoseDetection(
             wristAnchorColor = anchorGreyGateRef.current.update({
               visible: anchorVisible,
               nowMs: now,
-              measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor),
+              measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor, isKnickTowardNeck(knickResult.knickSide)),
             })
             wristRailAngleDeg = effectiveAngleDiff
 
