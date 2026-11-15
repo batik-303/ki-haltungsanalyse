@@ -68,7 +68,10 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKn
       if (hand) {
         try {
           const handResults = hand.detectForVideo(video, now)
-          handLandmarks = pickLeftHand(handResults)
+          // Griffhand am Körper-Handgelenk, nie die Bogenhand (#199).
+          const elbow = landmarks[13]
+          const wrist = landmarks[15]
+          handLandmarks = pickLeftHand(handResults, elbow && wrist ? { elbow, wrist, aspect } : undefined)
         } catch (e) {
           console.warn('[Calibration] hand detect failed', e)
         }

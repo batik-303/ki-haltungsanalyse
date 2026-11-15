@@ -3,6 +3,7 @@
 import type { AnchorColor, KnickSide, WristMasterPrint } from '../types'
 import { isKnickTowardNeck } from '../analysis/wrist-bar'
 import { formatLogMessage } from './log-message'
+import type { HandSelection } from '../analysis/hand-landmarker'
 
 export type KnickSideLabel = 'hals' | 'schnecke' | 'gerade'
 
@@ -21,6 +22,7 @@ export type DiagnosticEvent =
       side: KnickSideLabel | null
       msSinceLast: number
     }
+  | { kind: 'hand-pick'; hands: number; labels: string[]; distances: (number | null)[]; chosen: number | null }
   | {
       kind: 'device'
       userAgent: string
@@ -60,5 +62,21 @@ export function createCalibrationSavedEvent(mp: WristMasterPrint): DiagnosticEve
     knick: oneDecimal(mp.calibKnick),
     flexAngle: oneDecimal(mp.flexAngle),
     side: knickSideLabel(mp.calibKnickSide),
+  }
+}
+
+const twoDecimals = (value: number): number => Math.round(value * 100) / 100
+
+/**
+ * Hand-Auswahl (#199): wie viele Hände, welche Etiketten, Abstand jeder Hand zum
+ * Körper-Handgelenk (in Unterarm-Längen) und welche gewählt wurde. Keine Punkte.
+ */
+export function createHandPickEvent(selection: HandSelection): DiagnosticEvent {
+  return {
+    kind: 'hand-pick',
+    hands: selection.candidates.length,
+    labels: selection.candidates.map((c) => c.label),
+    distances: selection.candidates.map((c) => (c.distance === null ? null : twoDecimals(c.distance))),
+    chosen: selection.chosen < 0 ? null : selection.chosen,
   }
 }

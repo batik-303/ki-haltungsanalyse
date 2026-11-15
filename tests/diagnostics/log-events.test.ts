@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCalibrationSavedEvent, createProblemEvent } from '../../src/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createProblemEvent, createHandPickEvent } from '../../src/core/diagnostics/log-events'
 import { formatLogMessage } from '../../src/core/diagnostics/log-message'
 import type { KnickSide, WristMasterPrint } from '../../src/core/types'
 
@@ -70,5 +70,31 @@ describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)
   it('enthält nur Zahlen und die Richtung, keine Punkte', () => {
     expect(formatLogMessage([createCalibrationSavedEvent(wristPrint(12, 1))])).not.toBe('[Punkte ausgelassen]')
     expect(Object.keys(createCalibrationSavedEvent(wristPrint(12, 1))).sort()).toEqual(['flexAngle', 'kind', 'knick', 'side'])
+  })
+})
+
+// #199: Beweis-Log der Hand-Auswahl — nur Zahlen und Etiketten, keine Punkte.
+describe('createHandPickEvent', () => {
+  it('nennt Zahl der Hände, Etiketten, Abstände und die gewählte Hand', () => {
+    const event = createHandPickEvent({
+      detection: null,
+      candidates: [
+        { label: 'Left', distance: 2.0349 },
+        { label: 'Left', distance: 0.1234 },
+      ],
+      chosen: 1,
+    })
+    expect(event).toEqual({
+      kind: 'hand-pick',
+      hands: 2,
+      labels: ['Left', 'Left'],
+      distances: [2.03, 0.12],
+      chosen: 1,
+    })
+  })
+
+  it('zeigt fehlende Abstände und keine Wahl als null', () => {
+    const event = createHandPickEvent({ detection: null, candidates: [{ label: 'Right', distance: null }], chosen: -1 })
+    expect(event).toEqual({ kind: 'hand-pick', hands: 1, labels: ['Right'], distances: [null], chosen: null })
   })
 })

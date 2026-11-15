@@ -2,7 +2,7 @@ import { isKnickTowardNeck } from '../core/analysis/wrist-bar'
 import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { pickLeftHandDetection } from '../core/analysis/hand-landmarker'
+import { selectArmHand } from '../core/analysis/hand-landmarker'
 import { computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
@@ -24,7 +24,7 @@ import { createSessionTracker } from '../core/session/session-tracker'
 import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
-import { reportAnchorColor, reportFrame, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
+import { reportAnchorColor, reportFrame, reportHandPick, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
 // Conservative values: smooth visual output without perceptible lag.
@@ -295,10 +295,19 @@ export function usePoseDetection(
 
       // Hand detection (wrist mode only — landmarker loaded on demand).
       // Run with the same video frame + timestamp as pose for temporal coherence.
+      // Griffhand = Hand am Körper-Handgelenk (Pose 15), nicht nur nach
+      // Etikett — sonst misst die App an der Bogenhand (#199).
       const handLandmarker = handLandmarkerRef.current
       if (store.focusMode === 'wrist' && handLandmarker) {
         try {
-          const detection = pickLeftHandDetection(handLandmarker.detectForVideo(video, now))
+          const poseElbow = landmarks?.[13]
+          const poseWrist = landmarks?.[15]
+          const arm = poseElbow && poseWrist
+            ? { elbow: poseElbow, wrist: poseWrist, aspect: canvas.height > 0 ? canvas.width / canvas.height : 1 }
+            : undefined
+          const selection = selectArmHand(handLandmarker.detectForVideo(video, now), arm)
+          if (__DIAGNOSE__) reportHandPick(now, selection)
+          const detection = selection.detection
           handLandmarksRef.current = detection?.landmarks ?? null
           handednessScoreRef.current = detection?.handednessScore
         } catch (e) {
