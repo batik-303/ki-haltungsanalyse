@@ -22,6 +22,8 @@ interface UseCalibrationOptions {
   handLandmarkerRef?: React.RefObject<HandLandmarker | null>
   /** Knick mit Seite aus den Countdown-Frames (#91), gefüllt von usePoseDetection. */
   calibKnickSamplesRef?: React.RefObject<number[]>
+  /** Nur Diagnose-Log (#199): Unterarmlänge je Bild von 3 – 2 – 1. */
+  calibArmSamplesRef?: React.RefObject<number[]>
   landmarkerRef?: React.RefObject<PoseLandmarker | null>
   onCalibrated?: () => void
 }
@@ -31,7 +33,7 @@ interface UseCalibrationOptions {
  * still halten, Zählen, Pause) führt seit #118 der rAF-Loop
  * (`createSaveSequence` in `usePoseDetection`).
  */
-export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated }: UseCalibrationOptions) {
+export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, calibArmSamplesRef, onCalibrated }: UseCalibrationOptions) {
   const doCapture = useCallback((landmarker: PoseLandmarker): CalibrationResult => {
     const video = videoRef.current
     if (!video) return { success: false, reason: 'no_pose' }
@@ -90,10 +92,10 @@ export function useCalibration({ videoRef, canvasRef, handLandmarkerRef, calibKn
     const shoulderWidth = computeShoulderWidth(landmarks[11]!.x, landmarks[12]!.x)
 
     store.calibrate(masterPrint, shoulderWidth)
-    if (__DIAGNOSE__) reportCalibrationSaved(masterPrint)
+    if (__DIAGNOSE__) reportCalibrationSaved(masterPrint, calibArmSamplesRef?.current ?? [])
     onCalibrated?.()
     return { success: true }
-  }, [videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, onCalibrated])
+  }, [videoRef, canvasRef, handLandmarkerRef, calibKnickSamplesRef, calibArmSamplesRef, onCalibrated])
 
   return { doCapture }
 }

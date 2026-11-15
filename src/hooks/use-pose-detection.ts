@@ -10,7 +10,7 @@ import type { AnchorColor, KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { mediapipeWasmPath, POSE_MODEL_PATH, HAND_MODEL_PATH } from '../core/config/mediapipe-assets'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
+import { computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
@@ -63,6 +63,9 @@ export function usePoseDetection(
   // Knick mit Seite aus den Frames von 3 – 2 – 1 (#91, #118) — die Kalibrierung
   // mittelt daraus die gespeicherte Haltung statt aus einem einzigen Frame.
   const calibKnickSamplesRef = useRef<number[]>([])
+  // Nur Diagnose-Log (#199): Unterarmlänge je Bild von 3 – 2 – 1, für den
+  // Median beim Speichern. Die Analyse liest sie nicht.
+  const calibArmSamplesRef = useRef<number[]>([])
   // Sicherheit der Links/Rechts-Einordnung der linken Hand (Grau-Bedingung #74).
   const handednessScoreRef = useRef<number | undefined>(undefined)
   const animFrameRef = useRef<number>(0)
@@ -333,6 +336,7 @@ export function usePoseDetection(
         const calibSamples = calibKnickSamplesRef.current
         if (!store.isCalibrating || !store.saveStep) {
           if (calibSamples.length > 0) calibSamples.length = 0
+          calibArmSamplesRef.current.length = 0
           return
         }
         const hand = handLandmarksRef.current
@@ -351,9 +355,11 @@ export function usePoseDetection(
         if (save.sampling) {
           if (store.focusMode === 'wrist' && landmarks?.[13] && hand) {
             calibSamples.push(computeSignedKnick2D(landmarks[13], hand[0]!, hand[9]!, aspect))
+            if (__DIAGNOSE__ && landmarks[15]) calibArmSamplesRef.current.push(computeArmLength2D(landmarks[13], landmarks[15], aspect))
           }
         } else if (save.step !== 'done' && calibSamples.length > 0) {
           calibSamples.length = 0
+          calibArmSamplesRef.current.length = 0
         }
         if (save.capture) usePoseStore.getState().setSaveCaptureDue(true)
       }
@@ -464,7 +470,7 @@ export function usePoseDetection(
               measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor, isKnickTowardNeck(knickResult.knickSide)),
             })
             wristRailAngleDeg = effectiveAngleDiff
-            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now, reason: computeAnchorHiddenReason(visibilityInput) })
+            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now, reason: computeAnchorHiddenReason(visibilityInput), armRatio: store.masterPrint.calibArmLength2D > 0 ? knickResult.armLength2D / store.masterPrint.calibArmLength2D : null })
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
@@ -682,6 +688,7 @@ export function usePoseDetection(
   const startSave = useCallback(() => {
     saveSequenceRef.current.reset()
     calibKnickSamplesRef.current.length = 0
+    calibArmSamplesRef.current.length = 0
     const first = saveSequenceRef.current.state()
     const store = usePoseStore.getState()
     store.setSaveStep({ step: first.step, count: first.count, pauseStatus: first.pauseStatus })
@@ -689,5 +696,5 @@ export function usePoseDetection(
     store.setCalibrating(true)
   }, [])
 
-  return { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking }
+  return { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, calibArmSamplesRef, startTracking, stopTracking }
 }

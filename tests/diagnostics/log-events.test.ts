@@ -59,6 +59,8 @@ describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)
       knick: 12.3,
       flexAngle: 3.3,
       side: 'hals',
+      armLength: 0.3,
+      armLengthMedian: null,
     })
   })
 
@@ -69,7 +71,19 @@ describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)
 
   it('enthält nur Zahlen und die Richtung, keine Punkte', () => {
     expect(formatLogMessage([createCalibrationSavedEvent(wristPrint(12, 1))])).not.toBe('[Punkte ausgelassen]')
-    expect(Object.keys(createCalibrationSavedEvent(wristPrint(12, 1))).sort()).toEqual(['flexAngle', 'kind', 'knick', 'side'])
+    expect(Object.keys(createCalibrationSavedEvent(wristPrint(12, 1))).sort())
+      .toEqual(['armLength', 'armLengthMedian', 'flexAngle', 'kind', 'knick', 'side'])
+  })
+
+  // #199/#198: Die Unterarmlänge kommt aus EINEM Bild; der Median über 3 – 2 – 1
+  // zeigt, ob dieses Bild ein Ausreißer war.
+  it('nennt die Unterarmlänge im Erfassungs-Bild und den Median über 3 – 2 – 1', () => {
+    const event = createCalibrationSavedEvent(wristPrint(2, 0), [0.21, 0.2, 0.35, 0.19, 0.2])
+    expect(event).toMatchObject({ armLength: 0.3, armLengthMedian: 0.2 })
+  })
+
+  it('ohne Countdown-Bilder ist der Median null', () => {
+    expect(createCalibrationSavedEvent(wristPrint(2, 0), [])).toMatchObject({ armLengthMedian: null })
   })
 })
 

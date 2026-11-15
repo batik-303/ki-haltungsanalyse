@@ -17,7 +17,16 @@ export type DiagnosticEvent =
   | { kind: 'error' | 'warning'; source: ErrorSource; message: string; stack?: string }
   | { kind: 'model-load'; model: 'pose' | 'hand'; ms: number; ok: boolean }
   | { kind: 'fps'; fps: number }
-  | { kind: 'calibration-saved'; knick: number; flexAngle: number; side: KnickSideLabel }
+  | {
+      kind: 'calibration-saved'
+      knick: number
+      flexAngle: number
+      side: KnickSideLabel
+      /** Unterarmlänge (2D, mit Seitenverhältnis) im Erfassungs-Bild — so wird sie gespeichert. */
+      armLength: number
+      /** Median der Unterarmlänge über 3 – 2 – 1; `null` ohne Countdown-Bilder (#199). */
+      armLengthMedian: number | null
+    }
   | {
       kind: 'color-change'
       from: AnchorColor
@@ -27,6 +36,8 @@ export type DiagnosticEvent =
       msSinceLast: number
       /** Nur beim Wechsel nach Grau: warum die Sicht nicht sicher war (#199). */
       reason?: GreyReason
+      /** Unterarm aktuell / gespeichert; `null` ohne Körper (#199). */
+      armRatio: number | null
     }
   | { kind: 'hand-pick'; hands: number; labels: string[]; distances: (number | null)[]; chosen: number | null }
   | {
@@ -62,16 +73,25 @@ export function knickSideLabel(side: KnickSide): KnickSideLabel {
  * Gespeicherte Handgelenk-Haltung: nur abgeleitete Zahlen (Grad) und die Richtung,
  * damit sich der Durchschnitt mehrerer Speicher-Vorgänge bilden lässt. Keine Punkte.
  */
-export function createCalibrationSavedEvent(mp: WristMasterPrint): DiagnosticEvent {
+export function createCalibrationSavedEvent(mp: WristMasterPrint, armLengthSamples: readonly number[] = []): DiagnosticEvent {
   return {
     kind: 'calibration-saved',
     knick: oneDecimal(mp.calibKnick),
     flexAngle: oneDecimal(mp.flexAngle),
     side: knickSideLabel(mp.calibKnickSide),
+    armLength: threeDecimals(mp.calibArmLength2D),
+    armLengthMedian: armLengthSamples.length > 0 ? threeDecimals(median(armLengthSamples)) : null,
   }
 }
 
-const twoDecimals = (value: number): number => Math.round(value * 100) / 100
+export const twoDecimals = (value: number): number => Math.round(value * 100) / 100
+const threeDecimals = (value: number): number => Math.round(value * 1000) / 1000
+
+function median(values: readonly number[]): number {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = sorted.length / 2
+  return sorted.length % 2 === 1 ? sorted[Math.floor(mid)]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+}
 
 /**
  * Hand-Auswahl (#199): wie viele Hände, welche Etiketten, Abstand jeder Hand zum

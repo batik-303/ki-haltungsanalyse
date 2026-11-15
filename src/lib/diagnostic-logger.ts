@@ -95,8 +95,8 @@ export function reportFrame(nowMs: number): void {
 }
 
 /** Gespeicherte Haltung (nur Handgelenk-Modus): Knick, Beuge-Winkel, Richtung. */
-export function reportCalibrationSaved(mp: MasterPrint): void {
-  if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp))
+export function reportCalibrationSaved(mp: MasterPrint, armLengthSamples: readonly number[] = []): void {
+  if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp, armLengthSamples))
 }
 
 /** Anker-Farbe je Bild (nur Handgelenk-Modus); ins Log geht nur ein Wechsel (#200). */
