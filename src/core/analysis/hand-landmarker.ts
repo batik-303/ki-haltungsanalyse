@@ -16,11 +16,12 @@ export interface ArmReference {
 }
 
 /**
- * Größter Abstand Hand-Handgelenk (Hand 0) ↔ Körper-Handgelenk (Pose 15), in
- * Unterarm-Längen (#199). Die Bogenhand liegt weit darüber, die Griffhand
- * meist deutlich darunter. Feinstellung über das Diagnose-Log (`hand-pick`).
+ * Ab diesem Abstand Hand-Handgelenk (Hand 0) ↔ Körper-Handgelenk (Pose 15), in
+ * Unterarm-Längen, gilt eine „Right“-Hand als Bogenhand (#199). Gerätetest
+ * 15.11.: Griffhand 0,04 – 1,9, Bogenhand 2,2 – 6. Feinstellung über das
+ * Diagnose-Log (`hand-pick`).
  */
-export const MAX_HAND_WRIST_DISTANCE = 0.5
+export const BOW_HAND_MIN_DISTANCE = 2
 
 /** Eine erkannte Hand, wie die Auswahl sie sieht (auch fürs Diagnose-Log). */
 export interface HandCandidate {
@@ -46,10 +47,11 @@ function distanceToWrist(hand: Landmark[] | undefined, arm: ArmReference): numbe
 /**
  * Wählt die Griffhand (anatomisch links) aus einem HandLandmarker-Ergebnis.
  *
- * Mit Arm (#199): die Hand, deren Handgelenk am nächsten am Körper-Handgelenk
- * liegt und höchstens `MAX_HAND_WRIST_DISTANCE` entfernt ist; sonst keine Hand
- * (→ Grau). Das Etikett zählt nur als Sicherheit: „Left“ = Score, sonst
- * 1 − Score. So misst die App nie an der Bogenhand, auch wenn sie „Left“ heißt.
+ * Mit Arm (#199): von den Händen die nächste am Körper-Handgelenk. So misst
+ * die App bei zwei Händen nie an der Bogenhand, auch wenn sie „Left“ heißt.
+ * Verworfen wird nur eine Hand, die „Right“ heißt und mindestens
+ * `BOW_HAND_MIN_DISTANCE` entfernt ist (Bogenhand) — nie mehr Grau als vorher.
+ * Das Etikett zählt als Sicherheit: „Left“ = Score, sonst 1 − Score.
  *
  * Ohne Arm (kein Körper im Bild): wie bisher die erste Hand mit „Left“.
  */
@@ -63,11 +65,13 @@ export function selectArmHand(result: HandLandmarkerResult | null | undefined, a
 
   let chosen = -1
   if (arm) {
-    let bestDistance = MAX_HAND_WRIST_DISTANCE
+    let bestDistance = Infinity
     candidates.forEach((c, i) => {
-      if (c.distance !== null && c.distance <= bestDistance) {
+      const distance = c.distance ?? Infinity
+      const bowHand = c.label !== 'Left' && distance >= BOW_HAND_MIN_DISTANCE
+      if (!bowHand && (chosen < 0 || distance < bestDistance)) {
         chosen = i
-        bestDistance = c.distance
+        bestDistance = distance
       }
     })
   } else {
