@@ -43,8 +43,9 @@ describe('createMasterPrint — Knick-Baseline', () => {
   const mp = createMasterPrint('wrist', pose, { handLandmarks: hand, aspect, worldLandmarks: world })
   if (mp?.mode !== 'wrist') throw new Error('erwartet WristMasterPrint')
 
-  it('calibKnick = 2D-Winkel Pose-Ellbogen → Hand-Handgelenk → Hand-Mittelfinger (mit aspect)', () => {
-    expect(mp.calibKnick).toBeCloseTo(computeCollinearityAngle2D(pose[13]!, hand[0]!, hand[9]!, aspect), 9)
+  // Gemessen vor dem Gerade-Fang (#189); der Winkel hier liegt unter der Fang-Grenze.
+  it('gemessener Knick = 2D-Winkel Pose-Ellbogen → Hand-Handgelenk → Hand-Mittelfinger (mit aspect)', () => {
+    expect(Math.abs(mp.calibKnickMeasured)).toBeCloseTo(computeCollinearityAngle2D(pose[13]!, hand[0]!, hand[9]!, aspect), 9)
   })
 
   it('calibKnickFallback = 2D-Winkel aus Pose-worldLandmarks', () => {

@@ -143,16 +143,17 @@ describe('createKnickTracker — Seite nah an der Geraden (#91, Lehre aus #85)',
 })
 
 describe('createKnickTracker — gemittelte Kalibrierung (#91)', () => {
-  // Ausreißer genau im Erfassungs-Frame: in Wahrheit 4° gebeugt, gemessen −5°
+  // Ausreißer genau im Erfassungs-Frame: in Wahrheit 12° gebeugt, gemessen −9°
   // (andere Seite). Aus einem einzigen Frame verschiebt das die Null
-  // dauerhaft. Vermutete Ursache für Dauer-Gelb in #85.
-  const calibDeg = 4
+  // dauerhaft. Vermutete Ursache für Dauer-Gelb in #85. 12° liegt über dem
+  // Gerade-Fang (#189), sonst gälte die Haltung als gerade.
+  const calibDeg = 12
   const r = rng(42)
   const jitter = () => (r() - 0.5) * 0.006
   const samples = repeat(30, () => makeFrame({ knickDeg: 0, calibDeg }, { noise: jitter })).map((f) =>
     computeSignedKnick2D(f.pose[13]!, f.hand![0]!, f.hand![9]!, 1),
   )
-  const outlier = makeFrame({ knickDeg: -9, calibDeg })
+  const outlier = makeFrame({ knickDeg: -21, calibDeg })
   const mp = createMasterPrint('wrist', outlier.pose, {
     handLandmarks: outlier.hand,
     aspect: 1,
@@ -337,26 +338,27 @@ describe('Knick-Seite (#91) — Vibrato und Lagenwechsel bleiben blau', () => {
   }
 })
 
+// Gespeichert mit 12° (über dem Gerade-Fang, #189), damit „zurück in die Haltung“ eine schiefe Haltung bleibt.
 describe('Rutsch-Schutz — Korrektur pendelt nicht (Geigen-Test 29.09.)', () => {
   it('kleine Rucke beim Korrigieren, Hand noch geknickt (≥ 10°): bleibt ruhig gelb', () => {
-    const mp = calibrate(6)
-    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 6 }))
+    const mp = calibrate(12)
+    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 12 }))
     let x = 0
     for (let k = 0; k < 150; k++) {
       if (k % 30 < 5) x += 0.3 / 30 // alle 1 s ein kurzer Ruck, schneller als die Rutsch-Schwelle
-      frames.push(makeFrame({ knickDeg: Math.max(10, 15 - k * 0.1), calibDeg: 6, shift: { x, y: 0 } }))
+      frames.push(makeFrame({ knickDeg: Math.max(10, 15 - k * 0.1), calibDeg: 12, shift: { x, y: 0 } }))
     }
     const out = playShielded(frames, mp).slice(45)
     expect(out.every((o) => !o.blue)).toBe(true)
   })
 
   it('echte Korrektur mit Bewegung zurück in die Haltung wird blau und bleibt blau', () => {
-    const mp = calibrate(6)
-    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 6 }))
+    const mp = calibrate(12)
+    const frames: Frame[] = repeat(45, () => makeFrame({ knickDeg: 15, calibDeg: 12 }))
     let x = 0
     for (let k = 0; k < 150; k++) {
       if (k < 10) x += 0.3 / 30
-      frames.push(makeFrame({ knickDeg: Math.max(0, 15 - k * 1.5), calibDeg: 6, shift: { x, y: 0 } }))
+      frames.push(makeFrame({ knickDeg: Math.max(0, 15 - k * 1.5), calibDeg: 12, shift: { x, y: 0 } }))
     }
     const out = playShielded(frames, mp).slice(45)
     const firstBlue = out.findIndex((o) => o.blue)

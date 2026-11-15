@@ -103,6 +103,7 @@ export interface WristMasterPrint {
   calibArmLength2D: number    // 2D-Unterarmlänge bei der Kalibrierung (normiert, mit aspect)
   calibKnick: number          // Knick-Baseline Hand-Pfad (2D-Winkel in Grad, ADR 0003)
   calibKnickSide: KnickSide   // Seite der gespeicherten Haltung (#91), 0 = nah an der Geraden
+  calibKnickMeasured: number  // gemessener Median mit Vorzeichen vor dem Gerade-Fang (#189), für Entwickler-Ansicht + Log
   // Pose-only fallback baselines — computed at calibration so runtime can
   // switch to the fallback path without a baseline mismatch when the hand
   // briefly disappears.

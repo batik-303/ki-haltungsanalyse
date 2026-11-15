@@ -22,19 +22,32 @@ import {
 // dort zu unsicher gemessen und bleibt unbekannt (#91, Lehre aus #85).
 const CALIB_KNICK_SIDE_MIN_DEG = 2
 
+// Gerade-Fang (#189): Unter dieser Grenze (Grad, beide Richtungen gleich) gilt
+// die gespeicherte Haltung als gerade (0°). Ab hier bleibt der echte Wert und
+// der Tipp „neu speichern“ kommt. Zum Testen 10° (15.11.), später anhand der
+// Diagnose-Logs nachstellen.
+export const CALIB_STRAIGHT_SNAP_DEG = 10
+
 /**
  * Knick der gespeicherten Haltung aus vielen Countdown-Frames (#91): Median
  * des Knicks mit Seite, robust gegen einen Ausreißer im Erfassungs-Frame.
+ * Leicht schief (unter CALIB_STRAIGHT_SNAP_DEG) gilt als gerade (#189); der
+ * gemessene Median bleibt für Entwickler-Ansicht und Log erhalten.
  */
-function computeCalibKnick(samples: number[]): { calibKnick: number; calibKnickSide: KnickSide } {
+function computeCalibKnick(samples: number[]): Pick<WristMasterPrint, 'calibKnick' | 'calibKnickSide' | 'calibKnickMeasured'> {
   const sorted = [...samples].sort((a, b) => a - b)
   const mid = sorted.length / 2
   const median = sorted.length % 2 === 1
     ? sorted[Math.floor(mid)]!
     : (sorted[mid - 1]! + sorted[mid]!) / 2
   const calibKnick = Math.abs(median)
-  const calibKnickSide = calibKnick < CALIB_KNICK_SIDE_MIN_DEG ? 0 : (Math.sign(median) as KnickSide)
-  return { calibKnick, calibKnickSide }
+  if (calibKnick < CALIB_STRAIGHT_SNAP_DEG) return { calibKnick: 0, calibKnickSide: 0, calibKnickMeasured: median }
+  return { calibKnick, calibKnickSide: knickSideOf(median), calibKnickMeasured: median }
+}
+
+/** Seite eines Knicks mit Vorzeichen; nah an der Geraden unbekannt (0). */
+export function knickSideOf(signedKnick: number): KnickSide {
+  return Math.abs(signedKnick) < CALIB_KNICK_SIDE_MIN_DEG ? 0 : (Math.sign(signedKnick) as KnickSide)
 }
 
 /**
