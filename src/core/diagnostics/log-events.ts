@@ -4,8 +4,12 @@ import type { AnchorColor, KnickSide, WristMasterPrint } from '../types'
 import { isKnickTowardNeck } from '../analysis/wrist-bar'
 import { formatLogMessage } from './log-message'
 import type { HandSelection } from '../analysis/hand-landmarker'
+import type { AnchorHiddenReason } from '../analysis/anchor-visibility'
 
 export type KnickSideLabel = 'hals' | 'schnecke' | 'gerade'
+
+/** Grund für Grau: aus dem Sicht-Tor, oder kein Körper im Bild. */
+export type GreyReason = AnchorHiddenReason | 'no-body'
 
 export type ErrorSource = 'onerror' | 'unhandledrejection' | 'console.error' | 'console.warn'
 
@@ -21,6 +25,8 @@ export type DiagnosticEvent =
       knick: number | null
       side: KnickSideLabel | null
       msSinceLast: number
+      /** Nur beim Wechsel nach Grau: warum die Sicht nicht sicher war (#199). */
+      reason?: GreyReason
     }
   | { kind: 'hand-pick'; hands: number; labels: string[]; distances: (number | null)[]; chosen: number | null }
   | {

@@ -1,7 +1,7 @@
 // Farbwechsel des Handgelenk-Ankers fürs Diagnose-Log (#200).
 // Liest die fertige Farbe nur mit; Analyse, Grenzen und Farb-Logik bleiben unberührt.
 import type { AnchorColor, KnickSide } from '../types'
-import { knickSideLabel, oneDecimal, type DiagnosticEvent } from './log-events'
+import { knickSideLabel, oneDecimal, type DiagnosticEvent, type GreyReason } from './log-events'
 
 export type ColorChangeInput = {
   color: AnchorColor
@@ -9,6 +9,8 @@ export type ColorChangeInput = {
   knick: number | null
   side: KnickSide | null
   nowMs: number
+  /** Grund der unsicheren Sicht in diesem Bild (#199); geht nur beim Wechsel nach Grau ins Log. */
+  reason?: GreyReason | null
 }
 
 /** Factory: meldet ein Ereignis nur beim Wechsel der Farbe, nicht bei jedem Bild. */
@@ -17,7 +19,7 @@ export function createColorChangeLog() {
   let last: AnchorColor = 'blue'
   let lastChangeAt: number | null = null
 
-  function update({ color, knick, side, nowMs }: ColorChangeInput): DiagnosticEvent | undefined {
+  function update({ color, knick, side, nowMs, reason }: ColorChangeInput): DiagnosticEvent | undefined {
     lastChangeAt ??= nowMs
     if (color === last) return undefined
     const event: DiagnosticEvent = {
@@ -27,6 +29,7 @@ export function createColorChangeLog() {
       knick: knick === null ? null : oneDecimal(knick),
       side: side === null ? null : knickSideLabel(side),
       msSinceLast: Math.round(nowMs - lastChangeAt),
+      ...(color === 'grey' && reason && { reason }),
     }
     last = color
     lastChangeAt = nowMs

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeAnchorVisibility } from '../../src/core/analysis/anchor-visibility'
+import { computeAnchorHiddenReason, computeAnchorVisibility } from '../../src/core/analysis/anchor-visibility'
 import type { Landmark } from '../../src/core/types'
 
 // Grau-Bedingung aus #74: alle vier müssen erfüllt sein, sonst sieht die
@@ -36,5 +36,20 @@ describe('computeAnchorVisibility', () => {
   it('nicht sichtbar bei stark verkürztem Unterarm (Konfidenz < 0,5)', () => {
     expect(computeAnchorVisibility({ ...OK, foreshorteningConfidence: 0.49 })).toBe(false)
     expect(computeAnchorVisibility({ ...OK, foreshorteningConfidence: 0.5 })).toBe(true)
+  })
+})
+
+// #199/#198: Fürs Diagnose-Log — WARUM die Sicht nicht sicher ist (erste
+// zutreffende Bedingung in der Reihenfolge der Prüfung).
+describe('computeAnchorHiddenReason', () => {
+  it('kein Grund, wenn die Sicht sicher ist', () => {
+    expect(computeAnchorHiddenReason(OK)).toBeNull()
+  })
+
+  it('nennt den Grund je Bedingung', () => {
+    expect(computeAnchorHiddenReason({ ...OK, hand: null })).toBe('no-hand')
+    expect(computeAnchorHiddenReason({ ...OK, handednessScore: 0.4 })).toBe('handedness')
+    expect(computeAnchorHiddenReason({ ...OK, hand: hand(1.2, 0.5) })).toBe('off-image')
+    expect(computeAnchorHiddenReason({ ...OK, foreshorteningConfidence: 0.3 })).toBe('foreshortened')
   })
 })

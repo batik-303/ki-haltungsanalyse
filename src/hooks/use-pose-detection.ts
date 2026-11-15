@@ -3,7 +3,7 @@ import { createWristRepairStatus, createWristRailColor, computeWristTensionTarge
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { selectArmHand } from '../core/analysis/hand-landmarker'
-import { computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
+import { computeAnchorHiddenReason, computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
 import type { AnchorColor, KnickSide, Landmark } from '../core/types'
@@ -452,18 +452,19 @@ export function usePoseDetection(
             // macht aber nie Blau (sonst Pendeln bei Korrektur-Rucken).
             // Davor das Grau-Tor (#92): ohne sichere Sicht wird nicht gemessen.
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            const anchorVisible = computeAnchorVisibility({
+            const visibilityInput = {
               hand,
               handednessScore: handednessScoreRef.current,
               foreshorteningConfidence: foreConf,
-            })
+            }
+            const anchorVisible = computeAnchorVisibility(visibilityInput)
             wristAnchorColor = anchorGreyGateRef.current.update({
               visible: anchorVisible,
               nowMs: now,
               measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor, isKnickTowardNeck(knickResult.knickSide)),
             })
             wristRailAngleDeg = effectiveAngleDiff
-            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now })
+            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now, reason: computeAnchorHiddenReason(visibilityInput) })
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
@@ -634,7 +635,7 @@ export function usePoseDetection(
         if (store.focusMode === 'wrist' && store.masterPrint && !store.isCalibrating) {
           const color = anchorGreyGateRef.current.hide(now)
           if (color !== store.wristAnchorColor) usePoseStore.setState({ wristAnchorColor: color })
-          if (__DIAGNOSE__) reportAnchorColor({ color, knick: null, side: null, nowMs: now })
+          if (__DIAGNOSE__) reportAnchorColor({ color, knick: null, side: null, nowMs: now, reason: 'no-body' })
         }
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })

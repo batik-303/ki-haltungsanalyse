@@ -19,12 +19,20 @@ export interface AnchorVisibilityInput {
  * Sieht die Kamera das Handgelenk sicher genug für eine Farbe? Ungefiltert pro
  * Frame; die Zeit-Hysterese bis Grau liegt in `createAnchorGreyGate`.
  */
-export function computeAnchorVisibility({ hand, handednessScore, foreshorteningConfidence }: AnchorVisibilityInput): boolean {
+export function computeAnchorVisibility(input: AnchorVisibilityInput): boolean {
+  return computeAnchorHiddenReason(input) === null
+}
+
+/** Warum die Sicht nicht sicher ist (Diagnose-Log, #199); `null` = sicher. */
+export type AnchorHiddenReason = 'no-hand' | 'handedness' | 'off-image' | 'foreshortened'
+
+/** Erste nicht erfüllte Grau-Bedingung aus #74, in der Reihenfolge der Prüfung. */
+export function computeAnchorHiddenReason({ hand, handednessScore, foreshorteningConfidence }: AnchorVisibilityInput): AnchorHiddenReason | null {
   const wrist = hand?.[0]
-  if (!wrist) return false
-  if ((handednessScore ?? 0) < MIN_HANDEDNESS_SCORE) return false
-  if (wrist.x < 0 || wrist.x > 1 || wrist.y < 0 || wrist.y > 1) return false
-  return foreshorteningConfidence >= MIN_FORESHORTENING_CONFIDENCE
+  if (!wrist) return 'no-hand'
+  if ((handednessScore ?? 0) < MIN_HANDEDNESS_SCORE) return 'handedness'
+  if (wrist.x < 0 || wrist.x > 1 || wrist.y < 0 || wrist.y > 1) return 'off-image'
+  return foreshorteningConfidence >= MIN_FORESHORTENING_CONFIDENCE ? null : 'foreshortened'
 }
 
 // Zeit-Hysterese aus #74: grau erst nach dieser Zeit ohne sichere Sicht,

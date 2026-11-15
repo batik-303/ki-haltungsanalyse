@@ -53,4 +53,16 @@ describe('createColorChangeLog – Farbwechsel blau/gelb/grau fürs Diagnose-Log
     expect(log.update({ color: 'blue', knick: 2, side: 0, nowMs: 9000 })).toBeUndefined()
     expect(log.update({ color: 'yellow', knick: 15, side: 1, nowMs: 9400 })?.msSinceLast).toBe(400)
   })
+
+  // #199: Beim Wechsel nach Grau steht der Grund dabei, sonst nicht.
+  it('nennt beim Wechsel nach Grau den Grund (keine Hand, Etikett, Bildrand, Verkürzung, kein Körper)', () => {
+    const log = createColorChangeLog()
+    log.update({ color: 'blue', knick: 3, side: 1, nowMs: 1000 })
+    expect(log.update({ color: 'grey', knick: 21, side: 1, nowMs: 1300, reason: 'handedness' })).toMatchObject({
+      to: 'grey',
+      reason: 'handedness',
+    })
+    const back = log.update({ color: 'blue', knick: 4, side: 1, nowMs: 1600, reason: null })
+    expect(back).not.toHaveProperty('reason')
+  })
 })
