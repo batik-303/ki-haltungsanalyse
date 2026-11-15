@@ -24,7 +24,7 @@ import { createSessionTracker } from '../core/session/session-tracker'
 import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
-import { reportFrame, reportModelLoad } from '../lib/diagnostic-logger'
+import { reportAnchorColor, reportFrame, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
 // Conservative values: smooth visual output without perceptible lag.
@@ -116,6 +116,7 @@ export function usePoseDetection(
     lastAnalysisPathRef.current = null
     readinessGateRef.current.reset()
     saveSequenceRef.current.reset()
+    if (__DIAGNOSE__) resetAnchorColorLog()
     usePoseStore.getState().setReadiness('idle', false)
     usePoseStore.getState().setReadinessArmed(false)
     const mode = usePoseStore.getState().focusMode
@@ -453,6 +454,7 @@ export function usePoseDetection(
               measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor, isKnickTowardNeck(knickResult.knickSide)),
             })
             wristRailAngleDeg = effectiveAngleDiff
+            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now })
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
@@ -623,6 +625,7 @@ export function usePoseDetection(
         if (store.focusMode === 'wrist' && store.masterPrint && !store.isCalibrating) {
           const color = anchorGreyGateRef.current.hide(now)
           if (color !== store.wristAnchorColor) usePoseStore.setState({ wristAnchorColor: color })
+          if (__DIAGNOSE__) reportAnchorColor({ color, knick: null, side: null, nowMs: now })
         }
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })

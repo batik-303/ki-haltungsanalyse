@@ -4,6 +4,7 @@
 // komplett heraus. Das Modul hat deshalb keine Wirkung beim Import.
 // Schickt Fehler, Modell-Ladezeit, Bildrate und einmal je Sitzung das Gerät an
 // `POST /__log` (Preview-Server). Nie Bilder, Video, Punkte je Bild, Personendaten.
+import { createColorChangeLog, type ColorChangeInput } from '@/core/diagnostics/color-change'
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
 import { createCalibrationSavedEvent, createProblemEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
@@ -14,7 +15,11 @@ const MAX_BODY_BYTES = 64 * 1024
 const FLUSH_INTERVAL_MS = 5000
 const FPS_WINDOW_MS = 10_000
 
-type Logger = { record: (event: DiagnosticEvent) => void; frameRate: ReturnType<typeof createFrameRateMeter> }
+type Logger = {
+  record: (event: DiagnosticEvent) => void
+  frameRate: ReturnType<typeof createFrameRateMeter>
+  colorChange: ReturnType<typeof createColorChangeLog>
+}
 
 let logger: Logger | undefined
 
@@ -71,7 +76,7 @@ export function installDiagnosticLogger(): void {
     devicePixelRatio: window.devicePixelRatio,
     orientation: currentOrientation(),
   })
-  logger = { record, frameRate: createFrameRateMeter(FPS_WINDOW_MS) }
+  logger = { record, frameRate: createFrameRateMeter(FPS_WINDOW_MS), colorChange: createColorChangeLog() }
 }
 
 /** Ladezeit eines MediaPipe-Modells (WASM + Modelldatei) in Millisekunden. */
@@ -89,4 +94,15 @@ export function reportFrame(nowMs: number): void {
 /** Gespeicherte Haltung (nur Handgelenk-Modus): Knick, Beuge-Winkel, Richtung. */
 export function reportCalibrationSaved(mp: MasterPrint): void {
   if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp))
+}
+
+/** Anker-Farbe je Bild (nur Handgelenk-Modus); ins Log geht nur ein Wechsel (#200). */
+export function reportAnchorColor(input: ColorChangeInput): void {
+  const event = logger?.colorChange.update(input)
+  if (event) logger?.record(event)
+}
+
+/** Neue Kalibrierung: der Farbwechsel-Zähler beginnt wieder bei Blau (#200). */
+export function resetAnchorColorLog(): void {
+  logger?.colorChange.reset()
 }

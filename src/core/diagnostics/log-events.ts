@@ -1,8 +1,10 @@
 // Die Ereignisse im Diagnose-Log (docs/spec/stabilisierung.md, Abschnitt 6).
 // Nie im Log: Kamerabilder, Video, Punkte je Bild, Personendaten.
-import type { WristMasterPrint } from '../types'
+import type { AnchorColor, KnickSide, WristMasterPrint } from '../types'
 import { isKnickTowardNeck } from '../analysis/wrist-bar'
 import { formatLogMessage } from './log-message'
+
+export type KnickSideLabel = 'hals' | 'schnecke' | 'gerade'
 
 export type ErrorSource = 'onerror' | 'unhandledrejection' | 'console.error' | 'console.warn'
 
@@ -10,7 +12,15 @@ export type DiagnosticEvent =
   | { kind: 'error' | 'warning'; source: ErrorSource; message: string; stack?: string }
   | { kind: 'model-load'; model: 'pose' | 'hand'; ms: number; ok: boolean }
   | { kind: 'fps'; fps: number }
-  | { kind: 'calibration-saved'; knick: number; flexAngle: number; side: 'hals' | 'schnecke' | 'gerade' }
+  | { kind: 'calibration-saved'; knick: number; flexAngle: number; side: KnickSideLabel }
+  | {
+      kind: 'color-change'
+      from: AnchorColor
+      to: AnchorColor
+      knick: number | null
+      side: KnickSideLabel | null
+      msSinceLast: number
+    }
   | {
       kind: 'device'
       userAgent: string
@@ -33,7 +43,12 @@ export function createProblemEvent(source: ErrorSource, parts: readonly unknown[
   }
 }
 
-const oneDecimal = (value: number): number => Math.round(value * 10) / 10
+export const oneDecimal = (value: number): number => Math.round(value * 10) / 10
+
+/** Richtung als Wort: Hals = links auf dem Bildschirm (wie in der Entwickler-Ansicht, #101). */
+export function knickSideLabel(side: KnickSide): KnickSideLabel {
+  return side === 0 ? 'gerade' : isKnickTowardNeck(side) ? 'hals' : 'schnecke'
+}
 
 /**
  * Gespeicherte Handgelenk-Haltung: nur abgeleitete Zahlen (Grad) und die Richtung,
@@ -44,6 +59,6 @@ export function createCalibrationSavedEvent(mp: WristMasterPrint): DiagnosticEve
     kind: 'calibration-saved',
     knick: oneDecimal(mp.calibKnick),
     flexAngle: oneDecimal(mp.flexAngle),
-    side: mp.calibKnickSide === 0 ? 'gerade' : isKnickTowardNeck(mp.calibKnickSide) ? 'hals' : 'schnecke',
+    side: knickSideLabel(mp.calibKnickSide),
   }
 }
