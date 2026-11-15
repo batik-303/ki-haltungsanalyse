@@ -76,13 +76,14 @@ export function SessionScreen() {
   const readinessArmed = usePoseStore((s) => s.readinessArmed)
   const setReadinessArmed = usePoseStore((s) => s.setReadinessArmed)
 
-  const { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
+  const { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, calibArmSamplesRef, startTracking, stopTracking } = usePoseDetection(videoRef, canvasRef)
 
   const { doCapture } = useCalibration({
     videoRef,
     canvasRef,
     handLandmarkerRef,
     calibKnickSamplesRef,
+    calibArmSamplesRef,
     onCalibrated: resetAnalysisState,
   })
 

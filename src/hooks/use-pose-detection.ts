@@ -2,15 +2,15 @@ import { isKnickTowardNeck } from '../core/analysis/wrist-bar'
 import { createWristRepairStatus, createWristRailColor, computeWristTensionTarget, computeSignedKnick2D, smoothDirection2D, createWristRailTimer } from '../core/analysis/wrist-analyzer'
 import { useEffect, useRef, useCallback } from 'react'
 import { PoseLandmarker, HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { pickLeftHandDetection } from '../core/analysis/hand-landmarker'
-import { computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
+import { selectArmHand } from '../core/analysis/hand-landmarker'
+import { computeAnchorHiddenReason, computeAnchorVisibility, createAnchorGreyGate } from '../core/analysis/anchor-visibility'
 import { createKnickTracker } from '../core/analysis/knick-tracker'
 import { createSlideShield } from '../core/analysis/slide-shield'
 import type { AnchorColor, KnickSide, Landmark } from '../core/types'
 import { SENSITIVITY_PRESETS } from '../core/config/sensitivity'
 import { mediapipeWasmPath, POSE_MODEL_PATH, HAND_MODEL_PATH } from '../core/config/mediapipe-assets'
 import { computeShoulderDeviation, computeShoulderTensionTarget } from '../core/analysis/shoulder-analyzer'
-import { computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
+import { computeArmLength2D, computeForeshorteningConfidence } from '../core/analysis/wrist-analyzer'
 import { createViolinAnalyzer } from '../core/analysis/violin-analyzer'
 import { classifyLayer } from '../core/analysis/layer-classifier'
 import { createMovingAverage } from '../core/signal/smoothing'
@@ -24,7 +24,7 @@ import { createSessionTracker } from '../core/session/session-tracker'
 import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
-import { reportAnchorColor, reportFrame, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
+import { reportAnchorColor, reportFrame, reportHandPick, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
 
 // One Euro Filter Parameter für Wrist-Rendering (zentral konfigurierbar)
 // Conservative values: smooth visual output without perceptible lag.
@@ -63,6 +63,9 @@ export function usePoseDetection(
   // Knick mit Seite aus den Frames von 3 – 2 – 1 (#91, #118) — die Kalibrierung
   // mittelt daraus die gespeicherte Haltung statt aus einem einzigen Frame.
   const calibKnickSamplesRef = useRef<number[]>([])
+  // Nur Diagnose-Log (#199): Unterarmlänge je Bild von 3 – 2 – 1, für den
+  // Median beim Speichern. Die Analyse liest sie nicht.
+  const calibArmSamplesRef = useRef<number[]>([])
   // Sicherheit der Links/Rechts-Einordnung der linken Hand (Grau-Bedingung #74).
   const handednessScoreRef = useRef<number | undefined>(undefined)
   const animFrameRef = useRef<number>(0)
@@ -295,10 +298,19 @@ export function usePoseDetection(
 
       // Hand detection (wrist mode only — landmarker loaded on demand).
       // Run with the same video frame + timestamp as pose for temporal coherence.
+      // Griffhand = Hand am Körper-Handgelenk (Pose 15), nicht nur nach
+      // Etikett — sonst misst die App an der Bogenhand (#199).
       const handLandmarker = handLandmarkerRef.current
       if (store.focusMode === 'wrist' && handLandmarker) {
         try {
-          const detection = pickLeftHandDetection(handLandmarker.detectForVideo(video, now))
+          const poseElbow = landmarks?.[13]
+          const poseWrist = landmarks?.[15]
+          const arm = poseElbow && poseWrist
+            ? { elbow: poseElbow, wrist: poseWrist, aspect: canvas.height > 0 ? canvas.width / canvas.height : 1 }
+            : undefined
+          const selection = selectArmHand(handLandmarker.detectForVideo(video, now), arm)
+          if (__DIAGNOSE__) reportHandPick(now, selection)
+          const detection = selection.detection
           handLandmarksRef.current = detection?.landmarks ?? null
           handednessScoreRef.current = detection?.handednessScore
         } catch (e) {
@@ -324,6 +336,7 @@ export function usePoseDetection(
         const calibSamples = calibKnickSamplesRef.current
         if (!store.isCalibrating || !store.saveStep) {
           if (calibSamples.length > 0) calibSamples.length = 0
+          calibArmSamplesRef.current.length = 0
           return
         }
         const hand = handLandmarksRef.current
@@ -342,9 +355,11 @@ export function usePoseDetection(
         if (save.sampling) {
           if (store.focusMode === 'wrist' && landmarks?.[13] && hand) {
             calibSamples.push(computeSignedKnick2D(landmarks[13], hand[0]!, hand[9]!, aspect))
+            if (__DIAGNOSE__ && landmarks[15]) calibArmSamplesRef.current.push(computeArmLength2D(landmarks[13], landmarks[15], aspect))
           }
         } else if (save.step !== 'done' && calibSamples.length > 0) {
           calibSamples.length = 0
+          calibArmSamplesRef.current.length = 0
         }
         if (save.capture) usePoseStore.getState().setSaveCaptureDue(true)
       }
@@ -443,18 +458,19 @@ export function usePoseDetection(
             // macht aber nie Blau (sonst Pendeln bei Korrektur-Rucken).
             // Davor das Grau-Tor (#92): ohne sichere Sicht wird nicht gemessen.
             const graceBuffer = (store.lastCalibrationAt && (now - store.lastCalibrationAt) < 500) ? 2 : 0
-            const anchorVisible = computeAnchorVisibility({
+            const visibilityInput = {
               hand,
               handednessScore: handednessScoreRef.current,
               foreshorteningConfidence: foreConf,
-            })
+            }
+            const anchorVisible = computeAnchorVisibility(visibilityInput)
             wristAnchorColor = anchorGreyGateRef.current.update({
               visible: anchorVisible,
               nowMs: now,
               measureIsBlue: () => wristRailColorRef.current(effectiveAngleDiff, graceBuffer, slideShieldFactor, isKnickTowardNeck(knickResult.knickSide)),
             })
             wristRailAngleDeg = effectiveAngleDiff
-            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now })
+            if (__DIAGNOSE__) reportAnchorColor({ color: wristAnchorColor, knick: effectiveAngleDiff, side: knickResult.knickSide, nowMs: now, reason: computeAnchorHiddenReason(visibilityInput), armRatio: store.masterPrint.calibArmLength2D > 0 ? knickResult.armLength2D / store.masterPrint.calibArmLength2D : null })
 
             rawDev = effectiveAngleDiff / 30 // Normalize for display
             smoothedDev = smootherRef.current.push(rawDev)
@@ -625,7 +641,7 @@ export function usePoseDetection(
         if (store.focusMode === 'wrist' && store.masterPrint && !store.isCalibrating) {
           const color = anchorGreyGateRef.current.hide(now)
           if (color !== store.wristAnchorColor) usePoseStore.setState({ wristAnchorColor: color })
-          if (__DIAGNOSE__) reportAnchorColor({ color, knick: null, side: null, nowMs: now })
+          if (__DIAGNOSE__) reportAnchorColor({ color, knick: null, side: null, nowMs: now, reason: 'no-body' })
         }
         if (store.distanceOk || store.distanceStatus !== 'no-body') {
           usePoseStore.setState({ distanceOk: false, distanceStatus: 'no-body' })
@@ -672,6 +688,7 @@ export function usePoseDetection(
   const startSave = useCallback(() => {
     saveSequenceRef.current.reset()
     calibKnickSamplesRef.current.length = 0
+    calibArmSamplesRef.current.length = 0
     const first = saveSequenceRef.current.state()
     const store = usePoseStore.getState()
     store.setSaveStep({ step: first.step, count: first.count, pauseStatus: first.pauseStatus })
@@ -679,5 +696,5 @@ export function usePoseDetection(
     store.setCalibrating(true)
   }, [])
 
-  return { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, startTracking, stopTracking }
+  return { resetAnalysisState, armReadiness, startSave, landmarkerRef, handLandmarkerRef, calibKnickSamplesRef, calibArmSamplesRef, startTracking, stopTracking }
 }

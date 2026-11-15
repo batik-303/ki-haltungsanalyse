@@ -19,6 +19,7 @@ describe('createColorChangeLog – Farbwechsel blau/gelb/grau fürs Diagnose-Log
       knick: 12.3,
       side: 'hals',
       msSinceLast: 1500,
+      armRatio: null,
     })
     expect(log.update({ color: 'yellow', knick: 14, side: 1, nowMs: 2600 })).toBeUndefined()
     expect(log.update({ color: 'blue', knick: 4, side: -1, nowMs: 3200 })).toEqual({
@@ -28,6 +29,7 @@ describe('createColorChangeLog – Farbwechsel blau/gelb/grau fürs Diagnose-Log
       knick: 4,
       side: 'schnecke',
       msSinceLast: 700,
+      armRatio: null,
     })
   })
 
@@ -41,6 +43,7 @@ describe('createColorChangeLog – Farbwechsel blau/gelb/grau fürs Diagnose-Log
       knick: null,
       side: null,
       msSinceLast: 900,
+      armRatio: null,
     })
   })
 
@@ -52,5 +55,28 @@ describe('createColorChangeLog – Farbwechsel blau/gelb/grau fürs Diagnose-Log
     log.reset()
     expect(log.update({ color: 'blue', knick: 2, side: 0, nowMs: 9000 })).toBeUndefined()
     expect(log.update({ color: 'yellow', knick: 15, side: 1, nowMs: 9400 })?.msSinceLast).toBe(400)
+  })
+
+  // #199: Beim Wechsel nach Grau steht der Grund dabei, sonst nicht.
+  it('nennt beim Wechsel nach Grau den Grund (keine Hand, Etikett, Bildrand, Verkürzung, kein Körper)', () => {
+    const log = createColorChangeLog()
+    log.update({ color: 'blue', knick: 3, side: 1, nowMs: 1000 })
+    expect(log.update({ color: 'grey', knick: 21, side: 1, nowMs: 1300, reason: 'handedness' })).toMatchObject({
+      to: 'grey',
+      reason: 'handedness',
+    })
+    const back = log.update({ color: 'blue', knick: 4, side: 1, nowMs: 1600, reason: null })
+    expect(back).not.toHaveProperty('reason')
+  })
+
+  // #199/#198: Unterarm aktuell / gespeichert — zeigt, ob Grau oder ein kleiner
+  // gerechneter Knick von der gespeicherten Unterarmlänge kommt.
+  it('schreibt das Unterarm-Verhältnis bei jedem Wechsel mit (2 Nachkommastellen)', () => {
+    const log = createColorChangeLog()
+    log.update({ color: 'blue', knick: 3, side: 1, nowMs: 1000, armRatio: 1 })
+    expect(log.update({ color: 'grey', knick: 21, side: 1, nowMs: 1300, reason: 'foreshortened', armRatio: 0.4567 }))
+      .toMatchObject({ to: 'grey', reason: 'foreshortened', armRatio: 0.46 })
+    expect(log.update({ color: 'blue', knick: null, side: null, nowMs: 1600, armRatio: null }))
+      .toMatchObject({ armRatio: null })
   })
 })

@@ -7,26 +7,93 @@ export interface LeftHandDetection {
   handednessScore: number
 }
 
-/**
- * Pick the Left-handedness hand from a HandLandmarker result, or null if no
- * hand or no Left-categorized hand is present. The violinist's grip hand
- * (Subject anatomy = left) is the one we analyze; selfie-camera mirroring is
- * handled in MediaPipe's handedness output so 'Left' maps to the user's
- * actual left hand.
- */
-export function pickLeftHandDetection(result: HandLandmarkerResult | null | undefined): LeftHandDetection | null {
-  if (!result || !result.landmarks || result.landmarks.length === 0) return null
-  const handedness = result.handedness ?? result.handednesses ?? []
-  for (let i = 0; i < result.landmarks.length; i++) {
-    const cat = handedness[i]?.[0]
-    if (cat?.categoryName === 'Left') {
-      return { landmarks: result.landmarks[i] as unknown as Landmark[], handednessScore: cat.score }
-    }
-  }
-  return null
+/** Unterarm aus der Körper-Erkennung (Pose 13 → 15) in Bildkoordinaten. */
+export interface ArmReference {
+  elbow: { x: number; y: number }
+  wrist: { x: number; y: number }
+  /** Seitenverhältnis Breite / Höhe des Bildes. */
+  aspect: number
 }
 
-/** Nur die Punkte der linken Hand (siehe `pickLeftHandDetection`). */
-export function pickLeftHand(result: HandLandmarkerResult | null | undefined): Landmark[] | null {
-  return pickLeftHandDetection(result)?.landmarks ?? null
+/**
+ * Ab diesem Abstand Hand-Handgelenk (Hand 0) ↔ Körper-Handgelenk (Pose 15), in
+ * Unterarm-Längen, gilt eine „Right“-Hand als Bogenhand (#199). Gerätetest
+ * 15.11.: Griffhand 0,04 – 1,9, Bogenhand 2,2 – 6. Feinstellung über das
+ * Diagnose-Log (`hand-pick`).
+ */
+export const BOW_HAND_MIN_DISTANCE = 2
+
+/** Eine erkannte Hand, wie die Auswahl sie sieht (auch fürs Diagnose-Log). */
+export interface HandCandidate {
+  label: string
+  /** Abstand zum Körper-Handgelenk in Unterarm-Längen; ohne Arm `null`. */
+  distance: number | null
+}
+
+export interface HandSelection {
+  detection: LeftHandDetection | null
+  candidates: HandCandidate[]
+  /** Index der gewählten Hand in `candidates`, sonst -1. */
+  chosen: number
+}
+
+function distanceToWrist(hand: Landmark[] | undefined, arm: ArmReference): number | null {
+  const handWrist = hand?.[0]
+  const forearm = Math.hypot((arm.wrist.x - arm.elbow.x) * arm.aspect, arm.wrist.y - arm.elbow.y)
+  if (!handWrist || forearm === 0) return null
+  return Math.hypot((handWrist.x - arm.wrist.x) * arm.aspect, handWrist.y - arm.wrist.y) / forearm
+}
+
+/**
+ * Wählt die Griffhand (anatomisch links) aus einem HandLandmarker-Ergebnis.
+ *
+ * Mit Arm (#199): von den Händen die nächste am Körper-Handgelenk. So misst
+ * die App bei zwei Händen nie an der Bogenhand, auch wenn sie „Left“ heißt.
+ * Verworfen wird nur eine Hand, die „Right“ heißt und mindestens
+ * `BOW_HAND_MIN_DISTANCE` entfernt ist (Bogenhand) — nie mehr Grau als vorher.
+ * Das Etikett zählt als Sicherheit: „Left“ = Score, sonst 1 − Score.
+ *
+ * Ohne Arm (kein Körper im Bild): wie bisher die erste Hand mit „Left“.
+ */
+export function selectArmHand(result: HandLandmarkerResult | null | undefined, arm?: ArmReference): HandSelection {
+  const hands = (result?.landmarks ?? []) as unknown as Landmark[][]
+  const handedness = result?.handedness ?? result?.handednesses ?? []
+  const candidates: HandCandidate[] = hands.map((hand, i) => ({
+    label: handedness[i]?.[0]?.categoryName ?? '',
+    distance: arm ? distanceToWrist(hand, arm) : null,
+  }))
+
+  let chosen = -1
+  if (arm) {
+    let bestDistance = Infinity
+    candidates.forEach((c, i) => {
+      const distance = c.distance ?? Infinity
+      const bowHand = c.label !== 'Left' && distance >= BOW_HAND_MIN_DISTANCE
+      if (!bowHand && (chosen < 0 || distance < bestDistance)) {
+        chosen = i
+        bestDistance = distance
+      }
+    })
+  } else {
+    chosen = candidates.findIndex((c) => c.label === 'Left')
+  }
+
+  const hand = hands[chosen]
+  const cat = handedness[chosen]?.[0]
+  if (!hand || !cat) return { detection: null, candidates, chosen: -1 }
+  const handednessScore = cat.categoryName === 'Left' ? cat.score : 1 - cat.score
+  return { detection: { landmarks: hand, handednessScore }, candidates, chosen }
+}
+
+/** Die Griffhand samt Sicherheit (siehe `selectArmHand`), oder null. */
+export function pickLeftHandDetection(
+  result: HandLandmarkerResult | null | undefined,
+  arm?: ArmReference,
+): LeftHandDetection | null {
+  return selectArmHand(result, arm).detection
+}
+
+/** Nur die Punkte der Griffhand (siehe `selectArmHand`). */
+export function pickLeftHand(result: HandLandmarkerResult | null | undefined, arm?: ArmReference): Landmark[] | null {
+  return pickLeftHandDetection(result, arm)?.landmarks ?? null
 }

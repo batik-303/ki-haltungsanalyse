@@ -7,13 +7,15 @@
 import { createColorChangeLog, type ColorChangeInput } from '@/core/diagnostics/color-change'
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
-import { createCalibrationSavedEvent, createProblemEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createHandPickEvent, createProblemEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import type { HandSelection } from '@/core/analysis/hand-landmarker'
 import type { MasterPrint } from '@/core/types'
 
 const LOG_URL = '/__log'
 const MAX_BODY_BYTES = 64 * 1024
 const FLUSH_INTERVAL_MS = 5000
 const FPS_WINDOW_MS = 10_000
+const HAND_PICK_INTERVAL_MS = 1000
 
 type Logger = {
   record: (event: DiagnosticEvent) => void
@@ -22,6 +24,7 @@ type Logger = {
 }
 
 let logger: Logger | undefined
+let lastHandPickAt = -Infinity
 
 function randomSessionId(): string {
   return typeof crypto.randomUUID === 'function'
@@ -92,8 +95,8 @@ export function reportFrame(nowMs: number): void {
 }
 
 /** Gespeicherte Haltung (nur Handgelenk-Modus): Knick, Beuge-Winkel, Richtung. */
-export function reportCalibrationSaved(mp: MasterPrint): void {
-  if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp))
+export function reportCalibrationSaved(mp: MasterPrint, armLengthSamples: readonly number[] = []): void {
+  if (mp.mode === 'wrist') logger?.record(createCalibrationSavedEvent(mp, armLengthSamples))
 }
 
 /** Anker-Farbe je Bild (nur Handgelenk-Modus); ins Log geht nur ein Wechsel (#200). */
@@ -105,4 +108,11 @@ export function reportAnchorColor(input: ColorChangeInput): void {
 /** Neue Kalibrierung: der Farbwechsel-Zähler beginnt wieder bei Blau (#200). */
 export function resetAnchorColorLog(): void {
   logger?.colorChange.reset()
+}
+
+/** Hand-Auswahl (#199), höchstens einmal je Sekunde: Zahl, Etiketten, Abstände, Wahl. */
+export function reportHandPick(nowMs: number, selection: HandSelection): void {
+  if (!logger || nowMs - lastHandPickAt < HAND_PICK_INTERVAL_MS) return
+  lastHandPickAt = nowMs
+  logger.record(createHandPickEvent(selection))
 }
