@@ -4,8 +4,10 @@ import type { Landmark, WristMasterPrint } from '../../src/core/types'
 
 /**
  * Ticket #189 (Entscheidung in #144): Gerade-Fang. Ist die gespeicherte Haltung
- * nur leicht schief (Median-Knick unter 10°, beide Richtungen gleich; Entscheidung 15.11.), gilt sie
- * als gerade (0°, ohne Seite). Ab 10° bleibt der echte Wert mit Seite.
+ * nur leicht schief (Median-Knick unter 6°, beide Richtungen gleich; Entscheidung 16.11.,
+ * vorher 10°), gilt sie als gerade (0°, ohne Seite). Ab 6° bleibt der echte Wert mit Seite.
+ * Grund (#130-Test 16.11.): 8,9° zum Hals wurde auf 0° gefangen, danach blieb
+ * der Hals sofort gelb.
  * Der gemessene Wert bleibt für die Entwickler-Ansicht erhalten.
  */
 
@@ -35,16 +37,40 @@ describe('Gerade-Fang beim Speichern (#189)', () => {
     expect(mp.calibKnickSide).toBe(0)
   })
 
-  it('Median −9,9° (andere Richtung): gilt ebenfalls als gerade', () => {
-    const mp = calibrate([-10.2, -9.9, -9.5])
+  it('Median 5,9°: gilt noch als gerade', () => {
+    const mp = calibrate([5.9])
     expect(mp.calibKnick).toBe(0)
     expect(mp.calibKnickSide).toBe(0)
   })
 
-  it('Median genau 10°: echter Wert mit Seite', () => {
-    const mp = calibrate([9.5, 10, 11])
-    expect(mp.calibKnick).toBe(10)
+  it('Median −5,9° (andere Richtung): gilt ebenfalls als gerade', () => {
+    const mp = calibrate([-6.2, -5.9, -5.5])
+    expect(mp.calibKnick).toBe(0)
+    expect(mp.calibKnickSide).toBe(0)
+  })
+
+  it('Median genau 6°: echter Wert mit Seite', () => {
+    const mp = calibrate([5.5, 6, 7])
+    expect(mp.calibKnick).toBe(6)
     expect(mp.calibKnickSide).toBe(1)
+  })
+
+  it('8° zum Hals (Seite +1): echter Wert bleibt, kein Fang', () => {
+    const mp = calibrate([8])
+    expect(mp.calibKnick).toBe(8)
+    expect(mp.calibKnickSide).toBe(1)
+  })
+
+  it('8,9° zum Hals (Befund 16.11.): echter Wert bleibt', () => {
+    const mp = calibrate([8.9])
+    expect(mp.calibKnick).toBe(8.9)
+    expect(mp.calibKnickSide).toBe(1)
+  })
+
+  it('Median −9,9° zur Schnecke: echter Wert mit Seite', () => {
+    const mp = calibrate([-10.2, -9.9, -9.5])
+    expect(mp.calibKnick).toBe(9.9)
+    expect(mp.calibKnickSide).toBe(-1)
   })
 
   it('Median −12°: echter Wert mit Seite', () => {

@@ -23,10 +23,11 @@ import {
 const CALIB_KNICK_SIDE_MIN_DEG = 2
 
 // Gerade-Fang (#189): Unter dieser Grenze (Grad, beide Richtungen gleich) gilt
-// die gespeicherte Haltung als gerade (0°). Ab hier bleibt der echte Wert und
-// der Tipp „neu speichern“ kommt. Zum Testen 10° (15.11.), später anhand der
-// Diagnose-Logs nachstellen.
-export const CALIB_STRAIGHT_SNAP_DEG = 10
+// die gespeicherte Haltung als gerade (0°). Ab hier bleibt der echte Wert.
+// 16.11. von 10° auf 6° gesenkt (#130-Test): 8,9° zum Hals wurde auf 0°
+// gefangen, danach blieb der Hals sofort gelb. Der Tipp „neu speichern“ hat
+// eine eigene Grenze (straight-wrist-tip.ts).
+export const CALIB_STRAIGHT_SNAP_DEG = 6
 
 /**
  * Knick der gespeicherten Haltung aus vielen Countdown-Frames (#91): Median
