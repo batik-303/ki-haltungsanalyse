@@ -3,6 +3,7 @@
 import type { AnchorColor, KnickSide, WristMasterPrint } from '../types'
 import { isKnickTowardNeck } from '../analysis/wrist-bar'
 import { formatLogMessage } from './log-message'
+import { knickSideOf } from '../calibration/master-print'
 import type { HandSelection } from '../analysis/hand-landmarker'
 import type { AnchorHiddenReason } from '../analysis/anchor-visibility'
 
@@ -22,6 +23,9 @@ export type DiagnosticEvent =
       knick: number
       flexAngle: number
       side: KnickSideLabel
+      /** Gemessener Knick vor dem Gerade-Fang (#189), um die Fang-Grenze zu prüfen. */
+      knickRaw: number
+      sideRaw: KnickSideLabel
       /** Unterarmlänge (2D, mit Seitenverhältnis) im Erfassungs-Bild — so wird sie gespeichert. */
       armLength: number
       /** Median der Unterarmlänge über 3 – 2 – 1; `null` ohne Countdown-Bilder (#199). */
@@ -79,6 +83,8 @@ export function createCalibrationSavedEvent(mp: WristMasterPrint, armLengthSampl
     knick: oneDecimal(mp.calibKnick),
     flexAngle: oneDecimal(mp.flexAngle),
     side: knickSideLabel(mp.calibKnickSide),
+    knickRaw: oneDecimal(Math.abs(mp.calibKnickMeasured)),
+    sideRaw: knickSideLabel(knickSideOf(mp.calibKnickMeasured)),
     armLength: threeDecimals(mp.calibArmLength2D),
     armLengthMedian: armLengthSamples.length > 0 ? threeDecimals(median(armLengthSamples)) : null,
   }

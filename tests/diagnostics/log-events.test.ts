@@ -3,7 +3,12 @@ import { createCalibrationSavedEvent, createProblemEvent, createHandPickEvent } 
 import { formatLogMessage } from '../../src/core/diagnostics/log-message'
 import type { KnickSide, WristMasterPrint } from '../../src/core/types'
 
-function wristPrint(calibKnick: number, calibKnickSide: KnickSide, flexAngle = 3.25): WristMasterPrint {
+function wristPrint(
+  calibKnick: number,
+  calibKnickSide: KnickSide,
+  flexAngle = 3.25,
+  calibKnickMeasured: number = calibKnickSide * calibKnick,
+): WristMasterPrint {
   return {
     mode: 'wrist',
     flexAngle,
@@ -11,6 +16,7 @@ function wristPrint(calibKnick: number, calibKnickSide: KnickSide, flexAngle = 3
     calibArmLength2D: 0.3,
     calibKnick,
     calibKnickSide,
+    calibKnickMeasured,
     calibKnickFallback: 0,
   }
 }
@@ -59,9 +65,19 @@ describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)
       knick: 12.3,
       flexAngle: 3.3,
       side: 'hals',
+      knickRaw: 12.3,
+      sideRaw: 'hals',
       armLength: 0.3,
       armLengthMedian: null,
     })
+  })
+
+  // #189: Rohwert vor dem Gerade-Fang, damit sich die Grenze (10°) später prüfen lässt.
+  it('schreibt beim Gerade-Fang den gemessenen Rohwert mit Richtung mit', () => {
+    const event = createCalibrationSavedEvent(wristPrint(0, 0, 3.25, 6.24))
+    expect(event).toMatchObject({ knick: 0, side: 'gerade', knickRaw: 6.2, sideRaw: 'hals' })
+    expect(createCalibrationSavedEvent(wristPrint(0, 0, 3.25, -9.86))).toMatchObject({ knickRaw: 9.9, sideRaw: 'schnecke' })
+    expect(createCalibrationSavedEvent(wristPrint(0, 0, 3.25, 1.2))).toMatchObject({ knickRaw: 1.2, sideRaw: 'gerade' })
   })
 
   it('erkennt die Richtung Schnecke und die gerade Haltung', () => {
@@ -72,7 +88,7 @@ describe('createCalibrationSavedEvent – gespeicherte Handgelenk-Haltung (#170)
   it('enthält nur Zahlen und die Richtung, keine Punkte', () => {
     expect(formatLogMessage([createCalibrationSavedEvent(wristPrint(12, 1))])).not.toBe('[Punkte ausgelassen]')
     expect(Object.keys(createCalibrationSavedEvent(wristPrint(12, 1))).sort())
-      .toEqual(['armLength', 'armLengthMedian', 'flexAngle', 'kind', 'knick', 'side'])
+      .toEqual(['armLength', 'armLengthMedian', 'flexAngle', 'kind', 'knick', 'knickRaw', 'side', 'sideRaw'])
   })
 
   // #199/#198: Die Unterarmlänge kommt aus EINEM Bild; der Median über 3 – 2 – 1
