@@ -22,6 +22,7 @@ import { createSaveSequence } from '../core/calibration/save-sequence'
 import type { PositioningStatus } from '../core/calibration/distance-guidance'
 import { createSessionTracker } from '../core/session/session-tracker'
 import { createResourceScope, type ResourceScope } from '../core/session/resource-scope'
+import { startCameraAndModel } from '../core/session/camera-first-start'
 import { usePoseStore } from '../store/pose-store'
 import { renderFrame } from '../rendering/canvas-renderer'
 import { reportAnchorColor, reportFrame, reportHandPick, reportModelLoad, resetAnchorColorLog } from '../lib/diagnostic-logger'
@@ -137,31 +138,42 @@ export function usePoseDetection(
 
     async function init() {
       const loadStart = performance.now()
-      try {
-        const filesetResolver = await FilesetResolver.forVisionTasks(
-          mediapipeWasmPath(__MEDIAPIPE_VERSION__),
-        )
-        const landmarker = scope.adopt(
-          await PoseLandmarker.createFromOptions(filesetResolver, {
+      // Kamera und Modell starten gleichzeitig (#145): Das Bild erscheint sofort,
+      // die Schleife wartet von selbst, bis das Modell da ist.
+      const start = startCameraAndModel(scope, {
+        loadModel: async () => {
+          const filesetResolver = await FilesetResolver.forVisionTasks(
+            mediapipeWasmPath(__MEDIAPIPE_VERSION__),
+          )
+          return PoseLandmarker.createFromOptions(filesetResolver, {
             baseOptions: {
               modelAssetPath: POSE_MODEL_PATH,
               delegate: 'GPU',
             },
             runningMode: 'VIDEO',
             numPoses: 1,
-          }),
-          (l) => l.close(),
-        )
-        if (!landmarker) return
-        landmarkerRef.current = landmarker
-        if (__DIAGNOSE__) reportModelLoad('pose', performance.now() - loadStart, true)
+          })
+        },
+        releaseModel: (l) => l.close(),
+        openCamera: () => navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: 'user' },
+        }),
+        releaseCamera: (s) => s.getTracks().forEach((t) => t.stop()),
+      })
 
-        const stream = scope.adopt(
-          await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480, facingMode: 'user' },
-          }),
-          (s) => s.getTracks().forEach((t) => t.stop()),
-        )
+      start.model
+        .then((landmarker) => {
+          if (!landmarker) return
+          landmarkerRef.current = landmarker
+          if (__DIAGNOSE__) reportModelLoad('pose', performance.now() - loadStart, true)
+        })
+        .catch((e: unknown) => {
+          if (__DIAGNOSE__) reportModelLoad('pose', performance.now() - loadStart, false)
+          console.error('Failed to initialize pose detection:', e)
+        })
+
+      try {
+        const stream = await start.camera
         if (!stream) return
 
         // Pre-grant mic permission for voice commands (non-blocking)
@@ -184,8 +196,7 @@ export function usePoseDetection(
           })
         }
       } catch (e) {
-        if (__DIAGNOSE__ && !landmarkerRef.current) reportModelLoad('pose', performance.now() - loadStart, false)
-        console.error('Failed to initialize pose detection:', e)
+        console.error('Failed to start camera:', e)
       }
     }
 
