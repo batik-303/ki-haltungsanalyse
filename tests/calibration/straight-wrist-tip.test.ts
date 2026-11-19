@@ -47,10 +47,18 @@ describe('computeStraightWristTip', () => {
     expect(tip).toMatch(/Sag „neu“ oder geh über das Hauptmenü und speichere neu\.$/)
   })
 
-  // #189 (15.11.): Unter 10° greift der Gerade-Fang (gespeichert 0°), ab 10°
-  // kommt der Tipp, zum Hals und zur Schnecke gleich (Hals vorher 28°).
+  // #189 (15.11.): ab 10° kommt der Tipp, zum Hals und zur Schnecke gleich
+  // (Hals vorher 28°). Seit 16.11. greift der Gerade-Fang schon unter 6°; die
+  // Tipp-Grenze bleibt trotzdem 10°.
   it('gerade gespeichert (Fang griff, 0°): kein Tipp', () => {
-    expect(computeStraightWristTip({ masterPrint: wristPrint(0, 0, 9.9), calibratedAt: 1000, now: 1000 })).toBeNull()
+    expect(computeStraightWristTip({ masterPrint: wristPrint(0, 0, 5.9), calibratedAt: 1000, now: 1000 })).toBeNull()
+  })
+
+  it('zwischen Fang (6°) und 10° gespeichert: noch kein Tipp, beide Richtungen', () => {
+    for (const deg of [6, 8, 8.9, 9.9]) {
+      expect(computeStraightWristTip({ masterPrint: wristPrint(deg, NECK), calibratedAt: 1000, now: 1000 })).toBeNull()
+      expect(computeStraightWristTip({ masterPrint: wristPrint(deg, SCROLL), calibratedAt: 1000, now: 1000 })).toBeNull()
+    }
   })
 
   it('ab 10° Richtung Schnecke: Tipp', () => {
@@ -88,11 +96,15 @@ describe('computeSavedKnickLabel', () => {
   // #189: Gerade-Fang — angezeigt wird der gemessene Wert, dazu „→ 0°", wenn der Fang griff.
   it('Gerade-Fang griff: gemessener Wert mit Richtung und „→ 0°"', () => {
     expect(computeSavedKnickLabel({ masterPrint: wristPrint(0, 0, 5.26 * NECK), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 5,3° · links → 0°')
-    expect(computeSavedKnickLabel({ masterPrint: wristPrint(0, 0, 9.9 * SCROLL), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 9,9° · rechts → 0°')
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(0, 0, 5.9 * SCROLL), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 5,9° · rechts → 0°')
   })
 
   it('Gerade-Fang griff, gemessen fast 0 (< 2°): ohne Richtung, mit „→ 0°"', () => {
     expect(computeSavedKnickLabel({ masterPrint: wristPrint(0, 0, 1.2), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 1,2° → 0°')
+  })
+
+  it('Fang griff nicht (8,9° zum Hals): kein „→ 0°"', () => {
+    expect(computeSavedKnickLabel({ masterPrint: wristPrint(8.9, NECK), calibratedAt: 1000, now: 1000 })).toBe('gespeichert: 8,9° · links')
   })
 
   it('zeigt den gespeicherten Knick mit einer Nachkommastelle', () => {

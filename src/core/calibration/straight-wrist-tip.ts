@@ -2,6 +2,10 @@ import type { MasterPrint, WristMasterPrint } from '../types'
 import { isKnickTowardNeck } from '../analysis/wrist-bar'
 import { CALIB_STRAIGHT_SNAP_DEG, knickSideOf } from './master-print'
 
+// Ab diesem gespeicherten Knick (Grad, beide Richtungen gleich) kommt der Tipp
+// (#189, 15.11.). Bewusst getrennt vom Gerade-Fang (seit 16.11. 6°).
+const STRAIGHT_WRIST_TIP_MIN_DEG = 10
+
 // So lange steht der Tipp nach dem Speichern am Rand, dann geht er von selbst.
 export const STRAIGHT_WRIST_TIP_DURATION_MS = 8000
 
@@ -16,8 +20,7 @@ export interface StraightWristTipInput {
 
 /**
  * Freundlicher Tipp nach dem Speichern einer deutlich geknickten Haltung (#101).
- * Grenze = Gerade-Fang (#189): darunter gilt die Haltung als gerade, ab dort
- * kommt der Tipp, zum Hals und zur Schnecke gleich.
+ * Ab STRAIGHT_WRIST_TIP_MIN_DEG kommt der Tipp, zum Hals und zur Schnecke gleich.
  * Gemessen wird die Abweichung von der gespeicherten Haltung — schief
  * gespeichert reagiert eine Seite träger. Nur Hinweis, die Analyse läuft weiter
  * (kein Modal); `null` = nichts zeigen.
@@ -25,7 +28,7 @@ export interface StraightWristTipInput {
 export function computeStraightWristTip(input: StraightWristTipInput): string | null {
   const mp = freshWristPrint(input)
   if (!mp) return null
-  if (mp.calibKnick < CALIB_STRAIGHT_SNAP_DEG) return null
+  if (mp.calibKnick < STRAIGHT_WRIST_TIP_MIN_DEG) return null
   return STRAIGHT_WRIST_TIP
 }
 

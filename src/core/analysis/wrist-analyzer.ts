@@ -34,12 +34,13 @@ export function createWristRepairStatus(deadzoneDbeg = 10, hysteresisMs = 200) {
  * Same closure pattern as createWristRepairStatus — held via useRef in the hook.
  */
 export function createWristRailColor(
-  blueToYellowDeg = 8,
+  // Schnecke (und ohne Richtung): 10° (#130, Mini-Schritt 2, 16.11.).
+  blueToYellowDeg = 10,
   yellowToBlueDeg = 5,
   blueToYellowFrames = 8,
   yellowToBlueFrames = 4,
-  // Zum Hals etwas mehr Spielraum (#130, Mini-Schritt 1); Schnecke bleibt streng.
-  neckBlueToYellowDeg = 10,
+  // Zum Hals etwas mehr Spielraum: 12° (#130, Mini-Schritt 2, 16.11.).
+  neckBlueToYellowDeg = 12,
 ) {
   let isBlue = true
   let counter = 0
