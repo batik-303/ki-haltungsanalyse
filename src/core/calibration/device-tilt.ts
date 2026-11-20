@@ -48,6 +48,11 @@ export function computeDeviceTiltDeg(reading: OrientationReading, screenAngle: n
 
 export type DeviceTiltView = 'hidden' | 'tilted' | 'level'
 
+/** #147: kurzer Kärtchen-Text, aus Spiel-Entfernung lesbar; Häkchen, sobald es passt. */
+export function computeDeviceTiltMessage(view: 'tilted' | 'level'): string {
+  return view === 'level' ? 'Gerät gerade ✓' : 'Gerät gerade stellen'
+}
+
 /**
  * Stand der Sensor-Erlaubnis. iOS fragt beim Start-Tippen (`pending`, bis die
  * Antwort da ist); andere Systeme brauchen keine Frage (`granted`).
