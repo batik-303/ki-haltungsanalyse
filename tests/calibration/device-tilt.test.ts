@@ -127,4 +127,30 @@ describe('stepDeviceTiltHint', () => {
     expect(s.view).toBe('hidden')
     expect(s.distanceAllowed).toBe(true)
   })
+
+  it('iOS-Frage noch offen: keine Uhr, nichts zeigen, Abstand zurückhalten', () => {
+    let s = stepDeviceTiltHint(start, null, 0, 'pending')
+    s = stepDeviceTiltHint(s, null, 10_000, 'pending')
+    expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(false)
+    expect(s.done).toBe(false)
+  })
+
+  it('Frist zählt erst ab Antwort: nach Zustimmung erscheint das Kärtchen', () => {
+    let s = stepDeviceTiltHint(start, null, 0, 'pending')
+    s = stepDeviceTiltHint(s, null, 10_000, 'granted')
+    s = stepDeviceTiltHint(s, null, 10_000 + TILT_NO_SENSOR_GRACE_MS - 1, 'granted')
+    expect(s.done).toBe(false)
+    s = stepDeviceTiltHint(s, 20, 10_300, 'granted')
+    expect(s.view).toBe('tilted')
+    expect(s.distanceAllowed).toBe(false)
+  })
+
+  it('Erlaubnis abgelehnt: sofort Abstand, kein Kärtchen', () => {
+    let s = stepDeviceTiltHint(start, null, 0, 'pending')
+    s = stepDeviceTiltHint(s, null, 2000, 'denied')
+    expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(true)
+    expect(s.done).toBe(true)
+  })
 })

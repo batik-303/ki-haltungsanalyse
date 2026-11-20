@@ -49,6 +49,12 @@ export function computeDeviceTiltDeg(reading: OrientationReading, screenAngle: n
 
 export type DeviceTiltView = 'hidden' | 'tilted' | 'level'
 
+/**
+ * Stand der Sensor-Erlaubnis. iOS fragt beim Start-Tippen (`pending`, bis die
+ * Antwort da ist); andere Systeme brauchen keine Frage (`granted`).
+ */
+export type DeviceTiltPermission = 'pending' | 'granted' | 'denied'
+
 export interface DeviceTiltHintState {
   view: DeviceTiltView
   /** Darf der Abstands-Hinweis schon erscheinen? */
@@ -67,14 +73,20 @@ export function createDeviceTiltHintState(): DeviceTiltHintState {
 
 /**
  * Ein Schritt des Kärtchen-Ablaufs. `tiltDeg` = Ergebnis von
- * `computeDeviceTiltDeg` (`null` = noch keine Messung).
+ * `computeDeviceTiltDeg` (`null` = noch keine Messung). Solange die
+ * Erlaubnis-Frage offen ist, läuft keine Uhr; abgelehnt → sofort Abstand.
  */
 export function stepDeviceTiltHint(
   state: DeviceTiltHintState,
   tiltDeg: number | null,
   nowMs: number,
+  permission: DeviceTiltPermission = 'granted',
 ): DeviceTiltHintState {
   if (state.done) return state
+  if (permission === 'denied') {
+    return { ...state, view: 'hidden', distanceAllowed: true, done: true }
+  }
+  if (permission === 'pending') return { ...state, view: 'hidden' }
 
   const startedAt = state.startedAt ?? nowMs
   const elapsed = nowMs - startedAt

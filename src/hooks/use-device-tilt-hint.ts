@@ -3,6 +3,7 @@ import {
   computeDeviceTiltDeg,
   createDeviceTiltHintState,
   stepDeviceTiltHint,
+  type DeviceTiltPermission,
   type DeviceTiltView,
 } from '@/core/calibration/device-tilt'
 
@@ -22,15 +23,29 @@ interface OrientationEventWithPermission {
 }
 
 /**
+ * Stand der iOS-Erlaubnis über Bildschirme hinweg: gefragt wird im Start-Tippen
+ * (Home), ausgewertet in der Session. Ohne Frage (Android, Desktop) `granted`.
+ */
+let permission: DeviceTiltPermission = 'granted'
+
+/**
  * iOS verlangt eine Erlaubnis für den Lagesensor, und zwar innerhalb eines
- * Tippens (#210). Wird im Start-Klick aufgerufen; Ablehnung oder Fehler werden
- * still geschluckt — dann kommen einfach keine Werte und nichts wird angezeigt.
+ * Tippens (#210). Wird im Start-Klick aufgerufen. Solange die Antwort offen
+ * ist, wartet der Hinweis; Ablehnung oder Fehler → kein Kärtchen, Abstand sofort.
  */
 export function requestDeviceOrientationPermission(): void {
   if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return
   const ctor = window.DeviceOrientationEvent as unknown as OrientationEventWithPermission
   if (typeof ctor.requestPermission !== 'function') return
-  ctor.requestPermission().catch(() => {})
+  permission = 'pending'
+  ctor
+    .requestPermission()
+    .then((result) => {
+      permission = result === 'granted' ? 'granted' : 'denied'
+    })
+    .catch(() => {
+      permission = 'denied'
+    })
 }
 
 function screenAngle(): number {
@@ -57,7 +72,7 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
     }
 
     const step = () => {
-      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now())
+      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission)
       const { view, distanceAllowed } = stateRef.current
       setHint((prev) =>
         prev.view === view && prev.distanceAllowed === distanceAllowed ? prev : { view, distanceAllowed },
