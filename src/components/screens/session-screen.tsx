@@ -8,6 +8,7 @@ import type { CalibrationPhase } from '@/core/calibration/overlay-view'
 import { DistanceGlow } from '@/components/distance-glow'
 import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
+import { DeviceTiltHint } from '@/components/device-tilt-hint'
 import { StraightWristTip } from '@/components/straight-wrist-tip'
 import { SaveSequenceOverlay } from '@/components/save-sequence-overlay'
 import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
@@ -345,6 +346,8 @@ export function SessionScreen() {
           {/* Kärtchen oben mittig im Rahmen: Abstand, Bereitschaft, Tipp (#101) */}
           {!calibrating && <DistanceHint />}
           {!calibrating && <ReadinessHint />}
+          {/* Gerät steht gerade (#210): darunter, blockiert nie */}
+          {!calibrating && <DeviceTiltHint />}
           {!calibrating && !isFlowRail && <StraightWristTip />}
 
           {/* Ruhiges Speichern (#118): Kärtchen oben, Zahl in der Mitte, Glühen pulsiert */}

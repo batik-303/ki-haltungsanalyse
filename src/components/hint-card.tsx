@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { DISTANCE_GLOW_COLORS, type DistanceGlowTone } from '@/core/calibration/distance-glow'
 
 const PRIMARY = '#002b49'
@@ -8,6 +9,8 @@ interface HintCardProps {
   message: string
   /** Optionale kleine zweite Zeile (z. B. bei „Abstand passt", #116). */
   detail?: string
+  /** `below` = zweite Zeile unter dem oberen Kärtchen (Gerät-gerade-Hinweis, #210). */
+  placement?: 'top' | 'below'
 }
 
 /**
@@ -15,11 +18,16 @@ interface HintCardProps {
  * Gemeinsame Optik für Abstands- und Bereitschafts-Hinweis. Bewusst als
  * DOM-Element — der Canvas ist gespiegelt, Text darauf wäre unleserlich.
  */
-export function HintCard({ tone, message, detail }: HintCardProps) {
+export function HintCard({ tone, message, detail, placement = 'top' }: HintCardProps) {
   const color = DISTANCE_GLOW_COLORS[tone]
 
   return (
-    <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-[6] w-max max-w-[calc(100%-24px)]">
+    <div
+      className={cn(
+        'pointer-events-none absolute left-1/2 -translate-x-1/2 z-[6] w-max max-w-[calc(100%-24px)]',
+        placement === 'top' ? 'top-3' : 'top-[72px]',
+      )}
+    >
       <div className="inline-flex items-center gap-2.5 rounded-2xl bg-white/90 px-4 py-2 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-full"
