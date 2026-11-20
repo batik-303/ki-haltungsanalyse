@@ -6,6 +6,7 @@ import { INSTRUMENTS } from '@/core/config/instruments'
 import { AnchorLockup } from '@/components/brand/anchor-mark'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { requestDeviceOrientationPermission } from '@/hooks/use-device-tilt-hint'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 
 // Home = 2-Schritte-Wizard im Stitch-Layout „Willkommen & Ausrichtung" (#49,
@@ -64,7 +65,11 @@ export function HomeScreen() {
             focusMode={focusMode}
             setFocusMode={setFocusMode}
             onBack={() => setStep(1)}
-            onStart={() => enterSession('violin')}
+            onStart={() => {
+              // iOS-Erlaubnis für den Lagesensor im selben Tippen (#210)
+              requestDeviceOrientationPermission()
+              enterSession('violin')
+            }}
           />
         )}
       </div>

@@ -14,17 +14,34 @@ import { HintCard } from '@/components/hint-card'
  * scharf/wartend** ist (`readinessPhase === 'idle'`). Sobald bewusst ausgelöst
  * wurde, übernimmt der `ReadinessHint` denselben oberen Platz — so gibt es nie
  * zwei Kärtchen gleichzeitig.
+ *
+ * #210: Erst nach dem Gerät-Kärtchen (`allowed`). Bleibt das Gerät-Kärtchen
+ * sichtbar, rutscht dieses eine Zeile tiefer (`placement = 'below'`).
  */
-export function DistanceHint() {
+export function DistanceHint({
+  allowed = true,
+  placement = 'top',
+}: {
+  allowed?: boolean
+  placement?: 'top' | 'below'
+}) {
   const masterPrint = usePoseStore((s) => s.masterPrint)
   const status = usePoseStore((s) => s.distanceStatus)
   const readinessPhase = usePoseStore((s) => s.readinessPhase)
 
   if (masterPrint) return null
   if (readinessPhase !== 'idle') return null
+  if (!allowed) return null
 
   const guidance = computeDistanceGuidance(status)
   if (!guidance.show) return null
 
-  return <HintCard tone={guidance.tone} message={guidance.message} detail={guidance.detail} />
+  return (
+    <HintCard
+      tone={guidance.tone}
+      message={guidance.message}
+      detail={guidance.detail}
+      placement={placement}
+    />
+  )
 }
