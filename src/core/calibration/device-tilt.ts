@@ -4,7 +4,8 @@
  * Reine Logik ohne Browser-API: Neigung aus `deviceorientation` (beta/gamma)
  * plus Bildschirm-Drehung, und ein kleiner Ablauf für das Kärtchen. Zuerst kommt
  * nur das Gerät-Kärtchen; der Abstands-Hinweis folgt, sobald das Gerät gerade
- * steht. Nie blockieren: nach kurzer Wartezeit kommt der Abstand trotzdem.
+ * steht. Nie blockieren: nach kurzer Wartezeit kommt der Abstand trotzdem. Das
+ * Kärtchen bleibt bis zum Speichern sichtbar und reagiert live auf die Lage.
  */
 
 /** Ab dieser Neigung (Grad) gilt das Gerät als gerade. */
@@ -15,8 +16,6 @@ export const TILT_LEVEL_EXIT_DEG = 12
 export const TILT_DISTANCE_AFTER_MS = 5000
 /** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
 export const TILT_NO_SENSOR_GRACE_MS = 500
-/** So lange zeigt das Kärtchen „Gerät steht gerade", bevor es verschwindet. */
-export const TILT_LEVEL_HOLD_MS = 1000
 
 export interface OrientationReading {
   beta: number | null
@@ -61,14 +60,14 @@ export interface DeviceTiltHintState {
   distanceAllowed: boolean
   /** Zeitpunkt des ersten Schritts; davor läuft keine Uhr. */
   startedAt: number | null
-  /** Seit wann das Gerät ununterbrochen gerade steht. */
-  levelSince: number | null
-  /** Einmal erledigt (gerade bestätigt oder kein Sensor), bleibt das Kärtchen weg. */
+  /** Stand das Gerät beim letzten Schritt gerade? (für die Hysterese) */
+  level: boolean
+  /** Einmal erledigt (kein Sensor oder abgelehnt), bleibt das Kärtchen weg. */
   done: boolean
 }
 
 export function createDeviceTiltHintState(): DeviceTiltHintState {
-  return { view: 'hidden', distanceAllowed: false, startedAt: null, levelSince: null, done: false }
+  return { view: 'hidden', distanceAllowed: false, startedAt: null, level: false, done: false }
 }
 
 /**
@@ -92,24 +91,20 @@ export function stepDeviceTiltHint(
   const elapsed = nowMs - startedAt
 
   if (tiltDeg === null) {
+    // Schon echte Werte gesehen: eine leere Meldung zwischendurch ignorieren.
+    if (state.view !== 'hidden') return state
     // Kein Sensor oder keine Erlaubnis: nichts zeigen, Abstand nicht aufhalten.
     const noSensor = elapsed >= TILT_NO_SENSOR_GRACE_MS
     return { ...state, view: 'hidden', startedAt, distanceAllowed: state.distanceAllowed || noSensor, done: noSensor }
   }
 
-  const wasLevel = state.levelSince !== null
-  const isLevel = wasLevel ? tiltDeg <= TILT_LEVEL_EXIT_DEG : tiltDeg <= TILT_LEVEL_ENTER_DEG
-  const levelSince = isLevel ? (state.levelSince ?? nowMs) : null
-
-  if (levelSince !== null && nowMs - levelSince >= TILT_LEVEL_HOLD_MS) {
-    return { view: 'hidden', distanceAllowed: true, startedAt, levelSince, done: true }
-  }
+  const isLevel = state.level ? tiltDeg <= TILT_LEVEL_EXIT_DEG : tiltDeg <= TILT_LEVEL_ENTER_DEG
 
   return {
     view: isLevel ? 'level' : 'tilted',
-    distanceAllowed: state.distanceAllowed || elapsed >= TILT_DISTANCE_AFTER_MS,
+    distanceAllowed: state.distanceAllowed || isLevel || elapsed >= TILT_DISTANCE_AFTER_MS,
     startedAt,
-    levelSince,
+    level: isLevel,
     done: false,
   }
 }

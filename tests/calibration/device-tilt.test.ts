@@ -7,7 +7,6 @@ import {
   TILT_LEVEL_ENTER_DEG,
   TILT_LEVEL_EXIT_DEG,
   TILT_NO_SENSOR_GRACE_MS,
-  TILT_LEVEL_HOLD_MS,
 } from '../../src/core/calibration/device-tilt'
 
 /**
@@ -83,18 +82,22 @@ describe('stepDeviceTiltHint', () => {
     expect(s.distanceAllowed).toBe(false)
   })
 
-  it('gerade → kurz „level", danach weg und Abstand frei', () => {
+  it('gerade → „level" und Abstand sofort frei; Kärtchen bleibt sichtbar', () => {
     let s = stepDeviceTiltHint(start, 20, 0)
     s = stepDeviceTiltHint(s, 5, 100)
     expect(s.view).toBe('level')
-    expect(s.distanceAllowed).toBe(false)
-    s = stepDeviceTiltHint(s, 5, 100 + TILT_LEVEL_HOLD_MS - 1)
-    expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 5, 100 + TILT_LEVEL_HOLD_MS)
-    expect(s.view).toBe('hidden')
     expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 30, 100 + TILT_LEVEL_HOLD_MS + 500)
-    expect(s.view).toBe('hidden')
+    s = stepDeviceTiltHint(s, 5, 60_000)
+    expect(s.view).toBe('level')
+  })
+
+  it('reagiert live: wieder schief → „tilted", Abstand bleibt sichtbar', () => {
+    let s = stepDeviceTiltHint(start, 5, 0)
+    s = stepDeviceTiltHint(s, 20, 2000)
+    expect(s.view).toBe('tilted')
+    expect(s.distanceAllowed).toBe(true)
+    s = stepDeviceTiltHint(s, 4, 3000)
+    expect(s.view).toBe('level')
   })
 
   it('Hysterese: einmal gerade, bleibt es bis 12° gerade', () => {
@@ -117,15 +120,11 @@ describe('stepDeviceTiltHint', () => {
     expect(s.view).toBe('tilted')
   })
 
-  it('später gerade gestellt: kurz „level", dann weg; Abstand bleibt frei', () => {
-    let s = stepDeviceTiltHint(start, 20, 0)
-    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS + 1000)
-    s = stepDeviceTiltHint(s, 3, TILT_DISTANCE_AFTER_MS + 2000)
+  it('einzelne leere Messung nach echten Werten ändert nichts', () => {
+    let s = stepDeviceTiltHint(start, 5, 0)
+    s = stepDeviceTiltHint(s, null, 2000)
     expect(s.view).toBe('level')
-    expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 3, TILT_DISTANCE_AFTER_MS + 2000 + TILT_LEVEL_HOLD_MS)
-    expect(s.view).toBe('hidden')
-    expect(s.distanceAllowed).toBe(true)
+    expect(s.done).toBe(false)
   })
 
   it('iOS-Frage noch offen: keine Uhr, nichts zeigen, Abstand zurückhalten', () => {
