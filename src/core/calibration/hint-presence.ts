@@ -9,6 +9,8 @@
 
 /** So lange bleibt ein „in Ordnung"-Kärtchen stehen, bevor es weggleitet (ms). */
 export const HINT_OK_HOLD_MS = 1500
+/** Abstand passt: länger stehen, damit die Zeile zur Spielhaltung lesbar ist (ms). */
+export const DISTANCE_OK_HOLD_MS = 3000
 
 export type HintPresence = 'shown' | 'away'
 
@@ -22,9 +24,14 @@ export function createHintPresenceState(): HintPresenceState {
   return { presence: 'shown', okSince: null }
 }
 
-export function stepHintPresence(state: HintPresenceState, ok: boolean, nowMs: number): HintPresenceState {
+export function stepHintPresence(
+  state: HintPresenceState,
+  ok: boolean,
+  nowMs: number,
+  holdMs: number = HINT_OK_HOLD_MS,
+): HintPresenceState {
   if (!ok) return { presence: 'shown', okSince: null }
   if (state.presence === 'away') return state
   const okSince = state.okSince ?? nowMs
-  return { presence: nowMs - okSince >= HINT_OK_HOLD_MS ? 'away' : 'shown', okSince }
+  return { presence: nowMs - okSince >= holdMs ? 'away' : 'shown', okSince }
 }

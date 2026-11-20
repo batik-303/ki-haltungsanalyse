@@ -3,6 +3,7 @@ import {
   createHintPresenceState,
   stepHintPresence,
   HINT_OK_HOLD_MS,
+  DISTANCE_OK_HOLD_MS,
 } from '../../src/core/calibration/hint-presence'
 
 /**
@@ -67,5 +68,20 @@ describe('stepHintPresence', () => {
     s = stepHintPresence(s, true, 1200)
     s = stepHintPresence(s, true, 1200 + HINT_OK_HOLD_MS - 1)
     expect(s.presence).toBe('shown')
+  })
+})
+
+describe('stepHintPresence mit eigener Wartezeit (Abstand, #147)', () => {
+  it('Abstand wartet 3 s, weil die Zeile zur Spielhaltung gelesen werden soll', () => {
+    expect(DISTANCE_OK_HOLD_MS).toBe(3000)
+  })
+
+  it('gleitet erst nach der übergebenen Wartezeit weg', () => {
+    let s = createHintPresenceState()
+    s = stepHintPresence(s, true, 0, DISTANCE_OK_HOLD_MS)
+    s = stepHintPresence(s, true, HINT_OK_HOLD_MS, DISTANCE_OK_HOLD_MS)
+    expect(s.presence).toBe('shown')
+    s = stepHintPresence(s, true, DISTANCE_OK_HOLD_MS, DISTANCE_OK_HOLD_MS)
+    expect(s.presence).toBe('away')
   })
 })

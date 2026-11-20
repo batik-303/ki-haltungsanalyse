@@ -2,6 +2,7 @@ import { usePoseStore } from '@/store/pose-store'
 import { computeDistanceGuidance } from '@/core/calibration/distance-guidance'
 import { HintCard } from '@/components/hint-card'
 import { useHintPresence } from '@/hooks/use-hint-presence'
+import { DISTANCE_OK_HOLD_MS } from '@/core/calibration/hint-presence'
 
 /**
  * Kärtchen zur Kamera-Distanz vor der Kalibrierung (App-Test, Punkt 2; #115).
@@ -30,8 +31,8 @@ export function DistanceHint({
   const status = usePoseStore((s) => s.distanceStatus)
   const readinessPhase = usePoseStore((s) => s.readinessPhase)
   const guidance = computeDistanceGuidance(status)
-  // #147: passt der Abstand, gleitet das Kärtchen nach ≈ 1,5 s weg
-  const presence = useHintPresence(status === 'good')
+  // #147: passt der Abstand, gleitet das Kärtchen nach 3 s weg (Zeile zur Spielhaltung lesen)
+  const presence = useHintPresence(status === 'good', DISTANCE_OK_HOLD_MS)
 
   if (masterPrint) return null
   if (readinessPhase !== 'idle') return null
