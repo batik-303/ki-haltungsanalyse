@@ -22,6 +22,11 @@ const TILT_AMPLIFY = 1.5
 export const TILT_MAX_DEG = 40
 // Sanftes Kippen: Zeitkonstante der Glättung (ms statt Frames).
 const TILT_SMOOTH_TAU_MS = 150
+// Darunter gilt die Hand im Blau als gerade angekommen (#188).
+const TILT_STRAIGHT_DEG = 0.5
+// Anzeige-Totzone im Blau: Knick darunter zählt als gerade, damit die Hand
+// bei Messrauschen nicht dauerhaft leicht schief steht (#188).
+const TILT_BLUE_STRAIGHT_KNICK_DEG = 3
 // Seite +1 dreht im ungespiegelten Kamerabild im Uhrzeigersinn; der
 // CSS-Spiegel macht daraus gegen den Uhrzeigersinn → Hand kippt nach links.
 export const SIDE_TO_SCREEN = -1
@@ -64,15 +69,21 @@ export function createWristBarTilt() {
     prevColor = input.color
     const anchorGlow = rewardGlow(input.nowMs)
 
-    if (input.color !== 'yellow') {
-      // Blau = gespeicherte Haltung = gerade (kalibrierungsrelativ, Befund B).
-      // Grau = keine sichere Sicht → keine Richtung, Hand steht gerade.
+    if (input.color === 'grey') {
+      // Grau = keine sichere Sicht → keine Richtung, Hand steht sofort gerade.
       tilt = 0
       return { tiltDeg: 0, anchorGlow }
     }
-    // Vorzeichenbehaftet geglättet: ein Seitenwechsel schwenkt hinüber.
-    const target = screenDir * Math.min(TILT_MAX_DEG, input.knickDiff * TILT_AMPLIFY)
+    const shown = Math.min(TILT_MAX_DEG, input.knickDiff * TILT_AMPLIFY)
+    // Gelb: vorzeichenbehaftet geglättet, ein Seitenwechsel schwenkt hinüber.
+    // Blau (#188): Die Hand folgt dem Handgelenk weiter, bis es gerade ist,
+    // aber nur abnehmend (Ratsche) – kein Wackeln bei Vibrato/Lagenwechsel.
+    const blueShown = input.knickDiff < TILT_BLUE_STRAIGHT_KNICK_DEG ? 0 : shown
+    const target =
+      input.color === 'blue' ? Math.sign(tilt) * Math.min(Math.abs(tilt), blueShown) : screenDir * shown
     tilt += (target - tilt) * (1 - Math.exp(-dtMs / TILT_SMOOTH_TAU_MS))
+    // Im Blau angekommen: Hand steht bis zum nächsten Gelb still auf gerade.
+    if (input.color === 'blue' && Math.abs(tilt) < TILT_STRAIGHT_DEG) tilt = 0
     return { tiltDeg: tilt, anchorGlow }
   }
 

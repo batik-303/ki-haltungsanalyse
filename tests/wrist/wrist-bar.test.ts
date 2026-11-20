@@ -34,6 +34,63 @@ describe('createWristBarTilt — blau', () => {
   })
 })
 
+// #188: Beim Korrigieren folgt die Hand dem echten Handgelenk auch im Blau
+// weiter, bis es wirklich gerade ist („ah, ich bin angekommen“). Im Blau darf
+// die Neigung nur kleiner werden (Ratsche): kein Wackeln bei Vibrato/Lagenwechsel.
+describe('createWristBarTilt — folgt bis gerade (#188)', () => {
+  /** Gelb mit 20° einschwingen lassen (Seite −1 → Hand rechts, positiv). */
+  function afterYellow() {
+    const bar = createWristBarTilt()
+    const clock = { t: 0 }
+    const yellow = run(bar, { color: 'yellow', knickDiff: 20, knickSide: -1 }, 60, clock)
+    return { bar, clock, last: yellow.at(-1)!.tiltDeg }
+  }
+
+  it('gelb → blau: kein Sprung, die Hand folgt dem Knick 4, 3, 2, 1, 0 (× 1,5)', () => {
+    const { bar, clock, last } = afterYellow()
+    const tilts = [last]
+    const settled: number[] = []
+    for (const knickDiff of [4, 3, 2, 1, 0]) {
+      const out = run(bar, { color: 'blue', knickDiff, knickSide: -1 }, 30, clock)
+      tilts.push(...out.map((o) => o.tiltDeg))
+      settled.push(out.at(-1)!.tiltDeg)
+    }
+    expect(tilts[1]!).toBeGreaterThan(last * 0.6)
+    expect(tilts.slice(1).every((t, i) => t <= tilts[i]! && t >= 0)).toBe(true)
+    expect(settled[0]).toBeCloseTo(6, 0)
+    expect(settled[1]).toBeCloseTo(4.5, 0)
+    // Unter 3° Knick zählt Blau als gerade (Anzeige-Totzone).
+    expect(settled[2]).toBe(0)
+    expect(settled[3]).toBe(0)
+    expect(settled[4]).toBe(0)
+  })
+
+  it('Handgelenk bleibt im Blau bei 2,5° stehen (Messrauschen): Hand geht stetig auf gerade', () => {
+    const { bar, clock, last } = afterYellow()
+    const out = run(bar, { color: 'blue', knickDiff: 2.5, knickSide: -1 }, 30, clock)
+    const tilts = [last, ...out.map((o) => o.tiltDeg)]
+    expect(tilts[1]!).toBeGreaterThan(last * 0.6)
+    expect(tilts.slice(1).every((t, i) => t <= tilts[i]! && t >= 0)).toBe(true)
+    expect(out.at(-1)!.tiltDeg).toBe(0)
+  })
+
+  it('einmal gerade, bleibt gerade: Knick 3° im Blau → Hand bleibt bei 0', () => {
+    const { bar, clock } = afterYellow()
+    run(bar, { color: 'blue', knickDiff: 0, knickSide: -1 }, 30, clock)
+    const out = run(bar, { color: 'blue', knickDiff: 3, knickSide: -1 }, 30, clock)
+    expect(out.every((o) => o.tiltDeg === 0)).toBe(true)
+  })
+
+  it('Knick schwankt im Blau 4 → 2 → 4: die Hand kippt nicht wieder weiter', () => {
+    const { bar, clock } = afterYellow()
+    run(bar, { color: 'blue', knickDiff: 4, knickSide: -1 }, 30, clock)
+    const low = run(bar, { color: 'blue', knickDiff: 2, knickSide: -1 }, 30, clock)
+    const again = run(bar, { color: 'blue', knickDiff: 4, knickSide: -1 }, 30, clock)
+    const floor = low.at(-1)!.tiltDeg
+    expect(again.every((o) => o.tiltDeg <= floor)).toBe(true)
+  })
+})
+
 describe('createWristBarTilt — grau (#92: Kamera sieht das Handgelenk nicht sicher)', () => {
   it('Hand steht gerade: ohne sichere Sicht keine Richtung', () => {
     const bar = createWristBarTilt()
