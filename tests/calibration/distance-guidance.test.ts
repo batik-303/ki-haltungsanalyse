@@ -27,12 +27,25 @@ describe('computeDistanceGuidance', () => {
     expect(g.message).toMatch(/bild|kamera/i)
   })
 
-  it('bestätigt bei gutem Abstand mit „Abstand passt“ und lädt zur Spielhaltung ein (#115, #116)', () => {
+  it('bestätigt bei gutem Abstand mit „Abstand passt ✓“ und lädt zur Spielhaltung ein (#115, #116, #147)', () => {
     const g = computeDistanceGuidance('good')
     expect(g.show).toBe(true)
-    expect(g.message).toBe('Abstand passt')
-    expect(g.detail).toBe('Nimm deine Spielhaltung ein – so, wie du gleich üben willst')
+    expect(g.message).toBe('Abstand passt ✓')
+    expect(g.detail).toBe('Nimm deine Spielhaltung ein, so wie du gleich üben willst.')
     expect(g.tone).toBe('blue')
+  })
+
+  it('#147: kurze Texte, aus 1–2 m lesbar', () => {
+    expect(computeDistanceGuidance('too-far').message).toBe('Etwas näher')
+    expect(computeDistanceGuidance('too-close').message).toBe('Etwas zurück')
+    expect(computeDistanceGuidance('no-body').message).toBe('Mittig ins Bild')
+  })
+
+  it('#147: keine Gedankenstriche in Nutzertexten', () => {
+    for (const status of ['too-far', 'too-close', 'no-body', 'good'] as const) {
+      const g = computeDistanceGuidance(status)
+      expect(g.message + g.detail).not.toMatch(/[–—]/)
+    }
   })
 
   it('führt mit gelbem Punkt, solange der Abstand nicht passt (#115)', () => {

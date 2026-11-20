@@ -199,13 +199,13 @@ describe('computeSaveSequenceView', () => {
 
   it('Pause: gelb mit Richtungshinweis, keine Zahl', () => {
     expect(computeSaveSequenceView({ step: 'paused', count: null, pauseStatus: 'too-far' })).toEqual({
-      message: 'Komm ruhig etwas näher zur Kamera',
+      message: 'Etwas näher',
       detail: '',
       tone: 'yellow',
       glyph: null,
     })
     expect(computeSaveSequenceView({ step: 'paused', count: null, pauseStatus: 'too-close' }).message).toBe(
-      'Geh ein kleines Stück zurück',
+      'Etwas zurück',
     )
   })
 })

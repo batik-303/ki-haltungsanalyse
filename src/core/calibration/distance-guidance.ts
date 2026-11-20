@@ -26,20 +26,22 @@ export interface DistanceGuidance {
  *
  * #115: Das Kärtchen erklärt das Randglühen — gelber Punkt, solange der Abstand
  * nicht passt; blauer Punkt und „Abstand passt", sobald er passt (Text aus #116).
+ *
+ * #147: kurze Texte mit Häkchen, damit sie aus Spiel-Entfernung lesbar sind.
  */
 export function computeDistanceGuidance(status: PositioningStatus): DistanceGuidance {
   switch (status) {
     case 'too-far':
-      return { show: true, message: 'Komm ruhig etwas näher zur Kamera', detail: '', tone: 'yellow' }
+      return { show: true, message: 'Etwas näher', detail: '', tone: 'yellow' }
     case 'too-close':
-      return { show: true, message: 'Geh ein kleines Stück zurück', detail: '', tone: 'yellow' }
+      return { show: true, message: 'Etwas zurück', detail: '', tone: 'yellow' }
     case 'no-body':
-      return { show: true, message: 'Stell dich mittig ins Bild', detail: '', tone: 'yellow' }
+      return { show: true, message: 'Mittig ins Bild', detail: '', tone: 'yellow' }
     case 'good':
       return {
         show: true,
-        message: 'Abstand passt',
-        detail: 'Nimm deine Spielhaltung ein – so, wie du gleich üben willst',
+        message: 'Abstand passt ✓',
+        detail: 'Nimm deine Spielhaltung ein, so wie du gleich üben willst.',
         tone: 'blue',
       }
     case 'drifted':

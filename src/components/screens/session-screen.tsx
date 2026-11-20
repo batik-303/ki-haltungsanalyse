@@ -10,6 +10,7 @@ import { DistanceHint } from '@/components/distance-hint'
 import { ReadinessHint } from '@/components/readiness-hint'
 import { DeviceTiltHint } from '@/components/device-tilt-hint'
 import { useDeviceTiltHint } from '@/hooks/use-device-tilt-hint'
+import { useHintPresence } from '@/hooks/use-hint-presence'
 import { StraightWristTip } from '@/components/straight-wrist-tip'
 import { SaveSequenceOverlay } from '@/components/save-sequence-overlay'
 import { selectSessionPhase, selectPhaseHint, selectIsFlowRail } from '@/store/selectors'
@@ -283,6 +284,9 @@ export function SessionScreen() {
   const tiltReadiness = usePoseStore((s) => s.readinessPhase)
   // Gerät-gerade-Hinweis (#210): nur vor dem Speichern, solange nicht ausgelöst
   const tilt = useDeviceTiltHint(!tiltMasterPrint && tiltReadiness === 'idle')
+  // #147: Gerät gerade → Kärtchen gleitet weg, der Abstand rückt nach oben
+  const tiltPresence = useHintPresence(tilt.view === 'level')
+  const tiltCardVisible = tilt.view !== 'hidden' && tiltPresence === 'shown'
   const row = computeControlRow({ phase, viewMode, calibrating })
   const hintLine = computeHintLine({
     phase,
@@ -350,11 +354,11 @@ export function SessionScreen() {
 
           {/* Kärtchen oben mittig im Rahmen: Abstand, Bereitschaft, Tipp (#101) */}
           {/* Gerät steht gerade (#210): zuerst, Abstand danach bzw. darunter */}
-          {!calibrating && <DeviceTiltHint view={tilt.view} />}
+          {!calibrating && <DeviceTiltHint view={tilt.view} presence={tiltPresence} />}
           {!calibrating && (
             <DistanceHint
               allowed={tilt.distanceAllowed}
-              placement={tilt.view === 'hidden' ? 'top' : 'below'}
+              placement={tiltCardVisible ? 'below' : 'top'}
             />
           )}
           {!calibrating && <ReadinessHint />}
