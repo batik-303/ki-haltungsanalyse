@@ -2,16 +2,19 @@
  * #210: „Gerät steht gerade" vor der Kalibrierung (Lagesensor).
  *
  * Reine Logik ohne Browser-API: Neigung aus `deviceorientation` (beta/gamma)
- * plus Bildschirm-Drehung, und ein kleiner Ablauf für das Kärtchen. Der Hinweis
- * blockiert nie: Steht das Gerät nach kurzer Zeit nicht gerade, verschwindet er.
+ * plus Bildschirm-Drehung, und ein kleiner Ablauf für das Kärtchen. Zuerst kommt
+ * nur das Gerät-Kärtchen; der Abstands-Hinweis folgt, sobald das Gerät gerade
+ * steht. Nie blockieren: nach kurzer Wartezeit kommt der Abstand trotzdem.
  */
 
 /** Ab dieser Neigung (Grad) gilt das Gerät als gerade. */
-export const TILT_LEVEL_ENTER_DEG = 5
+export const TILT_LEVEL_ENTER_DEG = 10
 /** Erst über dieser Neigung gilt es wieder als schief (Hysterese gegen Flackern). */
-export const TILT_LEVEL_EXIT_DEG = 7
-/** Nach dieser Zeit ohne Geradestehen verschwindet das Kärtchen; nichts hält fest. */
-export const TILT_HINT_TIMEOUT_MS = 3000
+export const TILT_LEVEL_EXIT_DEG = 12
+/** Steht das Gerät bis dahin nicht gerade, kommt der Abstands-Hinweis trotzdem dazu. */
+export const TILT_DISTANCE_AFTER_MS = 5000
+/** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
+export const TILT_NO_SENSOR_GRACE_MS = 500
 /** So lange zeigt das Kärtchen „Gerät steht gerade", bevor es verschwindet. */
 export const TILT_LEVEL_HOLD_MS = 1000
 
@@ -48,21 +51,23 @@ export type DeviceTiltView = 'hidden' | 'tilted' | 'level'
 
 export interface DeviceTiltHintState {
   view: DeviceTiltView
-  /** Zeitpunkt der ersten Messung; davor läuft keine Uhr. */
+  /** Darf der Abstands-Hinweis schon erscheinen? */
+  distanceAllowed: boolean
+  /** Zeitpunkt des ersten Schritts; davor läuft keine Uhr. */
   startedAt: number | null
   /** Seit wann das Gerät ununterbrochen gerade steht. */
   levelSince: number | null
-  /** Einmal verschwunden, bleibt das Kärtchen weg. */
+  /** Einmal erledigt (gerade bestätigt oder kein Sensor), bleibt das Kärtchen weg. */
   done: boolean
 }
 
 export function createDeviceTiltHintState(): DeviceTiltHintState {
-  return { view: 'hidden', startedAt: null, levelSince: null, done: false }
+  return { view: 'hidden', distanceAllowed: false, startedAt: null, levelSince: null, done: false }
 }
 
 /**
  * Ein Schritt des Kärtchen-Ablaufs. `tiltDeg` = Ergebnis von
- * `computeDeviceTiltDeg` (`null` = kein Sensor/keine Erlaubnis → nichts zeigen).
+ * `computeDeviceTiltDeg` (`null` = noch keine Messung).
  */
 export function stepDeviceTiltHint(
   state: DeviceTiltHintState,
@@ -70,18 +75,29 @@ export function stepDeviceTiltHint(
   nowMs: number,
 ): DeviceTiltHintState {
   if (state.done) return state
-  if (tiltDeg === null) return { ...state, view: 'hidden' }
 
   const startedAt = state.startedAt ?? nowMs
+  const elapsed = nowMs - startedAt
+
+  if (tiltDeg === null) {
+    // Kein Sensor oder keine Erlaubnis: nichts zeigen, Abstand nicht aufhalten.
+    const noSensor = elapsed >= TILT_NO_SENSOR_GRACE_MS
+    return { ...state, view: 'hidden', startedAt, distanceAllowed: state.distanceAllowed || noSensor, done: noSensor }
+  }
+
   const wasLevel = state.levelSince !== null
   const isLevel = wasLevel ? tiltDeg <= TILT_LEVEL_EXIT_DEG : tiltDeg <= TILT_LEVEL_ENTER_DEG
   const levelSince = isLevel ? (state.levelSince ?? nowMs) : null
 
-  const confirmed = levelSince !== null && nowMs - levelSince >= TILT_LEVEL_HOLD_MS
-  const timedOut = levelSince === null && nowMs - startedAt >= TILT_HINT_TIMEOUT_MS
-  if (confirmed || timedOut) {
-    return { view: 'hidden', startedAt, levelSince, done: true }
+  if (levelSince !== null && nowMs - levelSince >= TILT_LEVEL_HOLD_MS) {
+    return { view: 'hidden', distanceAllowed: true, startedAt, levelSince, done: true }
   }
 
-  return { view: isLevel ? 'level' : 'tilted', startedAt, levelSince, done: false }
+  return {
+    view: isLevel ? 'level' : 'tilted',
+    distanceAllowed: state.distanceAllowed || elapsed >= TILT_DISTANCE_AFTER_MS,
+    startedAt,
+    levelSince,
+    done: false,
+  }
 }

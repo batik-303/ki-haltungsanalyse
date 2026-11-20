@@ -3,7 +3,10 @@ import {
   computeDeviceTiltDeg,
   createDeviceTiltHintState,
   stepDeviceTiltHint,
-  TILT_HINT_TIMEOUT_MS,
+  TILT_DISTANCE_AFTER_MS,
+  TILT_LEVEL_ENTER_DEG,
+  TILT_LEVEL_EXIT_DEG,
+  TILT_NO_SENSOR_GRACE_MS,
   TILT_LEVEL_HOLD_MS,
 } from '../../src/core/calibration/device-tilt'
 
@@ -49,60 +52,79 @@ describe('computeDeviceTiltDeg', () => {
   })
 })
 
+describe('Toleranz (#210, nach Test der Nutzerin)', () => {
+  it('bis 10° gilt als gerade, Hysterese bis 12°', () => {
+    expect(TILT_LEVEL_ENTER_DEG).toBe(10)
+    expect(TILT_LEVEL_EXIT_DEG).toBe(12)
+  })
+})
+
 describe('stepDeviceTiltHint', () => {
   const start = createDeviceTiltHintState()
 
-  it('ohne Sensor-Messung wird nichts angezeigt', () => {
+  it('vor der ersten Messung: nichts anzeigen, Abstand noch zurückhalten', () => {
     const s = stepDeviceTiltHint(start, null, 0)
     expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(false)
   })
 
-  it('schief → „aufrichten", gerade → „steht gerade"', () => {
-    const s1 = stepDeviceTiltHint(start, 12, 0)
-    expect(s1.view).toBe('tilted')
-    const s2 = stepDeviceTiltHint(s1, 2, 100)
-    expect(s2.view).toBe('level')
-  })
-
-  it('Hysterese: einmal gerade, bleibt es bis knapp über der Grenze gerade', () => {
-    let s = stepDeviceTiltHint(start, 4, 0)
-    expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 6, 100)
-    expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 8, 200)
-    expect(s.view).toBe('tilted')
-  })
-
-  it('hält nie fest: nach der Wartezeit schief verschwindet das Kärtchen für immer', () => {
-    let s = stepDeviceTiltHint(start, 20, 0)
-    s = stepDeviceTiltHint(s, 20, TILT_HINT_TIMEOUT_MS - 1)
-    expect(s.view).toBe('tilted')
-    s = stepDeviceTiltHint(s, 20, TILT_HINT_TIMEOUT_MS)
-    expect(s.view).toBe('hidden')
-    s = stepDeviceTiltHint(s, 1, TILT_HINT_TIMEOUT_MS + 100)
-    expect(s.view).toBe('hidden')
-  })
-
-  it('gerade gehalten: verschwindet nach kurzer Bestätigung', () => {
-    let s = stepDeviceTiltHint(start, 2, 0)
-    s = stepDeviceTiltHint(s, 2, TILT_LEVEL_HOLD_MS - 1)
-    expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 2, TILT_LEVEL_HOLD_MS)
-    expect(s.view).toBe('hidden')
-  })
-
-  it('gerade erreicht kurz vor Ablauf: Bestätigung darf noch zu Ende laufen', () => {
-    let s = stepDeviceTiltHint(start, 20, 0)
-    s = stepDeviceTiltHint(s, 2, TILT_HINT_TIMEOUT_MS - 100)
-    s = stepDeviceTiltHint(s, 2, TILT_HINT_TIMEOUT_MS + 100)
-    expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 2, TILT_HINT_TIMEOUT_MS - 100 + TILT_LEVEL_HOLD_MS)
-    expect(s.view).toBe('hidden')
-  })
-
-  it('die Uhr startet erst mit der ersten Messung', () => {
+  it('ohne Sensor/Erlaubnis: nach kurzer Wartezeit nichts zeigen, Abstand frei', () => {
     let s = stepDeviceTiltHint(start, null, 0)
-    s = stepDeviceTiltHint(s, 20, 5000)
+    s = stepDeviceTiltHint(s, null, TILT_NO_SENSOR_GRACE_MS)
+    expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(true)
+    s = stepDeviceTiltHint(s, 20, TILT_NO_SENSOR_GRACE_MS + 100)
+    expect(s.view).toBe('hidden')
+  })
+
+  it('zuerst nur das Gerät-Kärtchen: schief → „tilted", Abstand noch nicht', () => {
+    const s = stepDeviceTiltHint(start, 20, 0)
     expect(s.view).toBe('tilted')
+    expect(s.distanceAllowed).toBe(false)
+  })
+
+  it('gerade → kurz „level", danach weg und Abstand frei', () => {
+    let s = stepDeviceTiltHint(start, 20, 0)
+    s = stepDeviceTiltHint(s, 5, 100)
+    expect(s.view).toBe('level')
+    expect(s.distanceAllowed).toBe(false)
+    s = stepDeviceTiltHint(s, 5, 100 + TILT_LEVEL_HOLD_MS - 1)
+    expect(s.view).toBe('level')
+    s = stepDeviceTiltHint(s, 5, 100 + TILT_LEVEL_HOLD_MS)
+    expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(true)
+    s = stepDeviceTiltHint(s, 30, 100 + TILT_LEVEL_HOLD_MS + 500)
+    expect(s.view).toBe('hidden')
+  })
+
+  it('Hysterese: einmal gerade, bleibt es bis 12° gerade', () => {
+    let s = stepDeviceTiltHint(start, 9, 0)
+    expect(s.view).toBe('level')
+    s = stepDeviceTiltHint(s, 11.5, 100)
+    expect(s.view).toBe('level')
+    s = stepDeviceTiltHint(s, 13, 200)
+    expect(s.view).toBe('tilted')
+  })
+
+  it('nie blockieren: nach der Wartezeit kommt der Abstand, das Gerät-Kärtchen bleibt', () => {
+    let s = stepDeviceTiltHint(start, 20, 0)
+    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS - 1)
+    expect(s.distanceAllowed).toBe(false)
+    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS)
+    expect(s.view).toBe('tilted')
+    expect(s.distanceAllowed).toBe(true)
+    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS + 60_000)
+    expect(s.view).toBe('tilted')
+  })
+
+  it('später gerade gestellt: kurz „level", dann weg; Abstand bleibt frei', () => {
+    let s = stepDeviceTiltHint(start, 20, 0)
+    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS + 1000)
+    s = stepDeviceTiltHint(s, 3, TILT_DISTANCE_AFTER_MS + 2000)
+    expect(s.view).toBe('level')
+    expect(s.distanceAllowed).toBe(true)
+    s = stepDeviceTiltHint(s, 3, TILT_DISTANCE_AFTER_MS + 2000 + TILT_LEVEL_HOLD_MS)
+    expect(s.view).toBe('hidden')
+    expect(s.distanceAllowed).toBe(true)
   })
 })

@@ -6,6 +6,14 @@ import {
   type DeviceTiltView,
 } from '@/core/calibration/device-tilt'
 
+export interface DeviceTiltHint {
+  view: DeviceTiltView
+  /** Darf der Abstands-Hinweis erscheinen? Zuerst kommt das Gerät-Kärtchen. */
+  distanceAllowed: boolean
+}
+
+const INACTIVE: DeviceTiltHint = { view: 'hidden', distanceAllowed: true }
+
 /** Nachtakt, falls der Sensor bei ruhigem Gerät keine Ereignisse schickt. */
 const TICK_MS = 250
 
@@ -30,21 +38,30 @@ function screenAngle(): number {
 }
 
 /**
- * Liefert den Zustand des „Gerät steht gerade"-Kärtchens (#210). Ablauf-Zustand
- * liegt im `useRef`; React-State ändert sich nur, wenn sich die Anzeige ändert.
- * `active = false` → Sensor wird nicht abgehört, nichts angezeigt.
+ * Liefert den Zustand des „Gerät steht gerade"-Kärtchens (#210) und ob der
+ * Abstands-Hinweis schon dran ist. Ablauf-Zustand liegt im `useRef`;
+ * React-State ändert sich nur, wenn sich die Anzeige ändert.
+ * `active = false` → Sensor wird nicht abgehört, nichts angezeigt, Abstand frei.
  */
-export function useDeviceTiltHint(active: boolean): DeviceTiltView {
-  const [view, setView] = useState<DeviceTiltView>('hidden')
+export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
+  const [hint, setHint] = useState<DeviceTiltHint>({ view: 'hidden', distanceAllowed: false })
   const stateRef = useRef(createDeviceTiltHintState())
   const tiltRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!active || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return
+    if (!active) return
+    if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) {
+      stateRef.current = { ...stateRef.current, view: 'hidden', distanceAllowed: true, done: true }
+      setHint(INACTIVE)
+      return
+    }
 
     const step = () => {
       stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now())
-      setView(stateRef.current.view)
+      const { view, distanceAllowed } = stateRef.current
+      setHint((prev) =>
+        prev.view === view && prev.distanceAllowed === distanceAllowed ? prev : { view, distanceAllowed },
+      )
     }
     const onOrientation = (e: DeviceOrientationEvent) => {
       tiltRef.current = computeDeviceTiltDeg({ beta: e.beta, gamma: e.gamma }, screenAngle())
@@ -59,5 +76,5 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltView {
     }
   }, [active])
 
-  return active ? view : 'hidden'
+  return active ? hint : INACTIVE
 }
