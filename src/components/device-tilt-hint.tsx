@@ -25,7 +25,8 @@ export function DeviceTiltHint({ view, presence }: { view: DeviceTiltView; prese
   return (
     <div
       className={cn(
-        'grid w-full justify-items-center overflow-hidden transition-[grid-template-rows] duration-500 ease-in-out',
+        // #215: Spalte auf Rahmenbreite begrenzen, sonst wächst sie mit dem Text und er bricht nicht um
+        'grid w-full grid-cols-[minmax(0,1fr)] justify-items-center overflow-hidden transition-[grid-template-rows] duration-500 ease-in-out',
         away ? 'grid-rows-[0fr] delay-700' : 'grid-rows-[1fr]',
       )}
     >
