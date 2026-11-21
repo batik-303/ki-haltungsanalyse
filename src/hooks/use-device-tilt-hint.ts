@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   computeDeviceTiltDeg,
+  computeTiltLimits,
   createDeviceTiltHintState,
   initialDeviceTiltPermission,
   normalizeScreenAngle,
@@ -92,8 +93,10 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
       return
     }
 
+    // #215: Handy und Tablet haben eigene Grenzen
+    const limits = computeTiltLimits(screen.width, screen.height)
     const step = () => {
-      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission)
+      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission, limits)
       const { view, distanceAllowed, doneReason } = stateRef.current
       if (__DIAGNOSE__ && doneReason) reportTiltOutcome(doneReason, screenAngle())
       if (__DIAGNOSE__) reportTiltTrace(performance.now(), tiltRef.current)

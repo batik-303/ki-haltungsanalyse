@@ -3,8 +3,7 @@ import {
   createDeviceTiltHintState,
   stepDeviceTiltHint,
   TILT_DISTANCE_AFTER_MS,
-  TILT_LEVEL_ENTER_DEG,
-  TILT_LEVEL_EXIT_DEG,
+  TILT_LIMITS_TABLET,
   TILT_NO_SENSOR_GRACE_MS,
   type DeviceTiltHintState,
   type DeviceTiltPermission,
@@ -17,9 +16,8 @@ import {
  */
 describe('Toleranz (#210, nach Test der Nutzerin)', () => {
   // #215: Nutzerin hat gemessen (Notenständer bequem 34°, etwas Mühe 21°, mehr Mühe 13,5°)
-  it('bis 25° Zurück-/Vorlehnen gilt als gerade, Hysterese bis 27°', () => {
-    expect(TILT_LEVEL_ENTER_DEG).toBe(25)
-    expect(TILT_LEVEL_EXIT_DEG).toBe(27)
+  it('Tablet: bis 25° Zurück-/Vorlehnen gilt als gerade, Hysterese bis 27°', () => {
+    expect(TILT_LIMITS_TABLET).toEqual({ enterDeg: 25, exitDeg: 27 })
   })
 })
 

@@ -8,10 +8,26 @@
  * Kärtchen bleibt bis zum Speichern sichtbar und reagiert live auf die Lage.
  */
 
-/** Bis zu dieser Neigung (Grad, Zurück-/Vorlehnen) gilt das Gerät als gerade; #215: Notenständer-Messung der Nutzerin. */
-export const TILT_LEVEL_ENTER_DEG = 25
-/** Erst über dieser Neigung gilt es wieder als schief (Hysterese gegen Flackern). */
-export const TILT_LEVEL_EXIT_DEG = 27
+/**
+ * Bis `enterDeg` Zurück-/Vorlehnen gilt das Gerät als gerade; erst über
+ * `exitDeg` wieder als schief (Hysterese gegen Flackern).
+ */
+export interface TiltLimits {
+  enterDeg: number
+  exitDeg: number
+}
+
+/** #215, Entscheidung Nutzerin: Handy auf dem Ständer (ruhig ≈12°). */
+export const TILT_LIMITS_PHONE: TiltLimits = { enterDeg: 15, exitDeg: 17 }
+/** #215: Tablet auf dem Notenständer (Messung: bequem 34°, etwas Mühe 21°, mehr Mühe 13,5°). */
+export const TILT_LIMITS_TABLET: TiltLimits = { enterDeg: 25, exitDeg: 27 }
+/** Ab dieser kürzeren Bildschirmseite (CSS-px) gilt das Gerät als Tablet. */
+export const TABLET_MIN_SHORT_SIDE_PX = 600
+
+/** Grenzen aus der Bildschirmgröße (`screen.width`/`screen.height`), hochkant wie quer. */
+export function computeTiltLimits(screenWidth: number, screenHeight: number): TiltLimits {
+  return Math.min(screenWidth, screenHeight) >= TABLET_MIN_SHORT_SIDE_PX ? TILT_LIMITS_TABLET : TILT_LIMITS_PHONE
+}
 /** Steht das Gerät bis dahin nicht gerade, kommt der Abstands-Hinweis trotzdem dazu. */
 export const TILT_DISTANCE_AFTER_MS = 5000
 /** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
@@ -125,12 +141,14 @@ function finish(state: DeviceTiltHintState, reason: DeviceTiltDoneReason): Devic
  * Ein Schritt des Kärtchen-Ablaufs. `tiltDeg` = Ergebnis von
  * `computeDeviceTiltDeg` (`null` = noch keine Messung). Solange die
  * Erlaubnis-Frage offen ist, läuft keine Uhr; abgelehnt → sofort Abstand.
+ * `limits` = Grenzen je Gerät (`computeTiltLimits`, #215).
  */
 export function stepDeviceTiltHint(
   state: DeviceTiltHintState,
   tiltDeg: number | null,
   nowMs: number,
   permission: DeviceTiltPermission = 'granted',
+  limits: TiltLimits = TILT_LIMITS_TABLET,
 ): DeviceTiltHintState {
   if (state.done) return state
   if (permission === 'denied') return finish(state, 'denied')
@@ -166,7 +184,7 @@ export function stepDeviceTiltHint(
     return { ...next, view: 'hidden' }
   }
 
-  const isLevel = state.level ? tilt <= TILT_LEVEL_EXIT_DEG : tilt <= TILT_LEVEL_ENTER_DEG
+  const isLevel = state.level ? tilt <= limits.exitDeg : tilt <= limits.enterDeg
 
   return {
     ...next,
