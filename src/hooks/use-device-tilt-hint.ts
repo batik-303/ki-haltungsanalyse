@@ -66,7 +66,7 @@ export function requestDeviceOrientationPermission(): void {
     })
 }
 
-/** Hochkant und quer; ältere Safari-Versionen kennen nur `window.orientation` (#215). */
+/** Bildschirm-Winkel nur fürs Diagnose-Log; ältere Safari kennen nur `window.orientation`. */
 function screenAngle(): number {
   const orientationAngle = typeof screen !== 'undefined' ? screen.orientation?.angle : undefined
   const legacy = (window as Window & { orientation?: number }).orientation
@@ -101,7 +101,8 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
       )
     }
     const onOrientation = (e: DeviceOrientationEvent) => {
-      tiltRef.current = computeDeviceTiltDeg({ beta: e.beta, gamma: e.gamma }, screenAngle())
+      // #215: ohne Bildschirm-Winkel (iPad meldet hochkant 90°)
+      tiltRef.current = computeDeviceTiltDeg({ beta: e.beta, gamma: e.gamma })
       if (__DIAGNOSE__) reportTiltSample(e.beta, e.gamma, screenAngle())
       step()
     }

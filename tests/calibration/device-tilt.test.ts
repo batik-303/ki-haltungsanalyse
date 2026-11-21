@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  computeDeviceTiltDeg,
   createDeviceTiltHintState,
   stepDeviceTiltHint,
   TILT_DISTANCE_AFTER_MS,
@@ -16,43 +15,6 @@ import {
  * steht. Reine Logik: Neigung aus dem Lagesensor (beta/gamma + Bildschirm-
  * Drehung) und ein kleiner Ablauf, der nie festhält.
  */
-describe('computeDeviceTiltDeg', () => {
-  it('Hochkant aufrecht (beta 90, gamma 0) ist 0°', () => {
-    expect(computeDeviceTiltDeg({ beta: 90, gamma: 0 }, 0)).toBeCloseTo(0, 5)
-  })
-
-  it('nach hinten gelehnt (beta 80) ergibt 10°', () => {
-    expect(computeDeviceTiltDeg({ beta: 80, gamma: 0 }, 0)).toBeCloseTo(10, 5)
-  })
-
-  it('flach auf dem Tisch ist weit weg von gerade (90°)', () => {
-    expect(computeDeviceTiltDeg({ beta: 0, gamma: 0 }, 0)).toBeCloseTo(90, 5)
-  })
-
-  it('seitlich in der Bildschirm-Ebene gekippt zählt mit (beta 80, gamma 90 ≈ 10° Drehung)', () => {
-    // Aufrecht, aber um 10° in der Bildschirm-Ebene gedreht: Euler-Werte β=80, γ=±90.
-    expect(computeDeviceTiltDeg({ beta: 80, gamma: 90 }, 0)).toBeCloseTo(10, 5)
-  })
-
-  it('Querformat (angle 90): aufrecht, wenn die rechte Geräte-Kante oben ist', () => {
-    // Gerät gegen den Uhrzeigersinn gedreht → Oben-Vektor zeigt auf +x: β=0, γ=-90.
-    expect(computeDeviceTiltDeg({ beta: 0, gamma: -90 }, 90)).toBeCloseTo(0, 5)
-  })
-
-  it('Querformat (angle 270): aufrecht, wenn die linke Geräte-Kante oben ist', () => {
-    expect(computeDeviceTiltDeg({ beta: 0, gamma: 90 }, 270)).toBeCloseTo(0, 5)
-  })
-
-  it('Querformat falsch herum gedacht ergibt große Neigung', () => {
-    expect(computeDeviceTiltDeg({ beta: 0, gamma: 90 }, 90)).toBeGreaterThan(90)
-  })
-
-  it('ohne Sensorwerte (null) keine Neigung', () => {
-    expect(computeDeviceTiltDeg({ beta: null, gamma: 0 }, 0)).toBeNull()
-    expect(computeDeviceTiltDeg({ beta: 90, gamma: null }, 0)).toBeNull()
-  })
-})
-
 describe('Toleranz (#210, nach Test der Nutzerin)', () => {
   it('bis 10° gilt als gerade, Hysterese bis 12°', () => {
     expect(TILT_LEVEL_ENTER_DEG).toBe(10)

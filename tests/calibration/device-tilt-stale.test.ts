@@ -32,7 +32,6 @@ describe('stepDeviceTiltHint – eingefrorener Sensor (#215)', () => {
     s = stepDeviceTiltHint(s, 90, TILT_STALE_MS)
     expect(s.view).toBe('hidden')
     expect(s.distanceAllowed).toBe(true)
-    expect(s.done).toBe(true)
     expect(s.doneReason).toBe('stale')
   })
 
@@ -40,7 +39,7 @@ describe('stepDeviceTiltHint – eingefrorener Sensor (#215)', () => {
     let s = stepDeviceTiltHint(start, 90, 0)
     s = stepDeviceTiltHint(s, null, 1000)
     s = stepDeviceTiltHint(s, null, TILT_STALE_MS)
-    expect(s.done).toBe(true)
+    expect(s.doneReason).toBe('stale')
     expect(s.view).toBe('hidden')
   })
 
@@ -48,17 +47,6 @@ describe('stepDeviceTiltHint – eingefrorener Sensor (#215)', () => {
     let s = stepDeviceTiltHint(start, 30, 0)
     s = stepDeviceTiltHint(s, 30.2, 16)
     expect(s.view).toBe('tilted')
-  })
-
-  it('Sensor friert später ein: nach 3 s ohne Änderung verschwindet das Kärtchen', () => {
-    let s = stepDeviceTiltHint(start, 30, 0)
-    s = stepDeviceTiltHint(s, 30.2, 100)
-    s = stepDeviceTiltHint(s, 30.2, 100 + TILT_STALE_MS - 1)
-    expect(s.view).toBe('tilted')
-    s = stepDeviceTiltHint(s, 30.2, 100 + TILT_STALE_MS)
-    expect(s.view).toBe('hidden')
-    expect(s.distanceAllowed).toBe(true)
-    expect(s.done).toBe(true)
   })
 
   it('leichtes Rauschen hält den Sensor lebendig', () => {

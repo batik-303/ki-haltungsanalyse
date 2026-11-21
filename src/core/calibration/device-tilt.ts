@@ -17,9 +17,10 @@ export const TILT_DISTANCE_AFTER_MS = 5000
 /** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
 export const TILT_NO_SENSOR_GRACE_MS = 500
 /**
- * #215: Ändert sich der Sensor-Wert so lange nicht, gilt er als eingefroren
- * (iPad: nur ein einzelner Wert) → wie „kein Sensor“. Ein lebender Sensor
- * rauscht immer ein wenig.
+ * #215: Kommt so lange nach dem ersten Wert kein abweichender, gilt der Sensor
+ * als eingefroren (iPad: nur ein einzelner Wert): Kärtchen weg, Abstand frei.
+ * Nicht endgültig: kommen später neue Werte, erscheint es wieder. Hat er
+ * einmal gelebt, bleibt er an, auch wenn das Gerät ruhig steht.
  */
 export const TILT_STALE_MS = 3000
 
@@ -43,25 +44,17 @@ export function normalizeScreenAngle(
 }
 
 /**
- * Winkel (Grad) zwischen der Oben-Richtung des Bildschirms und der echten
- * Senkrechten. 0° = Gerät steht gerade; Vor-/Zurücklehnen und seitliches
- * Kippen zählen gleich. `screenAngle` = `screen.orientation.angle` (0/90/180/270).
- * Ohne Sensorwerte `null`.
+ * Neigung (Grad) der Bildschirm-Ebene zur Senkrechten: Vor- und Zurücklehnen,
+ * hochkant wie quer. 0° = Gerät steht aufrecht. #215: ohne Bildschirm-Winkel
+ * (iPadOS meldet hochkant 90°); seitliches Drehen in der Bildebene zählt nicht,
+ * die Knick-Messung ist handlokal. Ohne Sensorwerte `null`.
  */
-export function computeDeviceTiltDeg(reading: OrientationReading, screenAngle: number): number | null {
+export function computeDeviceTiltDeg(reading: OrientationReading): number | null {
   const { beta, gamma } = reading
   if (beta === null || gamma === null) return null
-
-  // Oben-Vektor (Gegenrichtung der Schwerkraft) in Geräte-Koordinaten (W3C, Euler Z-X'-Y'').
-  const upX = -Math.cos(beta * RAD) * Math.sin(gamma * RAD)
-  const upY = Math.sin(beta * RAD)
-
-  // Oben-Richtung des Bildschirms in Geräte-Koordinaten.
-  const screenUpX = Math.sin(screenAngle * RAD)
-  const screenUpY = Math.cos(screenAngle * RAD)
-
-  const dot = Math.max(-1, Math.min(1, upX * screenUpX + upY * screenUpY))
-  return Math.acos(dot) / RAD
+  // Schwerkraft-Anteil senkrecht zum Bildschirm (W3C, Euler Z-X'-Y'').
+  const normal = Math.min(1, Math.abs(Math.cos(beta * RAD) * Math.cos(gamma * RAD)))
+  return Math.asin(normal) / RAD
 }
 
 /** `ask` = Einladung zum Tippen für die iOS-Sensor-Frage (#215). */
@@ -97,7 +90,7 @@ export interface DeviceTiltHintState {
   level: boolean
   /** Einmal erledigt (kein Sensor, abgelehnt, eingefroren), bleibt das Kärtchen weg. */
   done: boolean
-  /** Warum erledigt (fürs Diagnose-Log); `null`, solange das Kärtchen läuft. */
+  /** Warum erledigt bzw. pausiert (`stale`, fürs Diagnose-Log); `null`, solange das Kärtchen läuft. */
   doneReason: DeviceTiltDoneReason | null
   /** Letzter Messwert; `null` = noch keiner. */
   lastTilt: number | null
@@ -164,10 +157,14 @@ export function stepDeviceTiltHint(
   const lastChangeAt = state.lastChangeAt === null || changed ? nowMs : state.lastChangeAt
   const next = { ...state, startedAt, lastTilt: tilt, lastChangeAt, live: state.live || changed }
 
-  // #215: Werte eingefroren (z. B. nur ein einzelner Wert) → wie kein Sensor.
-  if (nowMs - lastChangeAt >= TILT_STALE_MS) return finish(next, 'stale')
-  // Erst ein sich ändernder Wert zeigt, dass der Sensor lebt: vorher kein „schief“.
-  if (!next.live) return { ...next, view: 'hidden' }
+  if (!next.live) {
+    // #215: nie ein abweichender Wert (z. B. nur ein einzelner) → vorerst wie kein Sensor.
+    if (nowMs - lastChangeAt >= TILT_STALE_MS) {
+      return { ...next, view: 'hidden', distanceAllowed: true, doneReason: 'stale' }
+    }
+    // Erst ein sich ändernder Wert zeigt, dass der Sensor lebt: vorher kein „schief“.
+    return { ...next, view: 'hidden' }
+  }
 
   const isLevel = state.level ? tilt <= TILT_LEVEL_EXIT_DEG : tilt <= TILT_LEVEL_ENTER_DEG
 
@@ -176,5 +173,6 @@ export function stepDeviceTiltHint(
     view: isLevel ? 'level' : 'tilted',
     distanceAllowed: state.distanceAllowed || isLevel || elapsed >= TILT_DISTANCE_AFTER_MS,
     level: isLevel,
+    doneReason: null,
   }
 }
