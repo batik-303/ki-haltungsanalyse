@@ -17,15 +17,15 @@ import { DISTANCE_OK_HOLD_MS } from '@/core/calibration/hint-presence'
  * wurde, übernimmt der `ReadinessHint` denselben oberen Platz — so gibt es nie
  * zwei Kärtchen gleichzeitig.
  *
- * #210: Erst nach dem Gerät-Kärtchen (`allowed`). Bleibt das Gerät-Kärtchen
- * sichtbar, rutscht dieses eine Zeile tiefer (`placement = 'below'`).
+ * #210: Erst nach dem Gerät-Kärtchen (`allowed`). #215: In der Session steht
+ * es im `HintStack` unter dem Gerät-Kärtchen (`placement = 'stack'`), nie darüber.
  */
 export function DistanceHint({
   allowed = true,
   placement = 'top',
 }: {
   allowed?: boolean
-  placement?: 'top' | 'below'
+  placement?: 'top' | 'stack'
 }) {
   const masterPrint = usePoseStore((s) => s.masterPrint)
   const status = usePoseStore((s) => s.distanceStatus)

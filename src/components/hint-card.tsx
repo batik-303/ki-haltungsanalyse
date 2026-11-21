@@ -9,8 +9,11 @@ interface HintCardProps {
   message: string
   /** Optionale kleine zweite Zeile (z. B. bei „Abstand passt", #116). */
   detail?: string
-  /** `below` = zweite Zeile unter dem oberen Kärtchen (Gerät-gerade-Hinweis, #210). */
-  placement?: 'top' | 'below'
+  /**
+   * `top` = allein oben mittig im Rahmen. `stack` = im Stapel oben (`HintStack`,
+   * #215): Gerät-Kärtchen und Abstand untereinander, nie überdeckt.
+   */
+  placement?: 'top' | 'stack'
   /** #147: `true` = nach rechts aus dem Bild geglitten (Zustand in Ordnung). */
   away?: boolean
   /** #215: antippbar (z. B. Sensor-Frage auf iOS); sonst lässt das Kärtchen Tipps durch. */
@@ -32,12 +35,16 @@ export function HintCard({ tone, message, detail, placement = 'top', away = fals
     <div
       className={cn(
         onTap ? 'pointer-events-auto' : 'pointer-events-none',
-        'absolute left-1/2 z-[6] w-max max-w-[calc(100%-24px)]',
-        'transition-[transform,opacity,top] duration-700 ease-in-out',
-        placement === 'top' ? 'top-3' : 'top-[84px]',
+        'transition-[transform,opacity] duration-700 ease-in-out',
+        placement === 'top'
+          ? 'absolute left-1/2 top-3 z-[6] w-max max-w-[calc(100%-24px)]'
+          : 'relative w-max max-w-full',
       )}
       // #147: weggleiten nach rechts aus dem Bild (der Rahmen schneidet ab)
-      style={{ transform: away ? 'translateX(100vw)' : 'translateX(-50%)', opacity: away ? 0 : 1 }}
+      style={{
+        transform: away ? 'translateX(100vw)' : placement === 'top' ? 'translateX(-50%)' : 'none',
+        opacity: away ? 0 : 1,
+      }}
     >
       <Inner
         {...(onTap && { type: 'button' as const, onClick: onTap })}
