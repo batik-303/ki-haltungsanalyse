@@ -16,6 +16,12 @@ export const TILT_LEVEL_EXIT_DEG = 12
 export const TILT_DISTANCE_AFTER_MS = 5000
 /** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
 export const TILT_NO_SENSOR_GRACE_MS = 500
+/**
+ * #215: Ändert sich der Sensor-Wert so lange nicht, gilt er als eingefroren
+ * (iPad: nur ein einzelner Wert) → wie „kein Sensor“. Ein lebender Sensor
+ * rauscht immer ein wenig.
+ */
+export const TILT_STALE_MS = 3000
 
 export interface OrientationReading {
   beta: number | null
@@ -23,6 +29,18 @@ export interface OrientationReading {
 }
 
 const RAD = Math.PI / 180
+
+/**
+ * Bildschirm-Drehung in Grad (0/90/180/270). Bevorzugt `screen.orientation.angle`;
+ * ältere Safari-Versionen kennen nur `window.orientation` (−90/0/90/180).
+ */
+export function normalizeScreenAngle(
+  orientationAngle: number | undefined,
+  windowOrientation: number | undefined,
+): number {
+  const angle = orientationAngle ?? windowOrientation ?? 0
+  return ((angle % 360) + 360) % 360
+}
 
 /**
  * Winkel (Grad) zwischen der Oben-Richtung des Bildschirms und der echten
@@ -67,12 +85,36 @@ export interface DeviceTiltHintState {
   startedAt: number | null
   /** Stand das Gerät beim letzten Schritt gerade? (für die Hysterese) */
   level: boolean
-  /** Einmal erledigt (kein Sensor oder abgelehnt), bleibt das Kärtchen weg. */
+  /** Einmal erledigt (kein Sensor, abgelehnt, eingefroren), bleibt das Kärtchen weg. */
   done: boolean
+  /** Warum erledigt (fürs Diagnose-Log); `null`, solange das Kärtchen läuft. */
+  doneReason: DeviceTiltDoneReason | null
+  /** Letzter Messwert; `null` = noch keiner. */
+  lastTilt: number | null
+  /** Zeitpunkt der letzten Wert-Änderung (#215). */
+  lastChangeAt: number | null
+  /** Hat sich ein Wert schon einmal geändert? Erst dann zeigt das Kärtchen etwas. */
+  live: boolean
 }
 
+export type DeviceTiltDoneReason = 'no-sensor' | 'denied' | 'stale'
+
 export function createDeviceTiltHintState(): DeviceTiltHintState {
-  return { view: 'hidden', distanceAllowed: false, startedAt: null, level: false, done: false }
+  return {
+    view: 'hidden',
+    distanceAllowed: false,
+    startedAt: null,
+    level: false,
+    done: false,
+    doneReason: null,
+    lastTilt: null,
+    lastChangeAt: null,
+    live: false,
+  }
+}
+
+function finish(state: DeviceTiltHintState, reason: DeviceTiltDoneReason): DeviceTiltHintState {
+  return { ...state, view: 'hidden', distanceAllowed: true, done: true, doneReason: reason }
 }
 
 /**
@@ -87,29 +129,35 @@ export function stepDeviceTiltHint(
   permission: DeviceTiltPermission = 'granted',
 ): DeviceTiltHintState {
   if (state.done) return state
-  if (permission === 'denied') {
-    return { ...state, view: 'hidden', distanceAllowed: true, done: true }
-  }
+  if (permission === 'denied') return finish(state, 'denied')
   if (permission === 'pending') return { ...state, view: 'hidden' }
 
   const startedAt = state.startedAt ?? nowMs
   const elapsed = nowMs - startedAt
 
-  if (tiltDeg === null) {
-    // Schon echte Werte gesehen: eine leere Meldung zwischendurch ignorieren.
-    if (state.view !== 'hidden') return state
+  // Leere Meldung nach echten Werten: letzten Wert behalten (zählt nicht als Änderung).
+  const tilt = tiltDeg ?? state.lastTilt
+  if (tilt === null) {
     // Kein Sensor oder keine Erlaubnis: nichts zeigen, Abstand nicht aufhalten.
-    const noSensor = elapsed >= TILT_NO_SENSOR_GRACE_MS
-    return { ...state, view: 'hidden', startedAt, distanceAllowed: state.distanceAllowed || noSensor, done: noSensor }
+    if (elapsed >= TILT_NO_SENSOR_GRACE_MS) return finish({ ...state, startedAt }, 'no-sensor')
+    return { ...state, view: 'hidden', startedAt }
   }
 
-  const isLevel = state.level ? tiltDeg <= TILT_LEVEL_EXIT_DEG : tiltDeg <= TILT_LEVEL_ENTER_DEG
+  const changed = state.lastTilt !== null && tilt !== state.lastTilt
+  const lastChangeAt = state.lastChangeAt === null || changed ? nowMs : state.lastChangeAt
+  const next = { ...state, startedAt, lastTilt: tilt, lastChangeAt, live: state.live || changed }
+
+  // #215: Werte eingefroren (z. B. nur ein einzelner Wert) → wie kein Sensor.
+  if (nowMs - lastChangeAt >= TILT_STALE_MS) return finish(next, 'stale')
+  // Erst ein sich ändernder Wert zeigt, dass der Sensor lebt: vorher kein „schief“.
+  if (!next.live) return { ...next, view: 'hidden' }
+
+  const isLevel = state.level ? tilt <= TILT_LEVEL_EXIT_DEG : tilt <= TILT_LEVEL_ENTER_DEG
 
   return {
+    ...next,
     view: isLevel ? 'level' : 'tilted',
     distanceAllowed: state.distanceAllowed || isLevel || elapsed >= TILT_DISTANCE_AFTER_MS,
-    startedAt,
     level: isLevel,
-    done: false,
   }
 }

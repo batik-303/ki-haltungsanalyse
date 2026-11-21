@@ -7,6 +7,8 @@ import {
   TILT_LEVEL_ENTER_DEG,
   TILT_LEVEL_EXIT_DEG,
   TILT_NO_SENSOR_GRACE_MS,
+  type DeviceTiltHintState,
+  type DeviceTiltPermission,
 } from '../../src/core/calibration/device-tilt'
 
 /**
@@ -60,6 +62,12 @@ describe('Toleranz (#210, nach Test der Nutzerin)', () => {
 
 describe('stepDeviceTiltHint', () => {
   const start = createDeviceTiltHintState()
+  /**
+   * Echter Sensor (#215): ein Wert plus ein leicht anderer, wie das Rauschen
+   * eines lebenden Sensors. Erst dann zeigt das Kärtchen etwas.
+   */
+  const live = (s: DeviceTiltHintState, tilt: number, t: number, p?: DeviceTiltPermission) =>
+    stepDeviceTiltHint(stepDeviceTiltHint(s, tilt + 0.01, t, p), tilt, t, p)
 
   it('vor der ersten Messung: nichts anzeigen, Abstand noch zurückhalten', () => {
     const s = stepDeviceTiltHint(start, null, 0)
@@ -72,56 +80,56 @@ describe('stepDeviceTiltHint', () => {
     s = stepDeviceTiltHint(s, null, TILT_NO_SENSOR_GRACE_MS)
     expect(s.view).toBe('hidden')
     expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 20, TILT_NO_SENSOR_GRACE_MS + 100)
+    s = live(s, 20, TILT_NO_SENSOR_GRACE_MS + 100)
     expect(s.view).toBe('hidden')
   })
 
   it('zuerst nur das Gerät-Kärtchen: schief → „tilted", Abstand noch nicht', () => {
-    const s = stepDeviceTiltHint(start, 20, 0)
+    const s = live(start, 20, 0)
     expect(s.view).toBe('tilted')
     expect(s.distanceAllowed).toBe(false)
   })
 
   it('gerade → „level" und Abstand sofort frei; Kärtchen bleibt sichtbar', () => {
-    let s = stepDeviceTiltHint(start, 20, 0)
-    s = stepDeviceTiltHint(s, 5, 100)
+    let s = live(start, 20, 0)
+    s = live(s, 5, 100)
     expect(s.view).toBe('level')
     expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 5, 60_000)
+    s = live(s, 5, 60_000)
     expect(s.view).toBe('level')
   })
 
   it('reagiert live: wieder schief → „tilted", Abstand bleibt sichtbar', () => {
-    let s = stepDeviceTiltHint(start, 5, 0)
-    s = stepDeviceTiltHint(s, 20, 2000)
+    let s = live(start, 5, 0)
+    s = live(s, 20, 2000)
     expect(s.view).toBe('tilted')
     expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 4, 3000)
+    s = live(s, 4, 3000)
     expect(s.view).toBe('level')
   })
 
   it('Hysterese: einmal gerade, bleibt es bis 12° gerade', () => {
-    let s = stepDeviceTiltHint(start, 9, 0)
+    let s = live(start, 9, 0)
     expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 11.5, 100)
+    s = live(s, 11.5, 100)
     expect(s.view).toBe('level')
-    s = stepDeviceTiltHint(s, 13, 200)
+    s = live(s, 13, 200)
     expect(s.view).toBe('tilted')
   })
 
   it('nie blockieren: nach der Wartezeit kommt der Abstand, das Gerät-Kärtchen bleibt', () => {
-    let s = stepDeviceTiltHint(start, 20, 0)
-    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS - 1)
+    let s = live(start, 20, 0)
+    s = live(s, 20, TILT_DISTANCE_AFTER_MS - 1)
     expect(s.distanceAllowed).toBe(false)
-    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS)
+    s = live(s, 20, TILT_DISTANCE_AFTER_MS)
     expect(s.view).toBe('tilted')
     expect(s.distanceAllowed).toBe(true)
-    s = stepDeviceTiltHint(s, 20, TILT_DISTANCE_AFTER_MS + 60_000)
+    s = live(s, 20, TILT_DISTANCE_AFTER_MS + 60_000)
     expect(s.view).toBe('tilted')
   })
 
   it('einzelne leere Messung nach echten Werten ändert nichts', () => {
-    let s = stepDeviceTiltHint(start, 5, 0)
+    let s = live(start, 5, 0)
     s = stepDeviceTiltHint(s, null, 2000)
     expect(s.view).toBe('level')
     expect(s.done).toBe(false)
@@ -140,7 +148,7 @@ describe('stepDeviceTiltHint', () => {
     s = stepDeviceTiltHint(s, null, 10_000, 'granted')
     s = stepDeviceTiltHint(s, null, 10_000 + TILT_NO_SENSOR_GRACE_MS - 1, 'granted')
     expect(s.done).toBe(false)
-    s = stepDeviceTiltHint(s, 20, 10_300, 'granted')
+    s = live(s, 20, 10_300, 'granted')
     expect(s.view).toBe('tilted')
     expect(s.distanceAllowed).toBe(false)
   })

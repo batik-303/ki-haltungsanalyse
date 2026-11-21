@@ -12,6 +12,9 @@ export type KnickSideLabel = 'hals' | 'schnecke' | 'gerade'
 /** Grund für Grau: aus dem Sicht-Tor, oder kein Körper im Bild. */
 export type GreyReason = AnchorHiddenReason | 'no-body'
 
+/** Ergebnis der iOS-Frage „Bewegung und Ausrichtung“; `none` = keine Frage nötig. */
+export type TiltPermissionResult = 'granted' | 'denied' | 'error' | 'none'
+
 export type ErrorSource = 'onerror' | 'unhandledrejection' | 'console.error' | 'console.warn'
 
 export type DiagnosticEvent =
@@ -44,6 +47,14 @@ export type DiagnosticEvent =
       armRatio: number | null
     }
   | { kind: 'hand-pick'; hands: number; labels: string[]; distances: (number | null)[]; chosen: number | null }
+  | { kind: 'tilt-permission'; hasRequestPermission: boolean; result: TiltPermissionResult }
+  | {
+      kind: 'tilt-samples'
+      screenAngle: number
+      samples: { beta: number | null; gamma: number | null }[]
+      /** Wie das Kärtchen endete (#215); `null` = läuft noch. */
+      outcome: string | null
+    }
   | {
       kind: 'device'
       userAgent: string
@@ -110,5 +121,25 @@ export function createHandPickEvent(selection: HandSelection): DiagnosticEvent {
     labels: selection.candidates.map((c) => c.label),
     distances: selection.candidates.map((c) => (c.distance === null ? null : twoDecimals(c.distance))),
     chosen: selection.chosen < 0 ? null : selection.chosen,
+  }
+}
+
+/** #215: Gibt es die iOS-Frage, und was kam zurück? */
+export function createTiltPermissionEvent(hasRequestPermission: boolean, result: TiltPermissionResult): DiagnosticEvent {
+  return { kind: 'tilt-permission', hasRequestPermission, result }
+}
+
+/** #215: einige Rohwerte des Lagesensors (gerundet), Bildschirm-Winkel und Ausgang. */
+export function createTiltSamplesEvent(
+  samples: readonly { beta: number | null; gamma: number | null }[],
+  screenAngle: number,
+  outcome: string | null,
+): DiagnosticEvent {
+  const round = (v: number | null) => (v === null ? null : oneDecimal(v))
+  return {
+    kind: 'tilt-samples',
+    screenAngle,
+    samples: samples.map((s) => ({ beta: round(s.beta), gamma: round(s.gamma) })),
+    outcome,
   }
 }

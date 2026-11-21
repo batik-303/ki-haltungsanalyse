@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCalibrationSavedEvent, createProblemEvent, createHandPickEvent } from '../../src/core/diagnostics/log-events'
+import { createCalibrationSavedEvent, createProblemEvent, createHandPickEvent, createTiltPermissionEvent, createTiltSamplesEvent } from '../../src/core/diagnostics/log-events'
 import { formatLogMessage } from '../../src/core/diagnostics/log-message'
 import type { KnickSide, WristMasterPrint } from '../../src/core/types'
 
@@ -126,5 +126,36 @@ describe('createHandPickEvent', () => {
   it('zeigt fehlende Abstände und keine Wahl als null', () => {
     const event = createHandPickEvent({ detection: null, candidates: [{ label: 'Right', distance: null }], chosen: -1 })
     expect(event).toEqual({ kind: 'hand-pick', hands: 1, labels: ['Right'], distances: [null], chosen: null })
+  })
+})
+
+describe('Lagesensor fürs Diagnose-Log (#215)', () => {
+  it('Erlaubnis: ob requestPermission existiert und das Ergebnis', () => {
+    expect(createTiltPermissionEvent(true, 'granted')).toEqual({
+      kind: 'tilt-permission',
+      hasRequestPermission: true,
+      result: 'granted',
+    })
+  })
+
+  it('Proben: beta/gamma auf eine Nachkommastelle, Bildschirm-Winkel, Ausgang', () => {
+    expect(
+      createTiltSamplesEvent(
+        [
+          { beta: 89.987, gamma: -0.04 },
+          { beta: null, gamma: null },
+        ],
+        90,
+        'stale',
+      ),
+    ).toEqual({
+      kind: 'tilt-samples',
+      screenAngle: 90,
+      samples: [
+        { beta: 90, gamma: -0 },
+        { beta: null, gamma: null },
+      ],
+      outcome: 'stale',
+    })
   })
 })
