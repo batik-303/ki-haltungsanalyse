@@ -13,6 +13,8 @@ interface HintCardProps {
   placement?: 'top' | 'below'
   /** #147: `true` = nach rechts aus dem Bild geglitten (Zustand in Ordnung). */
   away?: boolean
+  /** #215: antippbar (z. B. Sensor-Frage auf iOS); sonst lässt das Kärtchen Tipps durch. */
+  onTap?: () => void
 }
 
 /**
@@ -22,20 +24,24 @@ interface HintCardProps {
  *
  * #147: groß (24 px), damit es aus Spiel-Entfernung lesbar ist.
  */
-export function HintCard({ tone, message, detail, placement = 'top', away = false }: HintCardProps) {
+export function HintCard({ tone, message, detail, placement = 'top', away = false, onTap }: HintCardProps) {
   const color = DISTANCE_GLOW_COLORS[tone]
+  const Inner = onTap ? 'button' : 'div'
 
   return (
     <div
       className={cn(
-        'pointer-events-none absolute left-1/2 z-[6] w-max max-w-[calc(100%-24px)]',
+        onTap ? 'pointer-events-auto' : 'pointer-events-none',
+        'absolute left-1/2 z-[6] w-max max-w-[calc(100%-24px)]',
         'transition-[transform,opacity,top] duration-700 ease-in-out',
         placement === 'top' ? 'top-3' : 'top-[84px]',
       )}
       // #147: weggleiten nach rechts aus dem Bild (der Rahmen schneidet ab)
       style={{ transform: away ? 'translateX(100vw)' : 'translateX(-50%)', opacity: away ? 0 : 1 }}
     >
-      <div className="inline-flex items-center gap-3.5 rounded-2xl bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
+      <Inner
+        {...(onTap && { type: 'button' as const, onClick: onTap })}
+        className="inline-flex items-center gap-3.5 rounded-2xl text-left bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
         <span
           className="h-4 w-4 shrink-0 rounded-full"
           style={{ background: color, boxShadow: `0 0 0 3px ${color}33` }}
@@ -44,7 +50,7 @@ export function HintCard({ tone, message, detail, placement = 'top', away = fals
           <span className="font-label text-[24px] font-semibold leading-tight">{message}</span>
           {detail && <span className="font-label text-[16px] leading-snug opacity-80">{detail}</span>}
         </span>
-      </div>
+      </Inner>
     </div>
   )
 }

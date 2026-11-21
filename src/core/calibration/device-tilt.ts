@@ -64,25 +64,35 @@ export function computeDeviceTiltDeg(reading: OrientationReading, screenAngle: n
   return Math.acos(dot) / RAD
 }
 
-export type DeviceTiltView = 'hidden' | 'tilted' | 'level'
+/** `ask` = Einladung zum Tippen für die iOS-Sensor-Frage (#215). */
+export type DeviceTiltView = 'hidden' | 'ask' | 'tilted' | 'level'
 
 /** #147: kurzer Kärtchen-Text, aus Spiel-Entfernung lesbar; Häkchen, sobald es passt. */
-export function computeDeviceTiltMessage(view: 'tilted' | 'level'): string {
+export function computeDeviceTiltMessage(view: 'ask' | 'tilted' | 'level'): string {
+  if (view === 'ask') return 'Tippe hier, damit ich prüfen kann, ob dein Gerät gerade steht.'
   return view === 'level' ? 'Gerät gerade ✓' : 'Gerät gerade stellen'
 }
 
 /**
- * Stand der Sensor-Erlaubnis. iOS fragt beim Start-Tippen (`pending`, bis die
- * Antwort da ist); andere Systeme brauchen keine Frage (`granted`).
+ * Stand der Sensor-Erlaubnis. iOS/iPadOS: zuerst `prompt` (das Kärtchen lädt
+ * zum Tippen ein, #215), nach dem Tipp `pending`, bis die Antwort da ist.
+ * Andere Systeme brauchen keine Frage (`granted`).
  */
-export type DeviceTiltPermission = 'pending' | 'granted' | 'denied'
+export type DeviceTiltPermission = 'prompt' | 'pending' | 'granted' | 'denied'
+
+/** Start-Zustand: Gibt es `DeviceOrientationEvent.requestPermission`, muss erst getippt werden. */
+export function initialDeviceTiltPermission(hasRequestPermission: boolean): DeviceTiltPermission {
+  return hasRequestPermission ? 'prompt' : 'granted'
+}
 
 export interface DeviceTiltHintState {
   view: DeviceTiltView
   /** Darf der Abstands-Hinweis schon erscheinen? */
   distanceAllowed: boolean
-  /** Zeitpunkt des ersten Schritts; davor läuft keine Uhr. */
+  /** Zeitpunkt des ersten Schritts mit Erlaubnis; davor läuft keine Sensor-Uhr. */
   startedAt: number | null
+  /** Seit wann die Einladung zum Tippen steht (#215); für die 5-s-Frist zum Abstand. */
+  askedAt: number | null
   /** Stand das Gerät beim letzten Schritt gerade? (für die Hysterese) */
   level: boolean
   /** Einmal erledigt (kein Sensor, abgelehnt, eingefroren), bleibt das Kärtchen weg. */
@@ -104,6 +114,7 @@ export function createDeviceTiltHintState(): DeviceTiltHintState {
     view: 'hidden',
     distanceAllowed: false,
     startedAt: null,
+    askedAt: null,
     level: false,
     done: false,
     doneReason: null,
@@ -130,6 +141,12 @@ export function stepDeviceTiltHint(
 ): DeviceTiltHintState {
   if (state.done) return state
   if (permission === 'denied') return finish(state, 'denied')
+  if (permission === 'prompt') {
+    // Nie blockieren: ignoriert man die Einladung, kommt der Abstand trotzdem.
+    const askedAt = state.askedAt ?? nowMs
+    const distanceAllowed = state.distanceAllowed || nowMs - askedAt >= TILT_DISTANCE_AFTER_MS
+    return { ...state, view: 'ask', askedAt, distanceAllowed }
+  }
   if (permission === 'pending') return { ...state, view: 'hidden' }
 
   const startedAt = state.startedAt ?? nowMs

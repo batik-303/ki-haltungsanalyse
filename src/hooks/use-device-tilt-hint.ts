@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   computeDeviceTiltDeg,
   createDeviceTiltHintState,
+  initialDeviceTiltPermission,
   normalizeScreenAngle,
   stepDeviceTiltHint,
   type DeviceTiltPermission,
@@ -24,27 +25,35 @@ interface OrientationEventWithPermission {
   requestPermission?: () => Promise<'granted' | 'denied'>
 }
 
+function orientationCtor(): OrientationEventWithPermission | null {
+  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return null
+  return window.DeviceOrientationEvent as unknown as OrientationEventWithPermission
+}
+
 /**
- * Stand der iOS-Erlaubnis über Bildschirme hinweg: gefragt wird im Start-Tippen
- * (Home), ausgewertet in der Session. Ohne Frage (Android, Desktop) `granted`.
+ * Stand der iOS-Erlaubnis über Sitzungen hinweg. Erkennung über die Methode,
+ * nicht über den User-Agent: iPadOS meldet sich als Mac (#215). Mit Frage
+ * startet sie bei `prompt` (Kärtchen lädt zum Tippen ein), sonst `granted`.
  */
-let permission: DeviceTiltPermission = 'granted'
+let permission: DeviceTiltPermission = initialDeviceTiltPermission(
+  typeof orientationCtor()?.requestPermission === 'function',
+)
 
 /**
  * iOS verlangt eine Erlaubnis für den Lagesensor, und zwar innerhalb eines
- * Tippens (#210). Wird im Start-Klick aufgerufen. Solange die Antwort offen
- * ist, wartet der Hinweis; Ablehnung oder Fehler → kein Kärtchen, Abstand sofort.
+ * Tippens. #215: Nicht im Start-Tippen (dort fragen Kamera + Mikro, iPadOS
+ * lehnt die Sensor-Frage dann still ab), sondern im eigenen Tipp aufs
+ * Gerät-Kärtchen, wenn Kamera und Mikro schon laufen. Synchron im Handler,
+ * vor jedem await/State-Update. Ablehnung oder Fehler → Kärtchen weg, Abstand frei.
  */
 export function requestDeviceOrientationPermission(): void {
-  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return
-  const ctor = window.DeviceOrientationEvent as unknown as OrientationEventWithPermission
-  // Erkennung über die Methode, nicht über den User-Agent: iPadOS meldet sich als Mac (#215).
-  if (typeof ctor.requestPermission !== 'function') {
+  const ctor = orientationCtor()
+  if (!ctor || typeof ctor.requestPermission !== 'function') {
     if (__DIAGNOSE__) reportTiltPermission(false, 'none')
     return
   }
+  if (permission !== 'prompt') return
   permission = 'pending'
-  // Direkt im Tipp-Handler, vor jedem await/State-Update (transiente Aktivierung).
   ctor
     .requestPermission()
     .then((result) => {
