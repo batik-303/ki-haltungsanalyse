@@ -8,7 +8,7 @@ import {
   type DeviceTiltPermission,
   type DeviceTiltView,
 } from '@/core/calibration/device-tilt'
-import { reportTiltPermission, reportTiltSample, reportTiltOutcome } from '@/lib/diagnostic-logger'
+import { reportTiltPermission, reportTiltSample, reportTiltOutcome, reportTiltTrace, resetTiltTrace } from '@/lib/diagnostic-logger'
 
 export interface DeviceTiltHint {
   view: DeviceTiltView
@@ -96,6 +96,7 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
       stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission)
       const { view, distanceAllowed, doneReason } = stateRef.current
       if (__DIAGNOSE__ && doneReason) reportTiltOutcome(doneReason, screenAngle())
+      if (__DIAGNOSE__) reportTiltTrace(performance.now(), tiltRef.current)
       setHint((prev) =>
         prev.view === view && prev.distanceAllowed === distanceAllowed ? prev : { view, distanceAllowed },
       )
@@ -112,6 +113,7 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
     return () => {
       window.removeEventListener('deviceorientation', onOrientation)
       window.clearInterval(timer)
+      if (__DIAGNOSE__) resetTiltTrace()
     }
   }, [active])
 

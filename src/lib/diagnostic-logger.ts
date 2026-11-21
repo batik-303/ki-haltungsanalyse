@@ -7,6 +7,7 @@
 import { createColorChangeLog, type ColorChangeInput } from '@/core/diagnostics/color-change'
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
+import { createTiltTrace } from '@/core/diagnostics/tilt-trace'
 import { createCalibrationSavedEvent, createHandPickEvent, createProblemEvent, createTiltPermissionEvent, createTiltSamplesEvent, type DiagnosticEvent, type TiltPermissionResult, type ErrorSource } from '@/core/diagnostics/log-events'
 import type { HandSelection } from '@/core/analysis/hand-landmarker'
 import type { MasterPrint } from '@/core/types'
@@ -29,6 +30,7 @@ const TILT_SAMPLE_COUNT = 8
 let tiltSamples: { beta: number | null; gamma: number | null }[] = []
 let tiltSamplesSent = false
 let tiltOutcomeSent = false
+const tiltTrace = createTiltTrace(1000, 5)
 
 function randomSessionId(): string {
   return typeof crypto.randomUUID === 'function'
@@ -143,4 +145,15 @@ export function reportTiltOutcome(reason: string, screenAngle: number): void {
   if (!logger || tiltOutcomeSent) return
   tiltOutcomeSent = true
   logger.record(createTiltSamplesEvent(tiltSamples, screenAngle, reason))
+}
+
+/** #215: solange das Gerät-Kärtchen aktiv ist, je ~1 s die Neigung; alle ~5 s gebündelt. */
+export function reportTiltTrace(nowMs: number, tiltDeg: number | null): void {
+  const event = logger ? tiltTrace.tick(nowMs, tiltDeg) : undefined
+  if (event) logger?.record(event)
+}
+
+/** #215: Gerät-Kärtchen aus (gespeichert/verlassen) — die nächste Reihe beginnt neu. */
+export function resetTiltTrace(): void {
+  tiltTrace.reset()
 }

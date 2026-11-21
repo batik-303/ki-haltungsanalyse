@@ -47,6 +47,7 @@ export type DiagnosticEvent =
       armRatio: number | null
     }
   | { kind: 'hand-pick'; hands: number; labels: string[]; distances: (number | null)[]; chosen: number | null }
+  | { kind: 'tilt-trace'; tilts: (number | null)[] }
   | { kind: 'tilt-permission'; hasRequestPermission: boolean; result: TiltPermissionResult }
   | {
       kind: 'tilt-samples'
