@@ -8,10 +8,10 @@
  * Kärtchen bleibt bis zum Speichern sichtbar und reagiert live auf die Lage.
  */
 
-/** Ab dieser Neigung (Grad) gilt das Gerät als gerade. */
-export const TILT_LEVEL_ENTER_DEG = 10
+/** Bis zu dieser Neigung (Grad, Zurück-/Vorlehnen) gilt das Gerät als gerade; #215: Notenständer-Messung der Nutzerin. */
+export const TILT_LEVEL_ENTER_DEG = 25
 /** Erst über dieser Neigung gilt es wieder als schief (Hysterese gegen Flackern). */
-export const TILT_LEVEL_EXIT_DEG = 12
+export const TILT_LEVEL_EXIT_DEG = 27
 /** Steht das Gerät bis dahin nicht gerade, kommt der Abstands-Hinweis trotzdem dazu. */
 export const TILT_DISTANCE_AFTER_MS = 5000
 /** Kommt so lange keine Sensor-Messung, gilt: kein Sensor/keine Erlaubnis → Abstand sofort. */
