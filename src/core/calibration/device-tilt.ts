@@ -62,7 +62,7 @@ export type DeviceTiltView = 'hidden' | 'ask' | 'tilted' | 'level'
 
 /** #147: kurzer Kärtchen-Text, aus Spiel-Entfernung lesbar; Häkchen, sobald es passt. */
 export function computeDeviceTiltMessage(view: 'ask' | 'tilted' | 'level'): string {
-  if (view === 'ask') return 'Tippe hier, damit ich prüfen kann, ob dein Gerät gerade steht.'
+  if (view === 'ask') return 'Tippe hier: Steht dein Gerät gerade?'
   return view === 'level' ? 'Gerät gerade ✓' : 'Gerät gerade stellen'
 }
 

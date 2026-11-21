@@ -21,8 +21,8 @@ describe('Gerät-Kärtchen fragt per eigenem Tipp (#215)', () => {
     expect(initialDeviceTiltPermission(false)).toBe('granted')
   })
 
-  it('Text lädt freundlich zum Tippen ein', () => {
-    expect(computeDeviceTiltMessage('ask')).toBe('Tippe hier, damit ich prüfen kann, ob dein Gerät gerade steht.')
+  it('Text lädt kurz und freundlich zum Tippen ein (Entscheidung Nutzerin)', () => {
+    expect(computeDeviceTiltMessage('ask')).toBe('Tippe hier: Steht dein Gerät gerade?')
   })
 
   it('„prompt“: Kärtchen zeigt die Einladung, Abstand noch zurück', () => {
