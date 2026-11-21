@@ -48,12 +48,13 @@ export function HintCard({ tone, message, detail, placement = 'top', away = fals
     >
       <Inner
         {...(onTap && { type: 'button' as const, onClick: onTap })}
-        className="inline-flex items-center gap-3.5 rounded-2xl text-left bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
+        // #215: nie abschneiden — Safari bricht Text in <button> sonst nicht um
+        className="inline-flex max-w-full min-w-0 items-center gap-3.5 whitespace-normal rounded-2xl text-left bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
         <span
           className="h-4 w-4 shrink-0 rounded-full"
           style={{ background: color, boxShadow: `0 0 0 3px ${color}33` }}
         />
-        <span className="flex flex-col" style={{ color: PRIMARY }}>
+        <span className="flex min-w-0 flex-col break-words" style={{ color: PRIMARY }}>
           <span className="font-label text-[24px] font-semibold leading-tight">{message}</span>
           {detail && <span className="font-label text-[16px] leading-snug opacity-80">{detail}</span>}
         </span>
