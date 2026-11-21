@@ -7,7 +7,8 @@
 import { createColorChangeLog, type ColorChangeInput } from '@/core/diagnostics/color-change'
 import { createFrameRateMeter } from '@/core/diagnostics/frame-rate-meter'
 import { createLogBatcher } from '@/core/diagnostics/log-batcher'
-import { createCalibrationSavedEvent, createHandPickEvent, createProblemEvent, type DiagnosticEvent, type ErrorSource } from '@/core/diagnostics/log-events'
+import { createTiltTrace } from '@/core/diagnostics/tilt-trace'
+import { createCalibrationSavedEvent, createHandPickEvent, createProblemEvent, createTiltPermissionEvent, createTiltSamplesEvent, type DiagnosticEvent, type TiltPermissionResult, type ErrorSource } from '@/core/diagnostics/log-events'
 import type { HandSelection } from '@/core/analysis/hand-landmarker'
 import type { MasterPrint } from '@/core/types'
 
@@ -25,6 +26,11 @@ type Logger = {
 
 let logger: Logger | undefined
 let lastHandPickAt = -Infinity
+const TILT_SAMPLE_COUNT = 8
+let tiltSamples: { beta: number | null; gamma: number | null }[] = []
+let tiltSamplesSent = false
+let tiltOutcomeSent = false
+const tiltTrace = createTiltTrace(1000, 5)
 
 function randomSessionId(): string {
   return typeof crypto.randomUUID === 'function'
@@ -115,4 +121,39 @@ export function reportHandPick(nowMs: number, selection: HandSelection): void {
   if (!logger || nowMs - lastHandPickAt < HAND_PICK_INTERVAL_MS) return
   lastHandPickAt = nowMs
   logger.record(createHandPickEvent(selection))
+}
+
+/** #215: Gibt es die iOS-Frage „Bewegung und Ausrichtung“, und was kam zurück? */
+export function reportTiltPermission(hasRequestPermission: boolean, result: TiltPermissionResult): void {
+  logger?.record(createTiltPermissionEvent(hasRequestPermission, result))
+  tiltSamples = []
+  tiltSamplesSent = false
+  tiltOutcomeSent = false
+}
+
+/** #215: die ersten Rohwerte des Lagesensors, einmal gesammelt ins Log. */
+export function reportTiltSample(beta: number | null, gamma: number | null, screenAngle: number): void {
+  if (!logger || tiltSamplesSent) return
+  tiltSamples.push({ beta, gamma })
+  if (tiltSamples.length < TILT_SAMPLE_COUNT) return
+  tiltSamplesSent = true
+  logger.record(createTiltSamplesEvent(tiltSamples, screenAngle, null))
+}
+
+/** #215: Kärtchen beendet (kein Sensor, abgelehnt, eingefroren) — mit den bis dahin gesehenen Werten. */
+export function reportTiltOutcome(reason: string, screenAngle: number): void {
+  if (!logger || tiltOutcomeSent) return
+  tiltOutcomeSent = true
+  logger.record(createTiltSamplesEvent(tiltSamples, screenAngle, reason))
+}
+
+/** #215: solange das Gerät-Kärtchen aktiv ist, je ~1 s die Neigung; alle ~5 s gebündelt. */
+export function reportTiltTrace(nowMs: number, tiltDeg: number | null): void {
+  const event = logger ? tiltTrace.tick(nowMs, tiltDeg) : undefined
+  if (event) logger?.record(event)
+}
+
+/** #215: Gerät-Kärtchen aus (gespeichert/verlassen) — die nächste Reihe beginnt neu. */
+export function resetTiltTrace(): void {
+  tiltTrace.reset()
 }

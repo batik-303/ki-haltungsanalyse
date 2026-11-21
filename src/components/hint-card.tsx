@@ -9,10 +9,15 @@ interface HintCardProps {
   message: string
   /** Optionale kleine zweite Zeile (z. B. bei „Abstand passt", #116). */
   detail?: string
-  /** `below` = zweite Zeile unter dem oberen Kärtchen (Gerät-gerade-Hinweis, #210). */
-  placement?: 'top' | 'below'
+  /**
+   * `top` = allein oben mittig im Rahmen. `stack` = im Stapel oben (`HintStack`,
+   * #215): Gerät-Kärtchen und Abstand untereinander, nie überdeckt.
+   */
+  placement?: 'top' | 'stack'
   /** #147: `true` = nach rechts aus dem Bild geglitten (Zustand in Ordnung). */
   away?: boolean
+  /** #215: antippbar (z. B. Sensor-Frage auf iOS); sonst lässt das Kärtchen Tipps durch. */
+  onTap?: () => void
 }
 
 /**
@@ -22,29 +27,38 @@ interface HintCardProps {
  *
  * #147: groß (24 px), damit es aus Spiel-Entfernung lesbar ist.
  */
-export function HintCard({ tone, message, detail, placement = 'top', away = false }: HintCardProps) {
+export function HintCard({ tone, message, detail, placement = 'top', away = false, onTap }: HintCardProps) {
   const color = DISTANCE_GLOW_COLORS[tone]
+  const Inner = onTap ? 'button' : 'div'
 
   return (
     <div
       className={cn(
-        'pointer-events-none absolute left-1/2 z-[6] w-max max-w-[calc(100%-24px)]',
-        'transition-[transform,opacity,top] duration-700 ease-in-out',
-        placement === 'top' ? 'top-3' : 'top-[84px]',
+        onTap ? 'pointer-events-auto' : 'pointer-events-none',
+        'transition-[transform,opacity] duration-700 ease-in-out',
+        placement === 'top'
+          ? 'absolute left-1/2 top-3 z-[6] w-max max-w-[calc(100%-24px)]'
+          : 'relative w-max max-w-full',
       )}
       // #147: weggleiten nach rechts aus dem Bild (der Rahmen schneidet ab)
-      style={{ transform: away ? 'translateX(100vw)' : 'translateX(-50%)', opacity: away ? 0 : 1 }}
+      style={{
+        transform: away ? 'translateX(100vw)' : placement === 'top' ? 'translateX(-50%)' : 'none',
+        opacity: away ? 0 : 1,
+      }}
     >
-      <div className="inline-flex items-center gap-3.5 rounded-2xl bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
+      <Inner
+        {...(onTap && { type: 'button' as const, onClick: onTap })}
+        // #215: nie abschneiden — Safari bricht Text in <button> sonst nicht um
+        className="inline-flex max-w-full min-w-0 items-center gap-3.5 whitespace-normal rounded-2xl text-left bg-white/90 px-6 py-3 shadow-[0_4px_16px_rgba(0,43,73,0.18)] backdrop-blur">
         <span
           className="h-4 w-4 shrink-0 rounded-full"
           style={{ background: color, boxShadow: `0 0 0 3px ${color}33` }}
         />
-        <span className="flex flex-col" style={{ color: PRIMARY }}>
+        <span className="flex min-w-0 flex-col break-words" style={{ color: PRIMARY }}>
           <span className="font-label text-[24px] font-semibold leading-tight">{message}</span>
           {detail && <span className="font-label text-[16px] leading-snug opacity-80">{detail}</span>}
         </span>
-      </div>
+      </Inner>
     </div>
   )
 }

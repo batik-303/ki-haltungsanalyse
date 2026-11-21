@@ -286,7 +286,6 @@ export function SessionScreen() {
   const tilt = useDeviceTiltHint(!tiltMasterPrint && tiltReadiness === 'idle')
   // #147: Gerät gerade → Kärtchen gleitet weg, der Abstand rückt nach oben
   const tiltPresence = useHintPresence(tilt.view === 'level')
-  const tiltCardVisible = tilt.view !== 'hidden' && tiltPresence === 'shown'
   const row = computeControlRow({ phase, viewMode, calibrating })
   const hintLine = computeHintLine({
     phase,
@@ -353,13 +352,12 @@ export function SessionScreen() {
           {!calibrating && <DistanceGlow />}
 
           {/* Kärtchen oben mittig im Rahmen: Abstand, Bereitschaft, Tipp (#101) */}
-          {/* Gerät steht gerade (#210): zuerst, Abstand danach bzw. darunter */}
-          {!calibrating && <DeviceTiltHint view={tilt.view} presence={tiltPresence} />}
+          {/* Gerät steht gerade (#210) oben, Abstand darunter — gestapelt, nie überdeckt (#215) */}
           {!calibrating && (
-            <DistanceHint
-              allowed={tilt.distanceAllowed}
-              placement={tiltCardVisible ? 'below' : 'top'}
-            />
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-[6] flex flex-col items-center">
+              <DeviceTiltHint view={tilt.view} presence={tiltPresence} />
+              <DistanceHint allowed={tilt.distanceAllowed} placement="stack" />
+            </div>
           )}
           {!calibrating && <ReadinessHint />}
           {!calibrating && !isFlowRail && <StraightWristTip />}

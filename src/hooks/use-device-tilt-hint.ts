@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   computeDeviceTiltDeg,
+  computeTiltLimits,
   createDeviceTiltHintState,
+  initialDeviceTiltPermission,
+  normalizeScreenAngle,
   stepDeviceTiltHint,
   type DeviceTiltPermission,
   type DeviceTiltView,
 } from '@/core/calibration/device-tilt'
+import { reportTiltPermission, reportTiltSample, reportTiltOutcome, reportTiltTrace, resetTiltTrace } from '@/lib/diagnostic-logger'
 
 export interface DeviceTiltHint {
   view: DeviceTiltView
@@ -22,34 +26,52 @@ interface OrientationEventWithPermission {
   requestPermission?: () => Promise<'granted' | 'denied'>
 }
 
+function orientationCtor(): OrientationEventWithPermission | null {
+  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return null
+  return window.DeviceOrientationEvent as unknown as OrientationEventWithPermission
+}
+
 /**
- * Stand der iOS-Erlaubnis über Bildschirme hinweg: gefragt wird im Start-Tippen
- * (Home), ausgewertet in der Session. Ohne Frage (Android, Desktop) `granted`.
+ * Stand der iOS-Erlaubnis über Sitzungen hinweg. Erkennung über die Methode,
+ * nicht über den User-Agent: iPadOS meldet sich als Mac (#215). Mit Frage
+ * startet sie bei `prompt` (Kärtchen lädt zum Tippen ein), sonst `granted`.
  */
-let permission: DeviceTiltPermission = 'granted'
+let permission: DeviceTiltPermission = initialDeviceTiltPermission(
+  typeof orientationCtor()?.requestPermission === 'function',
+)
 
 /**
  * iOS verlangt eine Erlaubnis für den Lagesensor, und zwar innerhalb eines
- * Tippens (#210). Wird im Start-Klick aufgerufen. Solange die Antwort offen
- * ist, wartet der Hinweis; Ablehnung oder Fehler → kein Kärtchen, Abstand sofort.
+ * Tippens. #215: Nicht im Start-Tippen (dort fragen Kamera + Mikro, iPadOS
+ * lehnt die Sensor-Frage dann still ab), sondern im eigenen Tipp aufs
+ * Gerät-Kärtchen, wenn Kamera und Mikro schon laufen. Synchron im Handler,
+ * vor jedem await/State-Update. Ablehnung oder Fehler → Kärtchen weg, Abstand frei.
  */
 export function requestDeviceOrientationPermission(): void {
-  if (typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return
-  const ctor = window.DeviceOrientationEvent as unknown as OrientationEventWithPermission
-  if (typeof ctor.requestPermission !== 'function') return
+  const ctor = orientationCtor()
+  if (!ctor || typeof ctor.requestPermission !== 'function') {
+    if (__DIAGNOSE__) reportTiltPermission(false, 'none')
+    return
+  }
+  if (permission !== 'prompt') return
   permission = 'pending'
   ctor
     .requestPermission()
     .then((result) => {
       permission = result === 'granted' ? 'granted' : 'denied'
+      if (__DIAGNOSE__) reportTiltPermission(true, permission)
     })
     .catch(() => {
       permission = 'denied'
+      if (__DIAGNOSE__) reportTiltPermission(true, 'error')
     })
 }
 
+/** Bildschirm-Winkel nur fürs Diagnose-Log; ältere Safari kennen nur `window.orientation`. */
 function screenAngle(): number {
-  return typeof screen !== 'undefined' && screen.orientation ? screen.orientation.angle : 0
+  const orientationAngle = typeof screen !== 'undefined' ? screen.orientation?.angle : undefined
+  const legacy = (window as Window & { orientation?: number }).orientation
+  return normalizeScreenAngle(orientationAngle, typeof legacy === 'number' ? legacy : undefined)
 }
 
 /**
@@ -71,15 +93,21 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
       return
     }
 
+    // #215: Handy und Tablet haben eigene Grenzen
+    const limits = computeTiltLimits(screen.width, screen.height)
     const step = () => {
-      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission)
-      const { view, distanceAllowed } = stateRef.current
+      stateRef.current = stepDeviceTiltHint(stateRef.current, tiltRef.current, performance.now(), permission, limits)
+      const { view, distanceAllowed, doneReason } = stateRef.current
+      if (__DIAGNOSE__ && doneReason) reportTiltOutcome(doneReason, screenAngle())
+      if (__DIAGNOSE__) reportTiltTrace(performance.now(), tiltRef.current)
       setHint((prev) =>
         prev.view === view && prev.distanceAllowed === distanceAllowed ? prev : { view, distanceAllowed },
       )
     }
     const onOrientation = (e: DeviceOrientationEvent) => {
-      tiltRef.current = computeDeviceTiltDeg({ beta: e.beta, gamma: e.gamma }, screenAngle())
+      // #215: ohne Bildschirm-Winkel (iPad meldet hochkant 90°)
+      tiltRef.current = computeDeviceTiltDeg({ beta: e.beta, gamma: e.gamma })
+      if (__DIAGNOSE__) reportTiltSample(e.beta, e.gamma, screenAngle())
       step()
     }
 
@@ -88,6 +116,7 @@ export function useDeviceTiltHint(active: boolean): DeviceTiltHint {
     return () => {
       window.removeEventListener('deviceorientation', onOrientation)
       window.clearInterval(timer)
+      if (__DIAGNOSE__) resetTiltTrace()
     }
   }, [active])
 
